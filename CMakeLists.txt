@@ -6,15 +6,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(SDK_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 set(PROJECT_NAME "a" CACHE STRING "Project Name")
 set(PROJECT_PATH "" CACHE PATH "Project Path")
-if($CACHE{PROJECT_PATH} STREQUAL "")
-	message(FATAL_ERROR "PROJECT_PATH must be set!")
+set(EXTRA_SRCS "" CACHE FILEPATH "Extra Sources to join the compiling.")
+set(EXTRA_INCS "" CACHE PATH "Extra Directories to include.")
+if(NOT $CACHE{PROJECT_PATH} STREQUAL "")
+	if(NOT IS_ABSOLUTE ${PROJECT_PATH})
+		set(PROJECT_PATH "$ENV{PWD}/$CACHE{PROJECT_PATH}" CACHE PATH "Project path" FORCE)
+	endif()
 endif()
-if(NOT IS_ABSOLUTE ${PROJECT_PATH})
-	set(PROJECT_PATH "$ENV{PWD}/${PROJECT_PATH}" CACHE PATH "Project path" FORCE)
-endif()
-
-message(STATUS "PROJECT_BINARY_DIR: ${PROJECT_BINARY_DIR}")
-message(STATUS "CMAKE_CURRENT_BINARY_DIR: ${CMAKE_CURRENT_BINARY_DIR}")
 
 project("${PROJECT_NAME}"
 	VERSION 0.1.0
@@ -22,7 +20,6 @@ project("${PROJECT_NAME}"
 	LANGUAGES C ASM
 )
 
-message(STATUS "PROJECT_BINARY_DIR: ${PROJECT_BINARY_DIR}")
 # apply to all targets
 
 ## common
@@ -48,20 +45,23 @@ add_subdirectory(hw/cpu/aarch64 EXCLUDE_FROM_ALL)
 add_subdirectory(hw/gic/v3_v4 EXCLUDE_FROM_ALL)
 add_subdirectory(hw/uart/pl011 EXCLUDE_FROM_ALL)
 add_subdirectory(libs/newlib_stubs EXCLUDE_FROM_ALL)
-
+add_subdirectory(verification EXCLUDE_FROM_ALL)
 
 # app targets
-include($CACHE{PROJECT_PATH}/app.cmake)
+if(NOT $CACHE{PROJECT_PATH} STREQUAL "")
+	include($CACHE{PROJECT_PATH}/app.cmake)
+endif()
 add_executable($CACHE{PROJECT_NAME}.elf)
 
 target_sources($CACHE{PROJECT_NAME}.elf
 	PRIVATE
+		$CACHE{EXTRA_SRCS}
 		${app_src}
 )
 
 target_include_directories($CACHE{PROJECT_NAME}.elf
     PRIVATE
-        ${CMAKE_CURRENT_BINARY_DIR}
+		$CACHE{EXTRA_INCS}
         ${app_inc}
 )
 
@@ -77,6 +77,7 @@ target_link_libraries($CACHE{PROJECT_NAME}.elf
 		newlib_stubs
 		wakeup_core
 		gicv3
+		verification_all_in_one
 		${app_dep}
 )
 
