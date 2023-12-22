@@ -27,7 +27,6 @@ func entrypoint
 	msr scr_el3, x0
 1:
 
-#ifdef RTL
 	// Initialise the register bank
 	mov x0, xzr
 	mov x1, xzr
@@ -101,7 +100,6 @@ func entrypoint
 	fmov    d30,  xzr
 	fmov    d31,  xzr
 rtl_init_end:
-#endif
 
 	msr spsel, 1
 	bl get_core_id
