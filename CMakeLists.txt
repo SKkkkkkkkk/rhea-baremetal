@@ -4,22 +4,31 @@ include(cmake_helper/cross_compile/generic_gcc.cmake)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(SDK_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+
 set(PROJECT_NAME "a" CACHE STRING "Project Name")
+
 set(PROJECT_PATH "" CACHE PATH "Project Path")
-set(CPU "NORTH" CACHE STRING "CPU: NORTH or SOUTH")
-set(BOARD "FPGA" CACHE STRING "Board: QEMU, RTL, FPGA, EVB")
 if("$CACHE{PROJECT_PATH}" STREQUAL "")
 	message(FATAL_ERROR "PROJECT_PATH must be set!")
 endif()
 if(NOT IS_ABSOLUTE $CACHE{PROJECT_PATH})
 	set(PROJECT_PATH "$ENV{PWD}/${PROJECT_PATH}" CACHE PATH "Project path" FORCE)
 endif()
-set(CUSTOM_LINKER_SCRIPT "" CACHE FILEPATH "Custom Linker Script file")
-if(NOT "$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
-	if(NOT IS_ABSOLUTE $CACHE{CUSTOM_LINKER_SCRIPT})
-		set(CUSTOM_LINKER_SCRIPT "$ENV{PWD}/${CUSTOM_LINKER_SCRIPT}" CACHE FILEPATH "Project path" FORCE)
+
+set(CPU "NORTH" CACHE STRING "CPU: NORTH or SOUTH")
+
+set(BOARD "FPGA" CACHE STRING "Board: QEMU, RTL, FPGA, EVB")
+
+set(MEM_SCHEME "ROM" CACHE STRING "ROM, SRAM, DRAM, CUSTOM")
+if($CACHE{MEM_SCHEME} STREQUAL "CUSTOM")
+	set(CUSTOM_LINKER_SCRIPT "" CACHE FILEPATH "Custom Linker Script file")
+	if(NOT "$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
+		if(NOT IS_ABSOLUTE $CACHE{CUSTOM_LINKER_SCRIPT})
+			set(CUSTOM_LINKER_SCRIPT "$ENV{PWD}/${CUSTOM_LINKER_SCRIPT}" CACHE FILEPATH "Project path" FORCE)
+		endif()
 	endif()
 endif()
+
 
 project("${PROJECT_NAME}"
 	VERSION 0.1.0
@@ -31,7 +40,7 @@ project("${PROJECT_NAME}"
 
 ## common
 set(compile_options_common -Wall -Wno-unused-variable -Werror -ffunction-sections -fdata-sections)
-set(common_inc -I${SDK_PATH}/common/inc)
+set(common_inc -I${SDK_PATH}/common/inc) 
 add_compile_options(-D$CACHE{CPU} -D$CACHE{BOARD} ${compile_options_common} ${common_inc})
 
 set(link_options_common 
@@ -39,6 +48,10 @@ set(link_options_common
 	-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/$CACHE{PROJECT_NAME}.map -Wl,--print-memory-usage
 	-Wl,--wrap=memcpy -Wl,--wrap=memmove -Wl,--wrap=memset -Wl,--wrap=memcmp
 )
+## With ld.bfd version 2.39 and newer new warnings are added. Skip those since we are not loaded by a elf loader.
+if(${CMAKE_C_COMPILER_VERSION} VERSION_GREATER_EQUAL 12.2.0)
+    set(link_options_common ${link_options_common} -Wl,--no-warn-rwx-segments)
+endif()
 
 ## architecture specific
 set(compile_options_arch -mlittle-endian -mstrict-align -march=armv8.1-a -DA55)
