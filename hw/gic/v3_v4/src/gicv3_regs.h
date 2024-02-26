@@ -69,8 +69,11 @@ typedef struct
 	__IM  uint32_t CIDR3;                /*!< \brief  Offset: 0xFFFC (R/ ) Component ID3 Register */
 }  GICDistributor_Type;
 
+#ifdef QEMU
 #define GICDistributor      ((GICDistributor_Type      *)     VIRT_GIC_DIST ) /*!< \brief GIC Distributor register set access pointer */
-
+#else
+#define GICDistributor      ((GICDistributor_Type      *)     (GIC600_BASE) ) /*!< \brief GIC Distributor register set access pointer */
+#endif
 /** \brief  Structure type to access the Generic Interrupt Controller ReDistributor RD_base (GICR_LPI)
 */
 typedef struct
@@ -99,8 +102,6 @@ typedef struct
     __IM  uint32_t SYNCR;           /*!< \brief  Offset: 0x0C0 (R/ ) Redistributor Synchronize Register */
         RESERVED(5[16335], uint32_t)
 }  GICRedistributor_LPI_Type;
-
-#define GICRedistributor_LPI      ((GICRedistributor_LPI_Type      *)     VIRT_GIC_REDIST ) /*!< \brief GIC ReDistributor register set access pointer */
 
 /** \brief  Structure type to access the Generic Interrupt Controller ReDistributor SGI_base (GICR_SGI)
 */
@@ -175,7 +176,13 @@ typedef struct
 #endif
 } GICRedistributor_Type;
 
+#ifdef QEMU
 #define GICRedistributor      ((GICRedistributor_Type      *)     VIRT_GIC_REDIST ) /*!< \brief GIC ReDistributor register set access pointer */
+#else
+#define ITScount 1
+#define RDcount  4
+#define GICRedistributor      ((GICRedistributor_Type      *)     (GIC600_BASE + ((4 + (2 * ITScount)) << 16))) /*!< \brief GIC ReDistributor register set access pointer */
+#endif
 
 extern uint32_t getAffinity(void);
 // #define CURRENT_GICR GICRedistributor[getAffinity()]

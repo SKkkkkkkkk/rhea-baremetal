@@ -10,5 +10,16 @@ target_sources(${TARTGET_NAME}
 target_link_libraries(${TARTGET_NAME}
 	PRIVATE
 		aarch64
-		pl011
 )
+
+if($CACHE{BOARD} STREQUAL "QEMU")
+	target_link_libraries(${TARTGET_NAME}
+		PRIVATE
+			pl011
+	)
+else()
+	target_link_libraries(${TARTGET_NAME}
+		PRIVATE
+			dw_apb_uart
+	)
+endif()

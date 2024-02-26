@@ -8,14 +8,31 @@ OUTPUT_FORMAT("elf64-littleaarch64")
 OUTPUT_ARCH(aarch64)
 ENTRY(entrypoint)
 
-#define __ROM_BASE 0x00000000
-#define __ROM_SIZE 64M
+#include "memmap.h"
 
-#define __SYSRAM_BASE 0x0e000000
-#define __SYSRAM_SIZE 16M
+#ifdef QEMU
 
-#define __DDR_BASE 0x40000000
-#define __DDR_SIZE 0xC0000000 //3G
+    #define __ROM_BASE VIRT_FLASH
+    #define __ROM_SIZE 64M
+
+    #define __SYSRAM_BASE VIRT_SECURE_MEM
+    #define __SYSRAM_SIZE 16M
+
+    #define __DDR_BASE VIRT_MEM
+    #define __DDR_SIZE 0xC0000000 //3G
+
+#else
+
+    #define __ROM_BASE A55_BOOTROM_BASE
+    #define __ROM_SIZE 64K
+
+    #define __SYSRAM_BASE APRAM_BASE
+    #define __SYSRAM_SIZE 64K
+
+    #define __DDR_BASE AP_DRAM_BASE
+    #define __DDR_SIZE 0xC0000000 //3G
+
+#endif
 
 #define __STACK_SIZE 0x4000 //16KB
 #define __HEAP_SIZE  0x4000 //16KB

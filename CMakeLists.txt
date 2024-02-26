@@ -6,11 +6,19 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(SDK_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 set(PROJECT_NAME "a" CACHE STRING "Project Name")
 set(PROJECT_PATH "" CACHE PATH "Project Path")
-if($CACHE{PROJECT_PATH} STREQUAL "")
+set(CPU "NORTH" CACHE STRING "CPU: NORTH or SOUTH")
+set(BOARD "FPGA" CACHE STRING "Board: QEMU, RTL, FPGA, EVB")
+if("$CACHE{PROJECT_PATH}" STREQUAL "")
 	message(FATAL_ERROR "PROJECT_PATH must be set!")
 endif()
-if(NOT IS_ABSOLUTE ${PROJECT_PATH})
+if(NOT IS_ABSOLUTE $CACHE{PROJECT_PATH})
 	set(PROJECT_PATH "$ENV{PWD}/${PROJECT_PATH}" CACHE PATH "Project path" FORCE)
+endif()
+set(CUSTOM_LINKER_SCRIPT "" CACHE FILEPATH "Custom Linker Script file")
+if(NOT "$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
+	if(NOT IS_ABSOLUTE $CACHE{CUSTOM_LINKER_SCRIPT})
+		set(CUSTOM_LINKER_SCRIPT "$ENV{PWD}/${CUSTOM_LINKER_SCRIPT}" CACHE FILEPATH "Project path" FORCE)
+	endif()
 endif()
 
 project("${PROJECT_NAME}"
@@ -24,7 +32,7 @@ project("${PROJECT_NAME}"
 ## common
 set(compile_options_common -Wall -Wno-unused-variable -Werror -ffunction-sections -fdata-sections)
 set(common_inc -I${SDK_PATH}/common/inc)
-add_compile_options(${compile_options_common} ${common_inc})
+add_compile_options(-D$CACHE{CPU} -D$CACHE{BOARD} ${compile_options_common} ${common_inc})
 
 set(link_options_common 
 	-static -nostartfiles -Wl,--fatal-warning -Wl,--gc-sections 
@@ -36,15 +44,12 @@ set(link_options_common
 set(compile_options_arch -mlittle-endian -mstrict-align -march=armv8.1-a -DA55)
 add_compile_options(${compile_options_arch})
 
-## board specific
-add_compile_options(-DQEMU_VIRT)
-
 # targets
 add_subdirectory(hw/cpu/aarch64 EXCLUDE_FROM_ALL)
 add_subdirectory(hw/gic/v3_v4 EXCLUDE_FROM_ALL)
 add_subdirectory(hw/uart/pl011 EXCLUDE_FROM_ALL)
+add_subdirectory(hw/uart/dw_apb_uart EXCLUDE_FROM_ALL)
 add_subdirectory(libs/newlib_stubs EXCLUDE_FROM_ALL)
-
 
 # app targets
 include($CACHE{PROJECT_PATH}/app.cmake)
@@ -64,17 +69,30 @@ target_include_directories($CACHE{PROJECT_NAME}.elf
 target_link_options($CACHE{PROJECT_NAME}.elf
 	PRIVATE
 		${link_options_common}
+		-T $CACHE{CUSTOM_LINKER_SCRIPT}
 )
+if(NOT "$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
+	target_link_options($CACHE{PROJECT_NAME}.elf 
+		PRIVATE
+			-T $CACHE{CUSTOM_LINKER_SCRIPT}
+	)
+endif()
 
 target_link_libraries($CACHE{PROJECT_NAME}.elf
 	PRIVATE
 		aarch64
-		linker_script
 		newlib_stubs
 		wakeup_core
 		gicv3
 		${app_dep}
 )
+
+if("$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
+	target_link_libraries($CACHE{PROJECT_NAME}.elf 
+		PRIVATE 
+			linker_script
+	)
+endif()
 
 # Cumtom targets
 

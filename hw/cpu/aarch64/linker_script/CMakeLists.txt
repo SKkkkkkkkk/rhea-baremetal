@@ -13,7 +13,8 @@ add_custom_command(
 	DEPENDS
 		${CMAKE_CURRENT_SOURCE_DIR}/linker.ld.S
 	COMMAND 
-		${TOOLCHAIN_PREFIX}cpp -P -x assembler-with-cpp -D__LINKER__ 
+		${TOOLCHAIN_PREFIX}cpp -P -x assembler-with-cpp -D__LINKER__
+		-I${SDK_PATH}/common/inc
 		${CMAKE_CURRENT_SOURCE_DIR}/linker.ld.S 
 		-o ${CMAKE_CURRENT_BINARY_DIR}/linker.ld
 	VERBATIM

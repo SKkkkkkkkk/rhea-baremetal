@@ -4,18 +4,29 @@
 #include <assert.h>
 
 #define DEFAULT_CONSOLE_BAUDRATE 115200U
-#define DEFAULT_UART_CLK 20000000U
+static uint32_t default_uart_clk = 25000000U;
 static bool console_init = false;
 
-#include "pl011.h"
+#ifdef QEMU 
+	#define UART_ID 0
+#else
+	#if defined(NORTH)
+		#define UART_ID SEEHI_UART0
+	#else
+		#define UART_ID SEEHI_UART1
+	#endif
+#endif
 
-void console_config(int console_id __unused, int console_input_clk __unused, int baudrate)
+#if defined QEMU
+
+#include "pl011.h"
+void console_config(int console_id __unused, int console_input_clk __unused, int baudrate __unused)
 {
 	uart_config _uart_config = {
 		.data_bits = 8,
 		.stop_bits = 1,
 		.parity = false,
-		.baudrate = baudrate
+		.baudrate = 9600
 	};
 	(void)uart_configure(&_uart_config);
 	console_init = true;
@@ -24,7 +35,7 @@ void console_config(int console_id __unused, int console_input_clk __unused, int
 int _write (int fd __unused, char *ptr, int len)
 {
 	if(!console_init)
-		console_config(0, DEFAULT_UART_CLK, DEFAULT_CONSOLE_BAUDRATE);
+		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
 	int i;
 	for(i=0;i<len;i++)
 	{
@@ -38,12 +49,66 @@ int _write (int fd __unused, char *ptr, int len)
 int _read(int fd __unused, char* ptr, int len)
 {
 	if(!console_init)
-		console_config(0, DEFAULT_UART_CLK, DEFAULT_CONSOLE_BAUDRATE);
+		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
 	int i;
 	for(i=0;i<len;i++)
 		while(uart_getchar(ptr+i)!=UART_OK);
 	return i;
 }
+
+#else
+
+// #ifdef EVB
+// // With EVB(ASIC), we have a real pll to get current uart clock.
+// #include "cru.h"
+// #endif
+#include "dw_apb_uart.h"
+void console_config(int console_id, int console_input_clk, int baudrate)
+{
+	(void)seehi_uart_config_baudrate(baudrate, console_input_clk, console_id);
+	console_init = true;
+}
+
+int _write (int fd __unused, char *ptr, int len)
+{
+	if(!console_init)
+	{
+	// #ifdef EVB
+	// 	(void)default_uart_clk;
+	// 	console_config(UART_ID, get_clk(CLK_UART_LP), DEFAULT_CONSOLE_BAUDRATE);
+	// #else
+		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
+	// #endif
+	}
+	int i;
+	for(i=0;i<len;i++)
+	{
+		uart_sendchar(UART_ID ,ptr[i]);
+		if(ptr[i] == '\n')
+			uart_sendchar(UART_ID,'\r');
+	}
+	return i;
+}
+
+int _read(int fd __unused, char* ptr, int len)
+{
+	if(!console_init)
+	{
+	// #ifdef EVB
+	// 	(void)default_uart_clk;
+	// 	console_config(UART_ID, get_clk(CLK_UART_LP), DEFAULT_CONSOLE_BAUDRATE);
+	// #else
+		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
+	// #endif
+	}
+	int i;
+	for(i=0;i<len;i++)
+		ptr[i] = uart_getchar(UART_ID);
+	return i;
+}
+
+#endif
+
 
 /* _exit */
 void _exit(int status __unused) {
