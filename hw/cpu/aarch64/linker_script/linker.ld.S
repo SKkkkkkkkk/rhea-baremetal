@@ -24,10 +24,10 @@ ENTRY(entrypoint)
 #else
 
 	#define __ROM_BASE A55_BOOTROM_BASE
-	#define __ROM_SIZE 64K
+	#define __ROM_SIZE 256K
 
 	#define __SRAM_BASE APRAM_BASE
-	#define __SRAM_SIZE 64K
+	#define __SRAM_SIZE 256K
 
 	#define __DDR_BASE AP_DRAM_BASE
 	#define __DDR_SIZE 0xC0000000 //3G
