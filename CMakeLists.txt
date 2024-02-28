@@ -15,7 +15,9 @@ if(NOT IS_ABSOLUTE $CACHE{PROJECT_PATH})
 	set(PROJECT_PATH "$ENV{PWD}/${PROJECT_PATH}" CACHE PATH "Project path" FORCE)
 endif()
 
-set(BOARD "FPGA" CACHE STRING "Board: QEMU, RTL, FPGA, EVB")
+set(CPU "NORTH" CACHE STRING "NORTH or SOUTH")
+
+set(BOARD "FPGA" CACHE STRING "QEMU, RTL, FPGA, EVB")
 
 set(MEM_SCHEME "ROM" CACHE STRING "ROM, SRAM, DRAM, CUSTOM")
 if($CACHE{MEM_SCHEME} STREQUAL "CUSTOM")
@@ -39,7 +41,7 @@ project("${PROJECT_NAME}"
 ## common
 set(compile_options_common -Wall -Wno-unused-variable -Werror -ffunction-sections -fdata-sections)
 set(common_inc -I${SDK_PATH}/common/inc) 
-add_compile_options(-D$CACHE{BOARD} ${compile_options_common} ${common_inc})
+add_compile_options(-D$CACHE{CPU} -D$CACHE{BOARD} ${compile_options_common} ${common_inc})
 
 set(link_options_common 
 	-static -nostartfiles -Wl,--fatal-warning -Wl,--gc-sections 
