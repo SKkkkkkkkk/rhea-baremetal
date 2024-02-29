@@ -62,6 +62,7 @@ add_subdirectory(hw/cpu/aarch64 EXCLUDE_FROM_ALL)
 add_subdirectory(hw/gic/v3_v4 EXCLUDE_FROM_ALL)
 add_subdirectory(hw/uart/pl011 EXCLUDE_FROM_ALL)
 add_subdirectory(hw/uart/dw_apb_uart EXCLUDE_FROM_ALL)
+add_subdirectory(hw/gpio/dw_apb_gpio EXCLUDE_FROM_ALL)
 add_subdirectory(libs/newlib_stubs EXCLUDE_FROM_ALL)
 
 # app targets
