@@ -214,8 +214,8 @@ int seehi_uart_config_baudrate(unsigned long baudrate, unsigned long uart_clk, s
 		break;
 	}
     IRQ_SetHandler(irq_nu, handler);
-    IRQ_SetPriority(irq_nu, 0 << 3);
-    IRQ_Enable(irq_nu);
+    GIC_SetPriority(irq_nu, 0 << 3);
+    GIC_EnableIRQ(irq_nu);
   #endif
     g_uart_used = uart_addr;
     return 0;

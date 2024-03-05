@@ -280,8 +280,8 @@ SECTIONS
 #if (MEM_SCHEME == MEM_SCHEME_ROM)
     __ROM_END__ = __RW_ROM_START__ + __RW_SIZE__;
     ASSERT(__ROM_END__ <= (__ROM_BASE + __ROM_SIZE), "ROM content has exceeded its limit.")
-#elif (MEM_SCHEME == MEM_SCHEME_SYSRAM)
-    ASSERT(__RAM_END__ <= (__SYSRAM_BASE + __SYSRAM_SIZE), "RW section has exceeded its limit.")
+#elif (MEM_SCHEME == MEM_SCHEME_SRAM)
+    ASSERT(__RAM_END__ <= (__SRAM_BASE + __SRAM_SIZE), "RW section has exceeded its limit.")
 #else
     ASSERT(__RAM_END__ <= (__DDR_BASE + __DDR_SIZE), "RW section has exceeded its limit.")
 #endif
