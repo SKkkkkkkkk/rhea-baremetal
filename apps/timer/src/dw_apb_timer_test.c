@@ -5,7 +5,7 @@
 #include "dw_apb_timers.h"
 #include "gicv3.h"
 
-#define TIMER_FREQ (20000000/100)
+#define TIMER_FREQ (25000000/100)
 
 #define Timerx6_T1_IRQn 32
 #define Timerx6_T2_IRQn 33

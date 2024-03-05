@@ -19,7 +19,6 @@ void irq32_handler(void)
 
 int main(void)
 {
-	GIC_Discovery();
 	GIC_Distributor_Init();
 	GIC_Redistributor_Init();
 	GIC_CPUInterfaceInit();
