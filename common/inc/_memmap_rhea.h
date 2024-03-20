@@ -28,3 +28,5 @@
 #define AP_cNOC_BASE 			 0x11000000
 #define AP_dNOC_BASE 			 0x11010000
 #define AP_DRAM_BASE 			 0x40000000
+
+#define SYSCTRL_CFG_BASE		 0x8300000000

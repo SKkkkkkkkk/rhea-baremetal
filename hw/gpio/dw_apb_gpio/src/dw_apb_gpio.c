@@ -143,8 +143,7 @@ void pinmux_select(gpio_port_t port, uint8_t pin, uint8_t function)
 	assert(pin < 32);
 	assert(function < 8);
 	uint8_t index = ((uint8_t)port * 32) + pin;
-	volatile uint32_t* pinmux = (volatile uint32_t*)((0x8000000000UL|(0x06UL<<31)) + 0x800UL);
-	// volatile uint32_t* pinmux = (volatile uint32_t*)((0x10000000000UL|(0x06UL<<32)) + 0x800UL);
+	volatile uint32_t* pinmux = (volatile uint32_t*)(SYSCTRL_CFG_BASE + 0x800UL);
 	pinmux[index] |= function<<4;
 	pinmux[index] |= 1;
 }

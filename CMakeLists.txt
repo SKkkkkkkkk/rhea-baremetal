@@ -40,7 +40,10 @@ project("${PROJECT_NAME}"
 
 ## common
 set(compile_options_common -Wall -Wno-unused-variable -Werror -ffunction-sections -fdata-sections)
-set(common_inc -I${SDK_PATH}/common/inc) 
+set(common_inc -I${SDK_PATH}/common/inc)
+if("$CACHE{CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+	set(compile_options_common ${compile_options_common} -O0 -g3 )
+endif()
 add_compile_options(-D$CACHE{CPU} -D$CACHE{BOARD} ${compile_options_common} ${common_inc})
 
 set(link_options_common 
@@ -65,6 +68,8 @@ add_subdirectory(hw/uart/dw_apb_uart EXCLUDE_FROM_ALL)
 add_subdirectory(hw/gpio/dw_apb_gpio EXCLUDE_FROM_ALL)
 add_subdirectory(hw/spi/dw_apb_ssi EXCLUDE_FROM_ALL)
 add_subdirectory(hw/timer/dw_apb_timers EXCLUDE_FROM_ALL)
+add_subdirectory(hw/system_counter EXCLUDE_FROM_ALL)
+
 add_subdirectory(libs/newlib_stubs EXCLUDE_FROM_ALL)
 add_subdirectory(libs/flash/nor EXCLUDE_FROM_ALL)
 add_subdirectory(libs/systimer EXCLUDE_FROM_ALL)
