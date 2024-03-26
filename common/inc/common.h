@@ -29,6 +29,8 @@
 #define     __IOM    volatile            /*!< \brief Defines 'read / write' structure member permissions */
 #define RESERVED(N, T) T RESERVED##N;    // placeholder struct members used for "reserved" areas
 
+#define UNREACHABLE() __builtin_unreachable()
+
 #ifdef __cplusplus
 }
 #endif
