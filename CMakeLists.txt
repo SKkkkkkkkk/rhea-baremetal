@@ -57,7 +57,7 @@ if(${CMAKE_C_COMPILER_VERSION} VERSION_GREATER_EQUAL 12.2.0)
 endif()
 
 ## architecture specific
-set(compile_options_arch -mlittle-endian -mstrict-align -march=armv8.1-a -DA55)
+set(compile_options_arch -mlittle-endian -mstrict-align -mcpu=cortex-a55 -mtune=cortex-a55 -DA55)
 add_compile_options(${compile_options_arch})
 
 # targets
