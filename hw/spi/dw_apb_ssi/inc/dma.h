@@ -1,7 +1,12 @@
 #ifndef __DMA_H__
 #define __DMA_H__
-#include "memmap.h"
+
+#include <stdint.h>
+#include <assert.h>
 #include "common.h"
+#include "memmap.h"
+
+#define DMA_BASE DMAC_BASE
 
 //common register offset
 #define DMAC_IDREG_0 0x0
@@ -536,8 +541,6 @@
 #define CHANNEL_LOCK_DMATRANSFER 0x0
 #define CHANNEL_LOCK_BLKTRANSFER 0x1
 
-
-
 #define HW_UART0_TX 0	
 #define HW_UART0_RX 1	
 #define HW_UART1_TX 2	
@@ -552,11 +555,14 @@
 #define HW_I2C3_RX 11	
 #define HW_PWM_RX 12	
 #define HW_BOOTSPI_TX 14	
-#define HW_BOOTSPI_RX 15	
+#define HW_BOOTSPI_RX 15
 
-#include <stdint.h>
-#include <assert.h>
-// #include "ape1210.h"
+#define HW_SPI0_RX 0
+#define HW_SPI1_RX 0
+#define HW_SPI2_RX 0
+#define HW_SPI0_TX 0
+#define HW_SPI1_TX 0
+#define HW_SPI2_TX 0
 
 typedef enum 
 {
@@ -606,7 +612,7 @@ extern uint8_t dma_channel_state[8];
 static inline bool is_dma_channel_free(DMA_Channel_t ch)
 {
 	assert((ch<=DMA_CHANNEL_8)&&(ch!=NO_FREE_DMA_CHANNEL));
-	if((dma_channel_state[ch-1]==0) && ((REG32(DMAC_BASE + DMAC_CHENREG_0) & (1<<(ch-1))) == 0))
+	if((dma_channel_state[ch-1]==0) && ((REG32(DMA_BASE + DMAC_CHENREG_0) & (1<<(ch-1))) == 0))
 		return true;
 	return false;
 }
@@ -633,32 +639,32 @@ static inline void free_dma_channel(DMA_Channel_t ch)
 static inline void dma_channel_start(DMA_Channel_t ch)
 {
 	assert((ch<=DMA_CHANNEL_8)&&(ch!=NO_FREE_DMA_CHANNEL));
-	REG32(DMAC_BASE + (CH1_INTSTATUS_ENABLEREG_0 + ((ch-1) * 0x100))) = 2; //Enable interrupt generation bit is valid
-	REG32(DMAC_BASE + (CH1_INTSIGNAL_ENABLEREG_0 + ((ch-1) * 0x100))) = 2; //Enable interrupt generation bit is valid
-	REG32(DMAC_BASE + DMAC_CFGREG_0) = 0x3;           //enable DMAC and its interrupt logic
-	REG32(DMAC_BASE + DMAC_CHENREG_0) = 0x101<<(ch-1);        //EN channel1
+	REG32(DMA_BASE + (CH1_INTSTATUS_ENABLEREG_0 + ((ch-1) * 0x100))) = 2; //Enable interrupt generation bit is valid
+	REG32(DMA_BASE + (CH1_INTSIGNAL_ENABLEREG_0 + ((ch-1) * 0x100))) = 2; //Enable interrupt generation bit is valid
+	REG32(DMA_BASE + DMAC_CFGREG_0) = 0x3;           //enable DMAC and its interrupt logic
+	REG32(DMA_BASE + DMAC_CHENREG_0) = 0x101<<(ch-1);        //EN channel1
 }
 
 static inline bool is_dma_channel_transfer_done(DMA_Channel_t ch)
 {
 	assert((ch<=DMA_CHANNEL_8)&&(ch!=NO_FREE_DMA_CHANNEL));
-	return (REG32(DMAC_BASE + CH1_INTSTATUS_0 + (ch-1)*0x100) & 0x00000002);
+	return (REG32(DMA_BASE + CH1_INTSTATUS_0 + (ch-1)*0x100) & 0x00000002);
 }
 
 static inline void clear_channel_transfer_done_irq(DMA_Channel_t ch)
 {
 	assert((ch<=DMA_CHANNEL_8)&&(ch!=NO_FREE_DMA_CHANNEL));
-	REG32(DMAC_BASE + CH1_INTCLEARREG_0 + ((ch-1) * 0x100)) = 0x00000002;
+	REG32(DMA_BASE + CH1_INTCLEARREG_0 + ((ch-1) * 0x100)) = 0x00000002;
 }
 
 static inline uint8_t dma_config(dma_config_t* config)
 {
 	DMA_Channel_t ch = config->ch;
 	if(ch == NO_FREE_DMA_CHANNEL)	return 1;
-	REG32(DMAC_BASE + CH1_SAR_0 + ((ch-1) * 0x100)) = config->sar;
-	REG32(DMAC_BASE + CH1_DAR_0 + ((ch-1) * 0x100)) = config->dar;
+	REG32(DMA_BASE + CH1_SAR_0 + ((ch-1) * 0x100)) = config->sar;
+	REG32(DMA_BASE + CH1_DAR_0 + ((ch-1) * 0x100)) = config->dar;
 
-	REG32(DMAC_BASE + CH1_CTL_0 + ((ch-1) * 0x100)) = AXI_MASTER_0 << 0 |
+	REG32(DMA_BASE + CH1_CTL_0 + ((ch-1) * 0x100)) = AXI_MASTER_0 << 0 |
 								AXI_MASTER_0 << 2 |
 								config->is_src_addr_increse << 4 |
 								config->is_dst_addr_increse << 6 |
@@ -668,7 +674,7 @@ static inline uint8_t dma_config(dma_config_t* config)
 								config->dst_msize <<18  |
 								NONPOSTED_LASTWRITE_EN << 30;
 
-	REG32(DMAC_BASE + CH1_CTL_32 + ((ch-1) * 0x100)) = ARLEN_EN << (38 - 32) |
+	REG32(DMA_BASE + CH1_CTL_32 + ((ch-1) * 0x100)) = ARLEN_EN << (38 - 32) |
 									config->axi_src_burst_length << (39 - 32) | //source burst length
 									AWLEN_EN << (47 - 32) |
 									config->axi_dst_burst_length << (48 - 32) | //destination burst length
@@ -678,16 +684,16 @@ static inline uint8_t dma_config(dma_config_t* config)
 									NOTLAST_SHADORLLI << (62 - 32) |
 									SHADORLLI_INVALID << (63 - 32);
 
-	REG32(DMAC_BASE + CH1_BLOCK_TS_0 + ((ch-1) * 0x100)) = config->block_ts;
+	REG32(DMA_BASE + CH1_BLOCK_TS_0 + ((ch-1) * 0x100)) = config->block_ts;
 
-	REG32(DMAC_BASE + CH1_CFG2_0 + ((ch-1) * 0x100)) = SRC_CONTIGUOUS << 0 |
+	REG32(DMA_BASE + CH1_CFG2_0 + ((ch-1) * 0x100)) = SRC_CONTIGUOUS << 0 |
 								DST_CONTIGUOUS << 2 |
 								config->handle_shake << 4;
 
 	uint8_t hardware_hs;
 	if(config->dir != MEM_TO_MEM)
 		hardware_hs = SRC_HARDWARE_HS;
-	REG32(DMAC_BASE + CH1_CFG2_32 + ((ch-1) * 0x100)) = config->dir << (32 - 32) |
+	REG32(DMA_BASE + CH1_CFG2_32 + ((ch-1) * 0x100)) = config->dir << (32 - 32) |
 									hardware_hs << (35 - 32) |
 									/*25 << (39 - 32) | //src handshake*/
 									CHANNEL_PRIORITY7 << (47 - 32) |

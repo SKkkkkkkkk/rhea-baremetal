@@ -12,7 +12,7 @@ typedef enum { T_R = 0, T_ONLY = 1, R_ONLY = 2, EEREAD = 3 } tmod_t;
 
 typedef enum { STD_SPI_FRF = 0, DUAL_SPI_FRF = 1, QUAD_SPI_FRF = 2/*, OCTAL_SPI_FRF = 3*/ } spi_frf_t;
 
-typedef enum { /*SPI0_ID = 0, SPI1_ID = 1, SPI2_ID = 2, */BOOTSPI_ID = 0, INVALID_SPI_ID } spi_id_t;
+typedef enum { SPI0_ID = 0, SPI1_ID = 1, SPI2_ID = 2, BOOTSPI_ID = 3 } spi_id_t;
 
 typedef struct _enhanced_transfer_format {
 	spi_frf_t spi_frf;
