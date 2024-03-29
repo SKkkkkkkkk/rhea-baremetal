@@ -1,23 +1,23 @@
 # 指定该模块(库)的名字
-set(LIB_OBJS_NAME nor_flash)
+set(TARTGET_NAME nor_flash)
 
 # 指定该模块(库)的类型,这里为静态库
-add_library(${LIB_OBJS_NAME} STATIC)
+add_library(${TARTGET_NAME} STATIC)
 
 # 该模块的源文件
-target_sources(${LIB_OBJS_NAME} 
+target_sources(${TARTGET_NAME} 
 	PRIVATE
 		src/nor_flash.c
 )
 
 # 该模块的头文件路径
-target_include_directories(${LIB_OBJS_NAME}
+target_include_directories(${TARTGET_NAME}
 	PUBLIC
 		inc
 )
 
 # 依赖模块
-target_link_libraries(${LIB_OBJS_NAME} 
+target_link_libraries(${TARTGET_NAME} 
 	PRIVATE
 		dw_apb_ssi
 		# systimer

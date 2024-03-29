@@ -2,24 +2,22 @@
 #include <string.h>
 #include "nand_flash.h"
 
-#define SPI_NUMS 4
 #define DUMMY_BYTE 0xFF
 
-static nand_flash_model_t nand_flash_model[SPI_NUMS] = {UNKNOWN_FLASH};
+static nand_flash_model_t nand_flash_model[BOOTSPI_ID + 1] = {UNKNOWN_NAND_FLASH};
 
 bool nand_flash_init(spi_id_t spi_id, uint16_t clk_div, uint8_t spi_mode, nand_flash_model_t _nand_flash_model)
 {
 	spi_init_config_t spi_init_config = {
-		.as_master = true,
 		.clock_div = clk_div,
 		.spi_id = spi_id,
 		.spi_mode = spi_mode
 	};
 	dw_spi_init(&spi_init_config);
 
-	if(_nand_flash_model == UNKNOWN_FLASH)
+	if(_nand_flash_model == UNKNOWN_NAND_FLASH)
 	{
-		nand_flash_model[spi_id] = UNKNOWN_FLASH;
+		nand_flash_model[spi_id] = UNKNOWN_NAND_FLASH;
 		return true;
 	}
 

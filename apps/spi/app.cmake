@@ -12,4 +12,5 @@ set(app_inc
 set(app_dep
 	dw_apb_ssi
 	nor_flash
+	nand_flash
 )

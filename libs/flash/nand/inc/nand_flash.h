@@ -14,7 +14,7 @@
 
 
 typedef enum {
-	UNKNOWN_FLASH = 0,
+	UNKNOWN_NAND_FLASH = 0,
 	GD5F1GQ4R	  = 0xC8C1,
 	GD5F1GQ5RExxG = 0xC841,
 } nand_flash_model_t;
