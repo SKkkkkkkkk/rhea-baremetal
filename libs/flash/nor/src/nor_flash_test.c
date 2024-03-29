@@ -1,8 +1,8 @@
 #include <stdio.h>
 #define OFF_RW_ADDR (2*1024*1024)
 
-// #define DMA_READ
-// #define DMA_WRITE
+#define DMA_READ
+#define DMA_WRITE
 // #define QUAD_READ
 
 #if !defined(DMA_WRITE) // flash_write
@@ -67,7 +67,7 @@ static uint8_t p25q40uj_w_buf[P25Q40UJ_SIZE] = {0};
 void nor_flash_test(spi_id_t spi_id, flash_model_t flash_model)
 {
 	uint8_t _flash_id[3];
-	if(flash_init(spi_id, 50, 3, flash_model) == false)
+	if(flash_init(spi_id, 2, 3, flash_model) == false)
 	{
 		printf("flash_init error.\n\r");
 		return;

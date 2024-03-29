@@ -8,11 +8,16 @@
     extern "C" {
 #endif
 
+#define SPI_FIFO_DEPTH 64
+#ifndef DMAC_FIFO_DEPTH
+#define DMAC_FIFO_DEPTH 4194304
+#endif
+
 typedef enum { T_R = 0, T_ONLY = 1, R_ONLY = 2, EEREAD = 3 } tmod_t;
 
 typedef enum { STD_SPI_FRF = 0, DUAL_SPI_FRF = 1, QUAD_SPI_FRF = 2/*, OCTAL_SPI_FRF = 3*/ } spi_frf_t;
 
-typedef enum { SPI0_ID = 0, SPI1_ID = 1, SPI2_ID = 2, BOOTSPI_ID = 3 } spi_id_t;
+typedef enum { /*SPI0_ID = 0, SPI1_ID = 1, SPI2_ID = 2,*/ BOOTSPI_ID = 0 } spi_id_t;
 
 typedef struct _enhanced_transfer_format {
 	spi_frf_t spi_frf;
@@ -28,7 +33,6 @@ typedef struct _enhanced_transfer_format {
 
 struct _spi_init_config {
 	spi_id_t spi_id;
-	bool as_master; //目前只支持master
 	uint8_t spi_mode; //0,1,2,3
 	uint16_t clock_div;
 };

@@ -2,42 +2,6 @@
 #define __DW_APB_SSI_REGS_H__
 
 #include "common.h"
-typedef struct {
-	__IOM uint32_t MAP;
-	__IOM uint32_t MAP_BAUDR;
-	__IOM uint32_t MAP_SER;
-	RESERVED(0 [61], uint32_t)
-	__IOM uint32_t CTRLR0;
-	__IOM uint32_t CTRLR1;
-	__IOM uint32_t SSIENR;
-	__IOM uint32_t MWCR;
-	__IOM uint32_t SER;
-	__IOM uint32_t BAUDR;
-	__IOM uint32_t TXFTLR;
-	__IOM uint32_t RXFTLR;
-	__IOM uint32_t TXFLR;
-	__IOM uint32_t RXFLR;
-	__IOM uint32_t SR;
-	__IOM uint32_t IMR;
-	__IOM uint32_t ISR;
-	__IOM uint32_t RISR;
-	__IOM uint32_t TXOICR;
-	__IOM uint32_t RXOICR;
-	__IOM uint32_t RXUICR;
-	__IOM uint32_t MSTICR;
-	__IOM uint32_t ICR;
-	__IOM uint32_t DMACR;
-	__IOM uint32_t DMATDLR;
-	__IOM uint32_t DMARDLR;
-	__IOM uint32_t IDR;
-	__IOM uint32_t SSI_VERSION_ID;
-	__IOM uint32_t DR;
-	RESERVED(1 [35], uint32_t)
-	__IOM uint32_t RX_SAMPLE_DLY;
-	__IOM uint32_t SPI_CTRLR0;
-	__IOM uint32_t TXD_DRIVE_EDGE;
-	__IOM uint32_t RSVD;
-} BOOTSPI_TypeDef;
 
 typedef struct {
 	__IOM uint32_t CTRLR0;

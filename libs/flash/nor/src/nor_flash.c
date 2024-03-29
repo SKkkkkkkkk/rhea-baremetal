@@ -3,25 +3,17 @@
 #include <stdio.h>
 #include "dw_apb_ssi.h"
 #include "nor_flash_port.h"
-// #include "ape1210_gpio.h"
 #include "nor_flash.h"
 // #include "systimer.h" /* for flash_reset */
 
-#define SPI_TX_FIFO_DEPTH 32U
-#define SPI_RX_FIFO_DEPTH 32U
-#define DMA_FIFO_DEPTH 2048U
+#define CPU_READ_BLOCK_SIZE SPI_FIFO_DEPTH
+#define BLOCK_SIZE_DMA 		DMAC_FIFO_DEPTH
 
-#define CPU_READ_BLOCK_SIZE SPI_RX_FIFO_DEPTH
-#define BLOCK_SIZE_DMA DMA_FIFO_DEPTH
-
-#define SPI_NUMS 4
-
-static flash_model_t flash_model[SPI_NUMS] = {UNKNOWN_FLASH};
+static flash_model_t flash_model[BOOTSPI_ID + 1] = {UNKNOWN_FLASH};
 
 bool flash_init(spi_id_t spi_id, uint16_t clk_div, uint8_t spi_mode, flash_model_t _flash_model)
 {
 	spi_init_config_t spi_init_config = {
-		.as_master = true,
 		.clock_div = clk_div,
 		.spi_id = spi_id,
 		.spi_mode = spi_mode
@@ -480,7 +472,7 @@ void flash_write_dma(spi_id_t spi_id, uint32_t addr, uint8_t *buf, uint32_t size
 static inline void _flash_read_dma(spi_id_t spi_id, uint32_t addr, uint8_t* const buf, uint32_t size)
 {
 	assert(buf);
-	// assert(size <= 2048);
+	// assert(size <= DMAC_FIFO_DEPTH);
 	if(size==0)
 		return;
 	uint8_t cmd[4];
@@ -555,7 +547,7 @@ bool is_dw_spi_eeprom_read_dma_end(spi_id_t spi_id, DMA_Channel_t ch);
 uint32_t flash_read_dma_start(spi_id_t spi_id, DMA_Channel_t* const ch, uint32_t addr, uint8_t* const buf, uint32_t size)
 {
 	assert(buf);
-	// assert(size <= 2048);
+	// assert(size <= DMAC_FIFO_DEPTH);
 	if(size==0)
 		return 0;
 	uint8_t cmd[4];
@@ -689,7 +681,7 @@ static inline bool _is_flash_read_dma_end(spi_id_t spi_id, uint8_t dma_ch)
 	// {
 	// 	REG32(DMAC_BASE + CH1_INTCLEARREG_0) = 0x00000002;
 	// 	void spi_disable(spi_id_t spi_id, bool is_master);
-	// 	spi_disable(spi_id, true);
+	// 	spi_disable(spi_id);
 
 	// 	return true;
 	// }
