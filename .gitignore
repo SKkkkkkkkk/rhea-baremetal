@@ -10,3 +10,4 @@ cscope.*
 
 # Ignore build directory
 build/
+gdb*
