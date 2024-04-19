@@ -21,12 +21,13 @@ func entrypoint
 
 	mrs     x1, CurrentEL
 	cmp     x1, #(MODE_EL3 << MODE_EL_SHIFT)
-	b.ne    1f
+	b.ne    rtl_init_start
 	mrs x0, scr_el3
 	mov x0, #0x53e                 	// #568
 	msr scr_el3, x0
-1:
 
+rtl_init_start:
+#if defined(RTL)
 	// Initialise the register bank
 	mov x0, xzr
 	mov x1, xzr
@@ -99,6 +100,16 @@ func entrypoint
 	fmov    d29,  xzr
 	fmov    d30,  xzr
 	fmov    d31,  xzr
+
+	//! This code may cause synchronization issues if all cores are not released at the same time.
+	bl  get_core_id
+	ldr x1, =secondary_cores_entry
+	mov x2, x0
+	lsl x2, x2, 4 // x0 = x0 * 16
+	str xzr, [x1, x2]
+	add x2, x2, 8
+	str xzr, [x1, x2]
+#endif
 rtl_init_end:
 
 	msr spsel, 1

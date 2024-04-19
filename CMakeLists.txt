@@ -39,7 +39,7 @@ project("${PROJECT_NAME}"
 # apply to all targets
 
 ## common
-set(compile_options_common -Wall -Wno-unused-variable -Werror -ffunction-sections -fdata-sections)
+set(compile_options_common -Wall -Wno-unused-variable -ffreestanding -Werror -ffunction-sections -fdata-sections)
 set(common_inc -I${SDK_PATH}/common/inc)
 if("$CACHE{CMAKE_BUILD_TYPE}" STREQUAL "Debug")
 	set(compile_options_common ${compile_options_common} -O0 -g3 )
