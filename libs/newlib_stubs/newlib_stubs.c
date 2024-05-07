@@ -10,11 +10,7 @@ static bool console_init = false;
 #ifdef QEMU 
 	#define UART_ID 0
 #else
-	#if defined(NORTH)
-		#define UART_ID SEEHI_UART0
-	#else
-		#define UART_ID SEEHI_UART1
-	#endif
+	#define UART_ID SEEHI_UART0
 #endif
 
 #if defined QEMU
