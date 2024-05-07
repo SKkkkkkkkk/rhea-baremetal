@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "wakeup_core.h"
-#include "component1/inc/componet1.h"
 
 void core1_entry()
 {
@@ -26,7 +25,6 @@ void core3_entry()
 
 int main()
 {
-	component1();
 	printf("hello world from core0\n\r");
 	wakeup_core(1, core1_entry);
 	return 0;

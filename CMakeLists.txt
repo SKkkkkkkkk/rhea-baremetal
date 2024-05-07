@@ -74,8 +74,6 @@ add_subdirectory(libs/flash/nor EXCLUDE_FROM_ALL)
 add_subdirectory(libs/flash/nand EXCLUDE_FROM_ALL)
 add_subdirectory(libs/systimer EXCLUDE_FROM_ALL)
 
-add_subdirectory(verification EXCLUDE_FROM_ALL)
-
 # app targets
 if(NOT $CACHE{PROJECT_PATH} STREQUAL "")
 	include($CACHE{PROJECT_PATH}/app.cmake)
@@ -112,7 +110,6 @@ target_link_libraries($CACHE{PROJECT_NAME}.elf
 		newlib_stubs
 		wakeup_core
 		gicv3
-		verification_all_in_one
 		${app_dep}
 )
 
