@@ -4,7 +4,6 @@
 #include "gicv3.h"
 #include "arch_helpers.h"
 
-
 void irq0_handler(void)
 {
 	printf("This is irq0\n\r");
@@ -20,7 +19,6 @@ void irq32_handler(void)
 
 int main(void)
 {
-	GIC_Discovery();
 	GIC_Distributor_Init();
 	GIC_Redistributor_Init();
 	GIC_CPUInterfaceInit();

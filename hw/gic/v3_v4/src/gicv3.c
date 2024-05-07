@@ -83,7 +83,7 @@ static inline void gicv3_rdistif_mark_core_awake()
 	while((CURRENT_GICR.RD_base.WAKER & WAKER_CA_BIT) != 0U);
 }
 
-void GIC_Discovery()
+static void GIC_Discovery()
 {
 	// must support system register access
 	assert((read_id_aa64pfr0_el1() & (ID_AA64PFR0_GIC_MASK << ID_AA64PFR0_GIC_SHIFT)) != 0U);
@@ -92,20 +92,20 @@ void GIC_Discovery()
 	uint8_t gicv2_compat = (GICDistributor->CTLR>>CTLR_ARE_S_SHIFT) & CTLR_ARE_S_MASK;
 
 	assert(gic_version == 0x3);
-	printf("GICv%u with%s legacy support detected.\n", gic_version,
-					(gicv2_compat == 0U) ? "" : "out");
+	// printf("GICv%u with%s legacy support detected.\n", gic_version,
+	// 				(gicv2_compat == 0U) ? "" : "out");
 
 	uint8_t index = 0;
 	do 
 	{
-		printf("GICR[%u] with Affinity: 0x%x\n", index, GICRedistributor[index].RD_base.TYPER[1]);
+		// printf("GICR[%u] with Affinity: 0x%x\n", index, GICRedistributor[index].RD_base.TYPER[1]);
 		if( getAffinity() == GICRedistributor[index].RD_base.TYPER[1])
 			current_gicr_index = index;
 		index++;
 	} while((GICRedistributor[index].RD_base.TYPER[0] & (1<<4)) == 0); // Keep incrementing until GICR_TYPER.Last reports no more RDs in block
-	printf("GICR[%u] with Affinity: 0x%x\n", index, GICRedistributor[index].RD_base.TYPER[1]);
+	// printf("GICR[%u] with Affinity: 0x%x\n", index, GICRedistributor[index].RD_base.TYPER[1]);
 	assert(current_gicr_index != 0xff);
-	printf("Current GICR index is %u\n", current_gicr_index);
+	// printf("Current GICR index is %u\n", current_gicr_index);
 }
 
 static inline uint16_t GIC_Get_MAX_SPI_INITD()
@@ -117,6 +117,7 @@ static inline uint16_t GIC_Get_MAX_SPI_INITD()
 
 void GIC_Distributor_Init()
 {
+	GIC_Discovery();
 	/*
 	 * Clear the "enable" bits for G0/G1S/G1NS interrupts before configuring
 	 * the ARE_S bit. The Distributor might generate a system error
@@ -131,7 +132,7 @@ void GIC_Distributor_Init()
 
 	/* Set the default attribute of all SPIs */
 	max_spi_id = GIC_Get_MAX_SPI_INITD();
-	printf("Maximum SPI INTID supported: %u\n", max_spi_id);
+	// printf("Maximum SPI INTID supported: %u\n", max_spi_id);
 
 	/* Treat all SPIs as G0 by default. We do 32 at a time. */
 	for (uint16_t i = MIN_SPI_ID; i <= max_spi_id; i += (1U << IGROUPR_SHIFT))

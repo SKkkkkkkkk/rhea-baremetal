@@ -4,8 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-void GIC_Discovery();
-
 void GIC_Distributor_Init();
 
 void GIC_Redistributor_Init();

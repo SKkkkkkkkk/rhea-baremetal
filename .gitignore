@@ -10,3 +10,7 @@ cscope.*
 
 # Ignore build directory
 build/
+
+# Others
+gdb*
+qemu.sh

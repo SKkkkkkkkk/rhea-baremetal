@@ -4,7 +4,9 @@ include(cmake_helper/cross_compile/generic_gcc.cmake)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(SDK_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+
 set(PROJECT_NAME "a" CACHE STRING "Project Name")
+
 set(PROJECT_PATH "" CACHE PATH "Project Path")
 set(EXTRA_SRCS "" CACHE FILEPATH "Extra Sources to join the compiling.")
 set(EXTRA_INCS "" CACHE PATH "Extra Directories to include.")
@@ -13,6 +15,19 @@ if(NOT $CACHE{PROJECT_PATH} STREQUAL "")
 		set(PROJECT_PATH "$ENV{PWD}/$CACHE{PROJECT_PATH}" CACHE PATH "Project path" FORCE)
 	endif()
 endif()
+
+set(BOARD "FPGA" CACHE STRING "QEMU, RTL, FPGA, EVB")
+
+set(MEM_SCHEME "ROM" CACHE STRING "ROM, SRAM, DRAM, CUSTOM")
+if($CACHE{MEM_SCHEME} STREQUAL "CUSTOM")
+	set(CUSTOM_LINKER_SCRIPT "" CACHE FILEPATH "Custom Linker Script file")
+	if(NOT "$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
+		if(NOT IS_ABSOLUTE $CACHE{CUSTOM_LINKER_SCRIPT})
+			set(CUSTOM_LINKER_SCRIPT "$ENV{PWD}/${CUSTOM_LINKER_SCRIPT}" CACHE FILEPATH "Project path" FORCE)
+		endif()
+	endif()
+endif()
+
 
 project("${PROJECT_NAME}"
 	VERSION 0.1.0
@@ -23,28 +38,42 @@ project("${PROJECT_NAME}"
 # apply to all targets
 
 ## common
-set(compile_options_common -Wall -Wno-unused-variable -Werror -ffunction-sections -fdata-sections)
+set(compile_options_common -Wall -Wno-unused-variable -ffreestanding -Werror -ffunction-sections -fdata-sections)
 set(common_inc -I${SDK_PATH}/common/inc)
-add_compile_options(${compile_options_common} ${common_inc})
+if("$CACHE{CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+	set(compile_options_common ${compile_options_common} -O0 -g3 )
+endif()
+add_compile_options(-D$CACHE{BOARD} ${compile_options_common} ${common_inc})
 
 set(link_options_common 
 	-static -nostartfiles -Wl,--fatal-warning -Wl,--gc-sections 
 	-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/$CACHE{PROJECT_NAME}.map -Wl,--print-memory-usage
 	-Wl,--wrap=memcpy -Wl,--wrap=memmove -Wl,--wrap=memset -Wl,--wrap=memcmp
 )
+## With ld.bfd version 2.39 and newer new warnings are added. Skip those since we are not loaded by a elf loader.
+if(${CMAKE_C_COMPILER_VERSION} VERSION_GREATER_EQUAL 12.2.0)
+    set(link_options_common ${link_options_common} -Wl,--no-warn-rwx-segments)
+endif()
 
 ## architecture specific
-set(compile_options_arch -mlittle-endian -mstrict-align -march=armv8.1-a -DA55)
+set(compile_options_arch -mlittle-endian -mstrict-align -mcpu=cortex-a55 -mtune=cortex-a55 -DA55)
 add_compile_options(${compile_options_arch})
-
-## board specific
-add_compile_options(-DQEMU_VIRT)
 
 # targets
 add_subdirectory(hw/cpu/aarch64 EXCLUDE_FROM_ALL)
 add_subdirectory(hw/gic/v3_v4 EXCLUDE_FROM_ALL)
 add_subdirectory(hw/uart/pl011 EXCLUDE_FROM_ALL)
+add_subdirectory(hw/uart/dw_apb_uart EXCLUDE_FROM_ALL)
+add_subdirectory(hw/gpio/dw_apb_gpio EXCLUDE_FROM_ALL)
+add_subdirectory(hw/spi/dw_apb_ssi EXCLUDE_FROM_ALL)
+add_subdirectory(hw/timer/dw_apb_timers EXCLUDE_FROM_ALL)
+add_subdirectory(hw/system_counter EXCLUDE_FROM_ALL)
+
 add_subdirectory(libs/newlib_stubs EXCLUDE_FROM_ALL)
+add_subdirectory(libs/flash/nor EXCLUDE_FROM_ALL)
+add_subdirectory(libs/flash/nand EXCLUDE_FROM_ALL)
+add_subdirectory(libs/systimer EXCLUDE_FROM_ALL)
+
 add_subdirectory(verification EXCLUDE_FROM_ALL)
 
 # app targets
@@ -68,18 +97,31 @@ target_include_directories($CACHE{PROJECT_NAME}.elf
 target_link_options($CACHE{PROJECT_NAME}.elf
 	PRIVATE
 		${link_options_common}
+		-T $CACHE{CUSTOM_LINKER_SCRIPT}
 )
+if(NOT "$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
+	target_link_options($CACHE{PROJECT_NAME}.elf 
+		PRIVATE
+			-T $CACHE{CUSTOM_LINKER_SCRIPT}
+	)
+endif()
 
 target_link_libraries($CACHE{PROJECT_NAME}.elf
 	PRIVATE
 		aarch64
-		linker_script
 		newlib_stubs
 		wakeup_core
 		gicv3
 		verification_all_in_one
 		${app_dep}
 )
+
+if("$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
+	target_link_libraries($CACHE{PROJECT_NAME}.elf 
+		PRIVATE 
+			linker_script
+	)
+endif()
 
 # Cumtom targets
 

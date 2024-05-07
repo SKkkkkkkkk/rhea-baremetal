@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <assert.h>
 
 #define REG64(addr) (*(volatile uint64_t *)(uintptr_t)(addr))
 #define REG32(addr) (*(volatile uint32_t *)(uintptr_t)(addr))
@@ -27,6 +28,8 @@
 #define     __OM     volatile            /*!< \brief Defines 'write only' structure member permissions */
 #define     __IOM    volatile            /*!< \brief Defines 'read / write' structure member permissions */
 #define RESERVED(N, T) T RESERVED##N;    // placeholder struct members used for "reserved" areas
+
+#define UNREACHABLE() __builtin_unreachable()
 
 #ifdef __cplusplus
 }
