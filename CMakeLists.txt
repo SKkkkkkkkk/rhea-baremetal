@@ -3,20 +3,19 @@ include(cmake_helper/common/out_of_source.cmake)
 include(cmake_helper/cross_compile/generic_gcc.cmake)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(SDK_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+set(SDK_PATH ${CMAKE_SOURCE_DIR})
 
 set(PROJECT_NAME "a" CACHE STRING "Project Name")
 
 set(PROJECT_PATH "" CACHE PATH "Project Path")
-set(EXTRA_SRCS "" CACHE FILEPATH "Extra Sources to join the compiling.")
-set(EXTRA_INCS "" CACHE PATH "Extra Directories to include.")
-if(NOT $CACHE{PROJECT_PATH} STREQUAL "")
-	if(NOT IS_ABSOLUTE ${PROJECT_PATH})
-		set(PROJECT_PATH "$ENV{PWD}/$CACHE{PROJECT_PATH}" CACHE PATH "Project path" FORCE)
-	endif()
+if("$CACHE{PROJECT_PATH}" STREQUAL "")
+	message(FATAL_ERROR "PROJECT_PATH must be set!")
+endif()
+if(NOT IS_ABSOLUTE $CACHE{PROJECT_PATH})
+	set(PROJECT_PATH "$ENV{PWD}/${PROJECT_PATH}" CACHE PATH "Project path" FORCE)
 endif()
 
-set(BOARD "RTL" CACHE STRING "QEMU, RTL, FPGA, EVB")
+set(BOARD "FPGA" CACHE STRING "QEMU, RTL, FPGA, EVB")
 
 set(MEM_SCHEME "ROM" CACHE STRING "ROM, SRAM, DRAM, CUSTOM")
 if($CACHE{MEM_SCHEME} STREQUAL "CUSTOM")
@@ -82,13 +81,11 @@ add_executable($CACHE{PROJECT_NAME}.elf)
 
 target_sources($CACHE{PROJECT_NAME}.elf
 	PRIVATE
-		$CACHE{EXTRA_SRCS}
 		${app_src}
 )
 
 target_include_directories($CACHE{PROJECT_NAME}.elf
     PRIVATE
-		$CACHE{EXTRA_INCS}
         ${app_inc}
 )
 
@@ -123,16 +120,10 @@ endif()
 # Cumtom targets
 
 ## dump
-
 add_custom_command(
-	OUTPUT $CACHE{PROJECT_NAME}.dump
+	TARGET $CACHE{PROJECT_NAME}.elf POST_BUILD
 	COMMAND ${CMAKE_OBJDUMP} -Sx $CACHE{PROJECT_NAME}.elf > $CACHE{PROJECT_NAME}.dump
-	DEPENDS $CACHE{PROJECT_NAME}.elf
 	WORKING_DIRECTORY   "${CMAKE_BINARY_DIR}"
-	VERBATIM
-)
-add_custom_target(dump
-	DEPENDS $CACHE{PROJECT_NAME}.dump
 )
 
 ## bin
@@ -143,12 +134,9 @@ add_custom_command(
 )
 
 ## hex
-
 add_custom_command(
 	OUTPUT 
-		$CACHE{PROJECT_NAME}.verilog.hex
 		$CACHE{PROJECT_NAME}.hex
-	COMMAND ${CMAKE_OBJCOPY} -O verilog $CACHE{PROJECT_NAME}.elf $CACHE{PROJECT_NAME}.verilog.hex
 	COMMAND hexdump -e '"%08x\\n"' -v $CACHE{PROJECT_NAME}.bin > $CACHE{PROJECT_NAME}.hex
 	DEPENDS
 		$CACHE{PROJECT_NAME}.elf
@@ -156,7 +144,6 @@ add_custom_command(
 )
 add_custom_target(hex
 	DEPENDS 
-		$CACHE{PROJECT_NAME}.verilog.hex
 		$CACHE{PROJECT_NAME}.hex
 )
 
