@@ -1,18 +1,17 @@
 cmake_minimum_required(VERSION 3.15...3.28)
 include(cmake_helper/common/out_of_source.cmake)
 include(cmake_helper/cross_compile/generic_gcc.cmake)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "Generate compile commands database")
+set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Debug, Release, RelWithDebInfo, MinSizeRel")
+set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install CACHE INTERNAL "Install path")
 
 set(SDK_PATH ${CMAKE_SOURCE_DIR})
 
 set(PROJECT_NAME "a" CACHE STRING "Project Name")
 
-set(PROJECT_PATH "" CACHE PATH "Project Path")
+set(PROJECT_PATH "" CACHE PATH "Project Path") # since the type is PATH, set comman will convert it to absolute automatically.
 if("$CACHE{PROJECT_PATH}" STREQUAL "")
 	message(FATAL_ERROR "PROJECT_PATH must be set!")
-endif()
-if(NOT IS_ABSOLUTE $CACHE{PROJECT_PATH})
-	set(PROJECT_PATH "$ENV{PWD}/${PROJECT_PATH}" CACHE PATH "Project path" FORCE)
 endif()
 
 set(BOARD "FPGA" CACHE STRING "QEMU, RTL, FPGA, EVB")
@@ -20,10 +19,8 @@ set(BOARD "FPGA" CACHE STRING "QEMU, RTL, FPGA, EVB")
 set(MEM_SCHEME "ROM" CACHE STRING "ROM, SRAM, DRAM, CUSTOM")
 if($CACHE{MEM_SCHEME} STREQUAL "CUSTOM")
 	set(CUSTOM_LINKER_SCRIPT "" CACHE FILEPATH "Custom Linker Script file")
-	if(NOT "$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
-		if(NOT IS_ABSOLUTE $CACHE{CUSTOM_LINKER_SCRIPT})
-			set(CUSTOM_LINKER_SCRIPT "$ENV{PWD}/${CUSTOM_LINKER_SCRIPT}" CACHE FILEPATH "Project path" FORCE)
-		endif()
+	if("$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
+		message(FATAL_ERROR "CUSTOM_LINKER_SCRIPT must be set, with MEM_SCHEME=CUSTOM")
 	endif()
 endif()
 
@@ -92,14 +89,7 @@ target_include_directories($CACHE{PROJECT_NAME}.elf
 target_link_options($CACHE{PROJECT_NAME}.elf
 	PRIVATE
 		${link_options_common}
-		-T $CACHE{CUSTOM_LINKER_SCRIPT}
 )
-if(NOT "$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
-	target_link_options($CACHE{PROJECT_NAME}.elf 
-		PRIVATE
-			-T $CACHE{CUSTOM_LINKER_SCRIPT}
-	)
-endif()
 
 target_link_libraries($CACHE{PROJECT_NAME}.elf
 	PRIVATE
@@ -110,7 +100,12 @@ target_link_libraries($CACHE{PROJECT_NAME}.elf
 		${app_dep}
 )
 
-if("$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
+if("$CACHE{MEM_SCHEME}" STREQUAL "CUSTOM")
+	target_link_options($CACHE{PROJECT_NAME}.elf 
+		PRIVATE
+			-T $CACHE{CUSTOM_LINKER_SCRIPT}
+	)
+else()
 	target_link_libraries($CACHE{PROJECT_NAME}.elf 
 		PRIVATE 
 			linker_script
