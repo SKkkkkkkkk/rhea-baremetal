@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.15...3.28)
 include(cmake_helper/common/out_of_source.cmake)
 include(cmake_helper/cross_compile/generic_gcc.cmake)
+include(cmake_helper/common/custom_build_type.cmake)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "Generate compile commands database")
-set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Debug, Release, RelWithDebInfo, MinSizeRel")
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install CACHE INTERNAL "Install path")
 
 set(SDK_PATH ${CMAKE_SOURCE_DIR})
