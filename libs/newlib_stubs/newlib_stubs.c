@@ -2,6 +2,7 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <stdint.h>
 
 #define DEFAULT_CONSOLE_BAUDRATE 115200U
 static uint32_t default_uart_clk = 25000000U;
@@ -250,7 +251,7 @@ void call_init_array() {
  */
 void call_fini_array() {
     ptr_func_t array = (ptr_func_t)&__fini_array_start;
-    while (array < (ptr_func_t)&__fini_array_end) {
+    while ((void*)array < (void*)&__fini_array_end) {
         (*array)();
         array++;
     }

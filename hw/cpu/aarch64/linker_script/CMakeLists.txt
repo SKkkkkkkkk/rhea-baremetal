@@ -13,7 +13,7 @@ add_custom_command(
 	DEPENDS
 		${CMAKE_CURRENT_SOURCE_DIR}/linker.ld.S
 	COMMAND 
-		${TOOLCHAIN_PREFIX}cpp -P -x assembler-with-cpp -D__LINKER__
+		${CMAKE_C_COMPILER} -E -P -x assembler-with-cpp -D__LINKER__
 		-I${SDK_PATH}/common/inc -D$CACHE{BOARD}
 		-DMEM_SCHEME_ROM=1 -DMEM_SCHEME_SRAM=2 -DMEM_SCHEME_DRAM=3 -DMEM_SCHEME_CUSTOM=4 -DMEM_SCHEME=MEM_SCHEME_$CACHE{MEM_SCHEME} 
 		${CMAKE_CURRENT_SOURCE_DIR}/linker.ld.S 

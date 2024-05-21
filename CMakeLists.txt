@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.15...3.28)
 include(cmake_helper/common/out_of_source.cmake)
-include(cmake_helper/cross_compile/generic_gcc.cmake)
+include(cmake_helper/cross_compile/toolchian_file.cmake)
 include(cmake_helper/common/custom_build_type.cmake)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "Generate compile commands database")
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install CACHE INTERNAL "Install path")
 
 set(SDK_PATH ${CMAKE_SOURCE_DIR})
@@ -24,36 +23,77 @@ if($CACHE{MEM_SCHEME} STREQUAL "CUSTOM")
 	endif()
 endif()
 
-
 project("${PROJECT_NAME}"
 	VERSION 0.1.0
 	DESCRIPTION "${PROJECT_NAME}"
 	LANGUAGES C ASM
 )
-
-# apply to all targets
+# for all targets
 
 ## common
-set(compile_options_common -Wall -Wno-unused-variable -ffreestanding -Werror -ffunction-sections -fdata-sections)
-set(common_inc -I${SDK_PATH}/common/inc)
-if("$CACHE{CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-	set(compile_options_common ${compile_options_common} -O0 -g3 )
-endif()
-add_compile_options(-D$CACHE{BOARD} ${compile_options_common} ${common_inc})
+set(compile_options_common
+	-Wall -Werror -Wno-unused-variable 
+	-ffunction-sections -fdata-sections
+	-mstrict-align
+	-I${SDK_PATH}/common/inc
+)
 
-set(link_options_common 
-	-static -nostartfiles -Wl,--fatal-warning -Wl,--gc-sections 
-	-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/$CACHE{PROJECT_NAME}.map -Wl,--print-memory-usage
+set(link_options_common
+	-static
+	-nostdlib # we will explicitly link libc.a, libm.a and libgcc.a later
+	-Wl,--fatal-warnings
+	-Wl,--gc-sections
+	-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/$CACHE{PROJECT_NAME}.map
+	-Wl,--print-memory-usage
 	-Wl,--wrap=memcpy -Wl,--wrap=memmove -Wl,--wrap=memset -Wl,--wrap=memcmp
 )
-## With ld.bfd version 2.39 and newer new warnings are added. Skip those since we are not loaded by a elf loader.
-if(${CMAKE_C_COMPILER_VERSION} VERSION_GREATER_EQUAL 12.2.0)
-    set(link_options_common ${link_options_common} -Wl,--no-warn-rwx-segments)
-endif()
 
 ## architecture specific
-set(compile_options_arch -mlittle-endian -mstrict-align -mcpu=cortex-a55 -mtune=cortex-a55 -DA55)
-add_compile_options(${compile_options_arch})
+set(compile_options_arch -mlittle-endian -mcpu=cortex-a55 -mtune=cortex-a55)
+
+## compiler specific
+if(${IS_CLANG})
+	set(ARM_GNU_CC aarch64-none-elf-gcc)
+elseif(${IS_GCC})
+	set(ARM_GNU_CC ${CMAKE_C_COMPILER})
+else()
+	message(FATAL_ERROR "Unknown compiler")
+endif()
+
+### set sysroot for clang
+if(${IS_CLANG})
+	execute_process(
+		COMMAND ${ARM_GNU_CC} ${compile_options_arch} -print-sysroot
+		OUTPUT_VARIABLE SYS_ROOT
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+	set(compile_options_common --sysroot=${SYS_ROOT} ${compile_options_common})
+	set(link_options_common --sysroot=${SYS_ROOT} ${link_options_common})
+endif()
+
+### libgcc
+execute_process(
+	COMMAND ${ARM_GNU_CC} ${compile_options_arch} -print-libgcc-file-name
+	OUTPUT_VARIABLE LIBGCC
+	OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+### set target triple for clang
+if(${IS_CLANG})
+	set(compile_options_arch -target aarch64-none-elf ${compile_options_arch})
+	set(link_options_common -target aarch64-none-elf ${link_options_common})
+endif()
+
+### With ld.bfd version 2.39 and newer new warnings are added. 
+### Skip those since we are not loaded by a elf loader.
+if(${IS_GCC})
+	if(${CMAKE_C_COMPILER_VERSION} VERSION_GREATER_EQUAL 12.2.0)
+		set(link_options_common ${link_options_common} -Wl,--no-warn-rwx-segments)
+	endif()
+endif()
+
+## this apply to all targets
+add_compile_options(-DA55 -D$CACHE{BOARD} ${compile_options_arch} ${compile_options_common})
 
 # targets
 add_subdirectory(hw/cpu/aarch64 EXCLUDE_FROM_ALL)
@@ -98,6 +138,7 @@ target_link_libraries($CACHE{PROJECT_NAME}.elf
 		wakeup_core
 		gicv3
 		${app_dep}
+		-lc -lm ${LIBGCC}
 )
 
 if("$CACHE{MEM_SCHEME}" STREQUAL "CUSTOM")
@@ -117,7 +158,7 @@ endif()
 ## dump
 add_custom_command(
 	TARGET $CACHE{PROJECT_NAME}.elf POST_BUILD
-	COMMAND ${CMAKE_OBJDUMP} -Sx $CACHE{PROJECT_NAME}.elf > $CACHE{PROJECT_NAME}.dump
+	COMMAND ${CMAKE_OBJDUMP} -dx $CACHE{PROJECT_NAME}.elf > $CACHE{PROJECT_NAME}.dump
 	WORKING_DIRECTORY   "${CMAKE_BINARY_DIR}"
 )
 
@@ -150,3 +191,6 @@ set_property(TARGET $CACHE{PROJECT_NAME}.elf
 		$CACHE{PROJECT_NAME}.bin
 		$CACHE{PROJECT_NAME}.dump
 )
+
+# compile database
+include(cmake_helper/common/compile_database.cmake)

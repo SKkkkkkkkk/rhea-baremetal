@@ -1,11 +1,12 @@
 #include "asm_macros.S"
 
 
+
 /* -----------------------------------------------------------------------------
  * Very simple stackless exception handlers.
  * -----------------------------------------------------------------------------
  */
-	.globl vector_table
+ 	.globl vector_table
 vector_base vector_table
 
 	/* -----------------------------------------------------
@@ -91,8 +92,7 @@ vector_entry serror_aarch32
 	b .
 end_vector_entry serror_aarch32
 
-	func _sync_exception_sph
-_sync_exception_sph:
+func _sync_exception_sph
 	// asm_read_sysreg_elx esr
 	// mov x1, x0
 	// asm_read_sysreg_elx far
@@ -102,8 +102,7 @@ _sync_exception_sph:
 	b .
 endfunc _sync_exception_sph
 
-	func _fiq_sph
-_fiq_sph:
+func _fiq_sph
 	/* Save volatile registers. */
 	STP		X0, X1, [SP, #-0x10]!
 	STP		X2, X3, [SP, #-0x10]!
@@ -186,17 +185,10 @@ _fiq_sph:
 	ERET
 endfunc _fiq_sph
 
-
-	.global _sync_exception_spt
-	.weak _sync_exception_spt
-	func _sync_exception_spt
-_sync_exception_spt:
+func _sync_exception_spt
 	b .
 endfunc _sync_exception_spt
 
-	.global _irq_spt
-	.weak _irq_spt
-	func _irq_spt
-_irq_spt:
+func _irq_spt
 	b .
 endfunc _irq_spt

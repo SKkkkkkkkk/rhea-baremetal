@@ -83,7 +83,7 @@ uint64_t systimer_get_elapsed_time(uint8_t timer_id, time_precision_t time_preci
     if(time_precision == IN_MS)
         return COUNT_TO_MSEC(diffcnt, SYSTIMER_CLOCK);
     // if(time_precision == IN_S)
-        return COUNT_TO_SEC(diffcnt, SYSTIMER_CLOCK);
+    return COUNT_TO_SEC(diffcnt, SYSTIMER_CLOCK);
 }
 
 /*判断是否超时*/

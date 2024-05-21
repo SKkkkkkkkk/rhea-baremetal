@@ -690,9 +690,7 @@ static inline uint8_t dma_config(dma_config_t* config)
 								DST_CONTIGUOUS << 2 |
 								config->handle_shake << 4;
 
-	uint8_t hardware_hs;
-	if(config->dir != MEM_TO_MEM)
-		hardware_hs = SRC_HARDWARE_HS;
+	uint8_t hardware_hs = SRC_HARDWARE_HS;
 	REG32(DMA_BASE + CH1_CFG2_32 + ((ch-1) * 0x100)) = config->dir << (32 - 32) |
 									hardware_hs << (35 - 32) |
 									/*25 << (39 - 32) | //src handshake*/

@@ -89,9 +89,10 @@ static void GIC_Discovery()
 	assert((read_id_aa64pfr0_el1() & (ID_AA64PFR0_GIC_MASK << ID_AA64PFR0_GIC_SHIFT)) != 0U);
 
 	uint8_t gic_version = (GICDistributor->PIDR2>>PIDR2_ARCH_REV_SHIFT) & PIDR2_ARCH_REV_MASK;
-	uint8_t gicv2_compat = (GICDistributor->CTLR>>CTLR_ARE_S_SHIFT) & CTLR_ARE_S_MASK;
+	// uint8_t gicv2_compat = (GICDistributor->CTLR>>CTLR_ARE_S_SHIFT) & CTLR_ARE_S_MASK;
 
 	assert(gic_version == 0x3);
+	(void)gic_version; // Silence unused variable warning
 	// printf("GICv%u with%s legacy support detected.\n", gic_version,
 	// 				(gicv2_compat == 0U) ? "" : "out");
 
@@ -270,6 +271,7 @@ void GIC_EnableIRQ(uint16_t int_id)
 		GICDistributor->ISENABLER[int_id >> ISENABLER_SHIFT] = 1U << (int_id % 32);
 		break;
 	default:
+		break;
 	}
 }
 
@@ -301,6 +303,7 @@ void GIC_DisableIRQ(uint16_t int_id)
 		GICDistributor->ICENABLER[int_id >> ISENABLER_SHIFT] = 1U << (int_id % 32);
 		break;
 	default:
+		break;
 	}
 }
 
@@ -332,6 +335,7 @@ void GIC_SetPendingIRQ(uint16_t int_id)
 		GICDistributor->ISPENDR[int_id >> ISPENDR_SHIFT] = 1U << (int_id % 32);
 		break;
 	default:
+		break;
 	}
 }
 
@@ -348,6 +352,7 @@ void GIC_ClearPendingIRQ(uint16_t int_id)
 		GICDistributor->ICPENDR[int_id >> ICPENDR_SHIFT] = 1U << (int_id % 32);
 		break;
 	default:
+		break;
 	}
 }
 
@@ -370,6 +375,7 @@ void GIC_SetEdgeOrLevel(uint16_t int_id, bool is_level_triggered)
 			GICDistributor->ICFGR[int_id >> ICFGR_SHIFT] |= 0b10 << ((int_id % 16) << 1U);
 		break;
 	default:
+		break;
 	}
 }
 
@@ -403,6 +409,7 @@ void GIC_SetPriority(uint16_t int_id, uint8_t priority)
 		GICDistributor->IPRIORITYR[int_id] = priority;
 		break;
 	default:
+		break;
 	}
 }
 
@@ -466,6 +473,7 @@ void GIC_SetGroup(uint16_t int_id, GICv3_Goroup_t group)
 		}
 		break;
 	default:
+		break;
 	}
 }
 
@@ -526,6 +534,7 @@ IRQHandler_t IRQ_GetHandler (uint16_t int_id)
 void fiq_handler(void)
 {
 	uint32_t iar;
+	IRQHandler_t irq_handler;
 	do {
 		iar = read_icc_iar0_el1();
 
@@ -534,7 +543,7 @@ void fiq_handler(void)
 		case 0 ... 15: // SGIs
 		case 16 ... 31: // PPIs
 		case 32 ... 1019: // SPIs
-			IRQHandler_t irq_handler = IRQ_GetHandler(iar);
+			irq_handler = IRQ_GetHandler(iar);
 			if(irq_handler!=(IRQHandler_t)0)
 				irq_handler();
 			break;

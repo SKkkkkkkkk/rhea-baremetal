@@ -10,6 +10,8 @@ cscope.*
 
 # Ignore build directory
 build/
+build_clang/
+build_gcc/
 
 # Others
 gdb*

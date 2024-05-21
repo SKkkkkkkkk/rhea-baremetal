@@ -89,15 +89,15 @@ static inline void _flash_write_enable(spi_id_t spi_id)
 	return;
 }
 
-static inline void _flash_write_disable(spi_id_t spi_id)
-{
-	uint8_t cmd = Flash_WriteDisable;
-	dw_spi_transmit_only(spi_id, &cmd, 1, 1);
+// static inline void _flash_write_disable(spi_id_t spi_id)
+// {
+// 	uint8_t cmd = Flash_WriteDisable;
+// 	dw_spi_transmit_only(spi_id, &cmd, 1, 1);
 
-	while(_flash_is_enable_write(spi_id));
+// 	while(_flash_is_enable_write(spi_id));
 
-	return;
-}
+// 	return;
+// }
 
 static inline void _flash_write_extended_address_reg(spi_id_t spi_id, uint8_t ext_ar)
 {
@@ -114,23 +114,23 @@ static inline void _flash_write_extended_address_reg(spi_id_t spi_id, uint8_t ex
 	return;
 }
 
-static inline void _flash_enter_4b_addr_mode(spi_id_t spi_id)
-{
-	assert((flash_model[spi_id]==GD25LQ255)||(flash_model[spi_id]==W25Q256JW));
-	uint8_t cmd = Flash_Enter_4Byte_Address_Mode;
-	dw_spi_transmit_only(spi_id, &cmd, 1, 1); 
-	/*需要读flash状态寄存器确定是否进入4B Mode吗？*/
-	return;
-}
+// static inline void _flash_enter_4b_addr_mode(spi_id_t spi_id)
+// {
+// 	assert((flash_model[spi_id]==GD25LQ255)||(flash_model[spi_id]==W25Q256JW));
+// 	uint8_t cmd = Flash_Enter_4Byte_Address_Mode;
+// 	dw_spi_transmit_only(spi_id, &cmd, 1, 1); 
+// 	/*需要读flash状态寄存器确定是否进入4B Mode吗？*/
+// 	return;
+// }
 
-static inline void _flash_exit_4b_addr_mode(spi_id_t spi_id)
-{
-	assert((flash_model[spi_id]==GD25LQ255)||(flash_model[spi_id]==W25Q256JW));
-	uint8_t cmd = Flash_Exit_4Byte_Address_Mode;
-	dw_spi_transmit_only(spi_id, &cmd, 1, 1);
-	/*需要读flash状态寄存器确定是否退出4B Mode吗？*/
-	return;
-}
+// static inline void _flash_exit_4b_addr_mode(spi_id_t spi_id)
+// {
+// 	assert((flash_model[spi_id]==GD25LQ255)||(flash_model[spi_id]==W25Q256JW));
+// 	uint8_t cmd = Flash_Exit_4Byte_Address_Mode;
+// 	dw_spi_transmit_only(spi_id, &cmd, 1, 1);
+// 	/*需要读flash状态寄存器确定是否退出4B Mode吗？*/
+// 	return;
+// }
 
 
 static inline void _flash_read(spi_id_t spi_id, uint32_t addr, uint8_t* const buf, uint32_t size)
@@ -675,18 +675,18 @@ static void _flash_page_write_dma(spi_id_t spi_id, uint32_t addr, uint8_t const 
 	}
 }
 
-static inline bool _is_flash_read_dma_end(spi_id_t spi_id, uint8_t dma_ch)
-{
-	// if((REG32(DMAC_BASE + CH1_INTSTATUS_0) & 0x00000002) != 0)
-	// {
-	// 	REG32(DMAC_BASE + CH1_INTCLEARREG_0) = 0x00000002;
-	// 	void spi_disable(spi_id_t spi_id, bool is_master);
-	// 	spi_disable(spi_id);
+// static inline bool _is_flash_read_dma_end(spi_id_t spi_id, uint8_t dma_ch)
+// {
+// 	// if((REG32(DMAC_BASE + CH1_INTSTATUS_0) & 0x00000002) != 0)
+// 	// {
+// 	// 	REG32(DMAC_BASE + CH1_INTCLEARREG_0) = 0x00000002;
+// 	// 	void spi_disable(spi_id_t spi_id, bool is_master);
+// 	// 	spi_disable(spi_id);
 
-	// 	return true;
-	// }
-	return false;
-}
+// 	// 	return true;
+// 	// }
+// 	return false;
+// }
 
 
 /* 
@@ -716,39 +716,39 @@ static inline void _flash_write_sr(spi_id_t spi_id, uint8_t* sr)
 	return;
 }
 
-static inline void _flash_reset(spi_id_t spi_id)
-{
-	uint8_t cmd[2] = {Flash_ResetEnable, Flash_ResetMemory};
-	dw_spi_transmit_only(spi_id, cmd, 1, true);
-	dw_spi_transmit_only(spi_id, cmd+1, 1, true);
-}
+// static inline void _flash_reset(spi_id_t spi_id)
+// {
+// 	uint8_t cmd[2] = {Flash_ResetEnable, Flash_ResetMemory};
+// 	dw_spi_transmit_only(spi_id, cmd, 1, true);
+// 	dw_spi_transmit_only(spi_id, cmd+1, 1, true);
+// }
 
-static inline void _flash_reset_4(spi_id_t spi_id)
-{
-	uint8_t cmd[2] = {0x00, 0x00};
-	enhanced_transfer_format_t enhanced_transfer_format = {
-		.spi_frf = QUAD_SPI_FRF,
-		.trans_type = 2,
-		.instruction = cmd[0],
-		.ins_lenth = 8,
-		.address = NULL,
-		.addr_lenth = 0,
-		.data = NULL,
-		.data_nums = 0
-	};
-	dw_spi_enhanced_write(spi_id, &enhanced_transfer_format, true);
-	enhanced_transfer_format.instruction = cmd[1];
-	dw_spi_enhanced_write(spi_id, &enhanced_transfer_format, true);
-}
+// static inline void _flash_reset_4(spi_id_t spi_id)
+// {
+// 	uint8_t cmd[2] = {0x00, 0x00};
+// 	enhanced_transfer_format_t enhanced_transfer_format = {
+// 		.spi_frf = QUAD_SPI_FRF,
+// 		.trans_type = 2,
+// 		.instruction = cmd[0],
+// 		.ins_lenth = 8,
+// 		.address = NULL,
+// 		.addr_lenth = 0,
+// 		.data = NULL,
+// 		.data_nums = 0
+// 	};
+// 	dw_spi_enhanced_write(spi_id, &enhanced_transfer_format, true);
+// 	enhanced_transfer_format.instruction = cmd[1];
+// 	dw_spi_enhanced_write(spi_id, &enhanced_transfer_format, true);
+// }
 
-static inline void flash_reset(spi_id_t spi_id)
-{
-	_flash_reset_4(spi_id);
-	// systimer_delay(30, IN_US);
+// static inline void flash_reset(spi_id_t spi_id)
+// {
+// 	_flash_reset_4(spi_id);
+// 	// systimer_delay(30, IN_US);
 
-	_flash_reset(spi_id);
-	// systimer_delay(30, IN_US);
-}
+// 	_flash_reset(spi_id);
+// 	// systimer_delay(30, IN_US);
+// }
 
 void flash_set_QE_bit(spi_id_t spi_id)
 {
@@ -760,27 +760,27 @@ void flash_set_QE_bit(spi_id_t spi_id)
 	_flash_write_sr(spi_id, sr);
 }
 
-static inline void _flash_enable_qpi(spi_id_t spi_id)
-{
-	uint8_t cmd[1] = {Flash_Enable_QPI};
-	dw_spi_transmit_only(spi_id, cmd, 1, true);
-}
+// static inline void _flash_enable_qpi(spi_id_t spi_id)
+// {
+// 	uint8_t cmd[1] = {Flash_Enable_QPI};
+// 	dw_spi_transmit_only(spi_id, cmd, 1, true);
+// }
 
-static inline void _flash_disable_qpi(spi_id_t spi_id)
-{
-	enhanced_transfer_format_t enhanced_transfer_format = {
-		.spi_frf = QUAD_SPI_FRF,
-		.trans_type = 2,
-		.instruction = Flash_Disable_QPI,
-		.ins_lenth = 8,
-		.address = NULL,
-		.addr_lenth = 0,
-		.data = NULL,
-		.data_nums = 0,
-		.wait_cycles = 0
-	};
-	dw_spi_enhanced_write(spi_id, &enhanced_transfer_format, false);
-}
+// static inline void _flash_disable_qpi(spi_id_t spi_id)
+// {
+// 	enhanced_transfer_format_t enhanced_transfer_format = {
+// 		.spi_frf = QUAD_SPI_FRF,
+// 		.trans_type = 2,
+// 		.instruction = Flash_Disable_QPI,
+// 		.ins_lenth = 8,
+// 		.address = NULL,
+// 		.addr_lenth = 0,
+// 		.data = NULL,
+// 		.data_nums = 0,
+// 		.wait_cycles = 0
+// 	};
+// 	dw_spi_enhanced_write(spi_id, &enhanced_transfer_format, false);
+// }
 
 static inline void _flash_read_quad(spi_id_t spi_id, uint32_t addr, uint8_t* const buf, uint32_t size)
 {
