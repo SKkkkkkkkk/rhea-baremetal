@@ -48,6 +48,11 @@ set(link_options_common
 	-Wl,--wrap=memcpy -Wl,--wrap=memmove -Wl,--wrap=memset -Wl,--wrap=memcmp
 )
 
+## if CMAKE_BUILD_TYPE is not Debug or RelWithDebInfo, strip all symbols
+if(NOT $CACHE{CMAKE_BUILD_TYPE} STREQUAL "Debug" AND NOT $CACHE{CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
+	list(APPEND link_options_common -Wl,--strip-all)
+endif()
+
 ## architecture specific
 set(compile_options_arch -mlittle-endian -mcpu=cortex-a55 -mtune=cortex-a55)
 

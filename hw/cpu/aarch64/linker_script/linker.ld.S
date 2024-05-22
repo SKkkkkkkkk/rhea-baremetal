@@ -285,4 +285,6 @@ SECTIONS
 #else
     ASSERT(__RAM_END__ <= (__DDR_BASE + __DDR_SIZE), "RW section has exceeded its limit.")
 #endif
+
+	/DISCARD/ : { *(.eh_frame) }
 }
