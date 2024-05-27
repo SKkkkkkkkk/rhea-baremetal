@@ -220,41 +220,41 @@ int wait(int *status __unused) {
 	return -1;
 }
 
-typedef void (*ptr_func_t)();
-extern char __preinit_array_start;
-extern char __preinit_array_end;
+// typedef void (*ptr_func_t)();
+// extern char __preinit_array_start;
+// extern char __preinit_array_end;
 
-extern char __init_array_start;
-extern char __init_array_end;
+// extern char __init_array_start;
+// extern char __init_array_end;
 
-extern char __fini_array_start;
-extern char __fini_array_end;
+// extern char __fini_array_start;
+// extern char __fini_array_end;
 
-/** Call constructors for static objects
- */
-void call_init_array() {
-    uintptr_t* func = (uintptr_t*)&__preinit_array_start;
-    while (func < (uintptr_t*)&__preinit_array_end) {
-		(*(ptr_func_t)(*func))();
-        func++;
-    }
+// /** Call constructors for static objects
+//  */
+// void call_init_array() {
+//     uintptr_t* func = (uintptr_t*)&__preinit_array_start;
+//     while (func < (uintptr_t*)&__preinit_array_end) {
+// 		(*(ptr_func_t)(*func))();
+//         func++;
+//     }
 
-    func = (uintptr_t*)&__init_array_start;
-    while (func < (uintptr_t*)&__init_array_end) {
-        (*(ptr_func_t)(*func))();
-        func++;
-    }
-}
+//     func = (uintptr_t*)&__init_array_start;
+//     while (func < (uintptr_t*)&__init_array_end) {
+//         (*(ptr_func_t)(*func))();
+//         func++;
+//     }
+// }
 
-/** Call destructors for static objects
- */
-void call_fini_array() {
-    ptr_func_t array = (ptr_func_t)&__fini_array_start;
-    while (array < (ptr_func_t)&__fini_array_end) {
-        (*array)();
-        array++;
-    }
-}
+// /** Call destructors for static objects
+//  */
+// void call_fini_array() {
+//     ptr_func_t array = (ptr_func_t)&__fini_array_start;
+//     while (array < (ptr_func_t)&__fini_array_end) {
+//         (*array)();
+//         array++;
+//     }
+// }
 
 
 
