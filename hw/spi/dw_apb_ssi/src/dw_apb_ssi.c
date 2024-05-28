@@ -192,6 +192,7 @@ void dw_spi_deinit(spi_id_t spi_id, bool as_master)
 //非安全模式下的发送不可被打断，否则发送数据可能不是连续的，但是发送的数据长度不限
 void dw_spi_transmit_and_receive(spi_id_t spi_id, void *t_buf, void *r_buf, uint32_t tr_size, bool safe_mode)
 {
+	(void)get_spi_state; // avoid unused function warning in release mode
 	assert(get_spi_state(spi_id)!=0);
 	assert(t_buf);
 	assert(r_buf);

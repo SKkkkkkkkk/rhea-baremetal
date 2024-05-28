@@ -116,4 +116,6 @@ SECTIONS
 		_stack_end = .;
 		_stack_top = .;
 	} >STACK_REGION
+
+	/DISCARD/ : { *(.eh_frame*) }
 }

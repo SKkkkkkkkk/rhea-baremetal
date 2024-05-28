@@ -6,13 +6,6 @@
 
 #define Mailbox_IRQn	59
 
-static inline void udelay(uint64_t x)
-{
-	for(uint32_t i = x; i!=0; i--)
-		asm volatile("");
-}
-
-
 static volatile uint32_t mailbox_i = 0U;
 void mailbox_irqhandler(void)
 {

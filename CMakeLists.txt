@@ -32,7 +32,7 @@ project("${PROJECT_NAME}"
 
 ## common
 set(compile_options_common
-	-Wall -Werror -Wno-unused-variable 
+	-Wall -Werror -Wno-unused-variable -Wno-unused-function
 	-ffunction-sections -fdata-sections
 	-mstrict-align
 	-I${SDK_PATH}/common/inc
