@@ -120,27 +120,27 @@ rtl_init_end:
 	cmp x0, x19
 	bne data_init_end
 
-	ldr	x0, =__BSS_START__
-	ldr	x1, =__BSS_END__
+	ldr	x0, =_bss_start
+	ldr	x1, =_bss_end
 	cmp x0, x1
 	b.eq clear_loop_end
 clear_loop:
-	str	xzr, [x0], #8
+	stp	xzr, xzr, [x0], #16
 	cmp	x0, x1
 	b.lo	clear_loop
 clear_loop_end:
 
-	ldr x0, =__RW_RAM_START__
-	ldr x1, =__RW_ROM_START__
-	ldr x2, =__RW_SIZE__
+	ldr x0, =_data_start
+	ldr x1, =_data_start_lma
+	ldr x2, =_data_size
 	cmp x0, x1
 	b.eq data_init_end
 data_init_start:
 	cbz x2, data_init_end
-	ldr x3, [x1], #8
-	str x3, [x0], #8
-	sub x2, x2, #8
-	cbnz x2, data_init_start
+	ldp	x3, x4, [x1], #16
+	stp	x3, x4, [x0], #16
+	sub	x2, x2, #16
+	b data_init_start
 data_init_end:
 
 	msr daifclr, #0xf	//enable syserror,irq,fiq
@@ -151,21 +151,17 @@ data_init_end:
 #if defined(ENABLE_MMU_CACHE) && (ENABLE_MMU_CACHE != 0)
 	bl config_mmu
 #endif
-#if !defined(aarch64_libc)
-	// bl call_init_array
-#endif
 	bl main
 dead:
 	wfi
 	b	dead
 endfunc entrypoint
 
-
 #define CORE_STACK_SIZE (16*1024/4)
 // x0 - core_id
 func setup_stack
-	.extern __STACK_TOP__
-	ldr x1, =__STACK_TOP__
+	.extern _stack_top
+	ldr x1, =_stack_top
 	bfi x1, xzr, #0, #4 // clear bit0-3
 
 	/* 
@@ -180,7 +176,6 @@ func setup_stack
 
 	ret
 endfunc setup_stack
-
 
 /*
 	x0 - core-id
@@ -208,7 +203,6 @@ func secondary_core_boot
 	b secondary_core_boot
 endfunc secondary_core_boot
 
-
 	.globl get_core_id
 func get_core_id
 	mrs x0, mpidr_el1
@@ -221,7 +215,6 @@ MT:
 	lsr x0, x0, 8
 	ret
 endfunc get_core_id
-
 
 	.globl getAffinity
 func getAffinity

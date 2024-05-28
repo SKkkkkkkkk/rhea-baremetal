@@ -141,12 +141,12 @@ int _lseek(int file __unused, int ptr __unused, int dir __unused) {
 }
 
 void *_sbrk(int incr) {
-	extern char __HEAP_START__;
-	extern char __HEAP_END__;
-	static unsigned char *heap = (unsigned char *)(uintptr_t)(&__HEAP_START__);
+	extern char _heap_start;
+	extern char _heap_end;
+	static unsigned char *heap = (unsigned char *)(uintptr_t)(&_heap_start);
 	unsigned char *prev_heap;
 	prev_heap = heap;
-	if((uintptr_t)(heap + incr) > (uintptr_t)&__HEAP_END__)
+	if((uintptr_t)(heap + incr) > (uintptr_t)&_heap_end)
 	{
 		_write(1, "Heap Overflow!\n\r", 16);
 		while(1) asm volatile("");
@@ -221,41 +221,41 @@ int wait(int *status __unused) {
 	return -1;
 }
 
-typedef void (*ptr_func_t)();
-extern char __preinit_array_start;
-extern char __preinit_array_end;
+// typedef void (*ptr_func_t)();
+// extern char __preinit_array_start;
+// extern char __preinit_array_end;
 
-extern char __init_array_start;
-extern char __init_array_end;
+// extern char __init_array_start;
+// extern char __init_array_end;
 
-extern char __fini_array_start;
-extern char __fini_array_end;
+// extern char __fini_array_start;
+// extern char __fini_array_end;
 
-/** Call constructors for static objects
- */
-void call_init_array() {
-    uintptr_t* func = (uintptr_t*)&__preinit_array_start;
-    while (func < (uintptr_t*)&__preinit_array_end) {
-		(*(ptr_func_t)(*func))();
-        func++;
-    }
+// /** Call constructors for static objects
+//  */
+// void call_init_array() {
+//     uintptr_t* func = (uintptr_t*)&__preinit_array_start;
+//     while (func < (uintptr_t*)&__preinit_array_end) {
+// 		(*(ptr_func_t)(*func))();
+//         func++;
+//     }
 
-    func = (uintptr_t*)&__init_array_start;
-    while (func < (uintptr_t*)&__init_array_end) {
-        (*(ptr_func_t)(*func))();
-        func++;
-    }
-}
+//     func = (uintptr_t*)&__init_array_start;
+//     while (func < (uintptr_t*)&__init_array_end) {
+//         (*(ptr_func_t)(*func))();
+//         func++;
+//     }
+// }
 
-/** Call destructors for static objects
- */
-void call_fini_array() {
-    ptr_func_t array = (ptr_func_t)&__fini_array_start;
-    while ((void*)array < (void*)&__fini_array_end) {
-        (*array)();
-        array++;
-    }
-}
+// /** Call destructors for static objects
+//  */
+// void call_fini_array() {
+//     ptr_func_t array = (ptr_func_t)&__fini_array_start;
+//     while (array < (ptr_func_t)&__fini_array_end) {
+//         (*array)();
+//         array++;
+//     }
+// }
 
 
 
