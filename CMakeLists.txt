@@ -57,31 +57,19 @@ endif()
 set(compile_options_arch -mlittle-endian -mcpu=cortex-a55 -mtune=cortex-a55)
 
 ## compiler specific
-if(${IS_CLANG})
-	set(ARM_GNU_CC aarch64-none-elf-gcc)
-elseif(${IS_GCC})
-	set(ARM_GNU_CC ${CMAKE_C_COMPILER})
-else()
-	message(FATAL_ERROR "Unknown compiler")
-endif()
 
 ### set sysroot for clang
 if(${IS_CLANG})
-	execute_process(
-		COMMAND ${ARM_GNU_CC} ${compile_options_arch} -print-sysroot
-		OUTPUT_VARIABLE SYS_ROOT
-		OUTPUT_STRIP_TRAILING_WHITESPACE
-	)
-	set(compile_options_common --sysroot=${SYS_ROOT} ${compile_options_common})
-	set(link_options_common --sysroot=${SYS_ROOT} ${link_options_common})
+	set(compile_options_common --sysroot=${SDK_PATH}/libs/arm_gnu/13.2.rel1/sysroot ${compile_options_common})
+	set(link_options_common --sysroot=${SDK_PATH}/libs/arm_gnu/13.2.rel1/sysroot ${link_options_common})
 endif()
 
 ### libgcc
-execute_process(
-	COMMAND ${ARM_GNU_CC} ${compile_options_arch} -print-libgcc-file-name
-	OUTPUT_VARIABLE LIBGCC
-	OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+if(${IS_CLANG})
+	set(LIBGCC ${SDK_PATH}/libs/arm_gnu/13.2.rel1/builtins/libgcc.a)
+else()
+	set(LIBGCC "-lgcc")
+endif()
 
 ### set target triple for clang
 if(${IS_CLANG})
