@@ -140,12 +140,12 @@ int _lseek(int file __unused, int ptr __unused, int dir __unused) {
 }
 
 void *_sbrk(int incr) {
-	extern char __HEAP_START__;
-	extern char __HEAP_END__;
-	static unsigned char *heap = (unsigned char *)(uintptr_t)(&__HEAP_START__);
+	extern char _heap_start;
+	extern char _heap_end;
+	static unsigned char *heap = (unsigned char *)(uintptr_t)(&_heap_start);
 	unsigned char *prev_heap;
 	prev_heap = heap;
-	if((uintptr_t)(heap + incr) > (uintptr_t)&__HEAP_END__)
+	if((uintptr_t)(heap + incr) > (uintptr_t)&_heap_end)
 	{
 		_write(1, "Heap Overflow!\n\r", 16);
 		while(1) asm volatile("");
