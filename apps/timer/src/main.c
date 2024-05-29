@@ -5,9 +5,7 @@
 
 int main()
 {
-	GIC_Distributor_Init();
-	GIC_Redistributor_Init();
-	GIC_CPUInterfaceInit();
+	GIC_Init();
 
 #if 1
 	void dw_apb_timer_test(bool sample);

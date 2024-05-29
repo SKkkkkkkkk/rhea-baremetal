@@ -101,7 +101,10 @@ static void GIC_Discovery()
 	{
 		// printf("GICR[%u] with Affinity: 0x%x\n", index, GICRedistributor[index].RD_base.TYPER[1]);
 		if( getAffinity() == GICRedistributor[index].RD_base.TYPER[1])
+		{
 			current_gicr_index = index;
+			break;
+		}
 		index++;
 	} while((GICRedistributor[index].RD_base.TYPER[0] & (1<<4)) == 0); // Keep incrementing until GICR_TYPER.Last reports no more RDs in block
 	// printf("GICR[%u] with Affinity: 0x%x\n", index, GICRedistributor[index].RD_base.TYPER[1]);
@@ -512,7 +515,6 @@ void GIC_Init()
 {
 	for (uint16_t i = 0U; i < IRQ_GIC_LINE_COUNT; i++)
 		IRQTable[i] = (IRQHandler_t)NULL;
-	GIC_Discovery();
 	GIC_Distributor_Init();
 	GIC_Redistributor_Init();
 	GIC_CPUInterfaceInit();

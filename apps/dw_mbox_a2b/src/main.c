@@ -44,9 +44,7 @@ static void a2b_init()
 
 int main()
 {
-	GIC_Distributor_Init();
-	GIC_Redistributor_Init();
-	GIC_CPUInterfaceInit();
+	GIC_Init();
 
   	a2b_init();
 

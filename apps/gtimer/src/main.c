@@ -19,9 +19,7 @@ DEFINE_SYSREG_RW_FUNCS(cntvct_el0)
 int main()
 {
 	printf("in main:\n\r");
-	GIC_Distributor_Init();
-	GIC_Redistributor_Init();
-	GIC_CPUInterfaceInit();
+	GIC_Init();
 	initSystemCounter(0, 0);
 	printf("CNTCR: 0x%x\n\r", counter_module->CNTCR);
 
