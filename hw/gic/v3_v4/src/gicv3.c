@@ -100,13 +100,13 @@ static void GIC_Discovery()
 	do 
 	{
 		// printf("GICR[%u] with Affinity: 0x%x\n", index, GICRedistributor[index].RD_base.TYPER[1]);
-		if( getAffinity() == GICRedistributor[index].RD_base.TYPER[1])
+		if( getAffinity() == (GICRedistributor[index].RD_base.TYPER>>32))
 		{
 			current_gicr_index = index;
 			break;
 		}
 		index++;
-	} while((GICRedistributor[index].RD_base.TYPER[0] & (1<<4)) == 0); // Keep incrementing until GICR_TYPER.Last reports no more RDs in block
+	} while((GICRedistributor[index].RD_base.TYPER & (1<<4)) == 0); // Keep incrementing until GICR_TYPER.Last reports no more RDs in block
 	// printf("GICR[%u] with Affinity: 0x%x\n", index, GICRedistributor[index].RD_base.TYPER[1]);
 	assert(current_gicr_index != 0xff);
 	// printf("Current GICR index is %u\n", current_gicr_index);
@@ -535,7 +535,7 @@ IRQHandler_t IRQ_GetHandler (uint16_t int_id)
 
 void fiq_handler(void)
 {
-	uint32_t iar;
+	uint32_t iar, group = 0;
 	IRQHandler_t irq_handler;
 	do {
 		iar = read_icc_iar0_el1();
@@ -549,8 +549,15 @@ void fiq_handler(void)
 			if(irq_handler!=(IRQHandler_t)0)
 				irq_handler();
 			break;
-		case 1020 ... 1022:
+		case 1020:
+		case 1022:
 			printf("FIQ: Received Special INTID.%d\n", iar);
+			break;
+		case 1021:
+			printf("An interrupt for the rich OS was signaled while the PE was executing in Secure state.\n");
+			iar = read_icc_iar1_el1();
+			printf("FIQ: Read INTID %d from IAR1\n", iar);
+			group = 1;
 			break;
 		case 1023:
 			return;
@@ -562,7 +569,10 @@ void fiq_handler(void)
 		}
 
 		// Write EOIR to deactivate interrupt
-		write_icc_eoir0_el1(iar);
+		if (group == 0)
+			write_icc_eoir0_el1(iar);
+		else
+			write_icc_eoir1_el1(iar);
 		isb();
 	} while(1);
 }

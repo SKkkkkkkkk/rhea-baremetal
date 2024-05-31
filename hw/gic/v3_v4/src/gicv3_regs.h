@@ -80,7 +80,7 @@ typedef struct
 {
     __IOM uint32_t CTLR;            /*!< \brief  Offset: 0x000 (R/W) ReDistributor Control Register */
     __IM  uint32_t IIDR;            /*!< \brief  Offset: 0x004 (R/ ) ReDistributor Implementer Identification Register */
-    __IM  uint32_t TYPER[2];        /*!< \brief  Offset: 0x008 (R/ ) ReDistributor Type Register */
+    __IM  uint64_t TYPER;        /*!< \brief  Offset: 0x008 (R/ ) ReDistributor Type Register */
     __IOM uint32_t STATUSR;         /*!< \brief  Offset: 0x010 (R/W) Error Reporting Status Register, optional */
     __IOM uint32_t WAKER;           /*!< \brief  Offset: 0x014 (R/W) Redistributor Wake Register */
     __IM  uint32_t MPAMIDR;         /*!< \brief  Offset: 0x018 (R/ ) Report maximum PARTID and PMG Register */
