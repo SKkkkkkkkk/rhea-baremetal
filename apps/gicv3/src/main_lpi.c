@@ -121,7 +121,7 @@ int main(void)
   }
   target_rd = getRdProcNumber(rd);
 
-  #define DID 3
+  #define DID 4
   #define EID 0
   #define CID 0
 
@@ -145,13 +145,10 @@ int main(void)
   // A55 write
   // WRITE_GITS_TRANSLATER(0x00000001);
 
-  // MBI_TX
-  REG32(MSI_TX_BASE + 0x10) = (uint64_t)GIC600_MSI_RX_BASE & 0xFFFFFFFF;
-  REG32(MSI_TX_BASE + 0x14) = (uint64_t)GIC600_MSI_RX_BASE >> 32;
-  
+  // MBI_TX + timer
+  REG32(MSI_TX_BASE + 0x10) = (uint64_t)(GIC600_MSI_RX_BASE+0x40) & 0xFFFFFFFF;
+  REG32(MSI_TX_BASE + 0x14) = (uint64_t)(GIC600_MSI_RX_BASE+0x40) >> 32;
   REG32(MSI_TX_BASE + 0x30) = 1;
-
-  // Timer
   timer_init_config_t timer_init_config = {
 		.int_mask = 0, .loadcount = 25000000, .timer_id = Timerx6_T1, .timer_mode = Mode_User_Defined
 	};
