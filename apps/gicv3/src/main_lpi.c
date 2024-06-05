@@ -22,6 +22,8 @@
 #include "gicv3_lpis.h"
 #include "memmap.h"
 #include "gicv3.h"
+#include "common.h"
+#include "dw_apb_timers.h"
 
 extern void sendLPI(uint32_t, uint32_t);
 
@@ -119,10 +121,14 @@ int main(void)
   }
   target_rd = getRdProcNumber(rd);
 
+  #define DID 3
+  #define EID 0
+  #define CID 0
+
   // Set up a mapping
-  itsMAPD(0 /*DeviceID*/, ITT /*addr of ITT*/, 2 /*bit width of ID*/);         // Map a DeviceID to a ITT
-  itsMAPTI(0 /*DeviceID*/, 0 /*EventID*/, 8192 /*intid*/, 0 /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
-  itsMAPC(target_rd /* target Redistributor*/, 0 /*collection*/);              // Map a Collection to a Redistributor
+  itsMAPD(DID /*DeviceID*/, ITT /*addr of ITT*/, 2 /*bit width of ID*/);         // Map a DeviceID to a ITT
+  itsMAPTI(DID /*DeviceID*/, EID /*EventID*/, 8192 /*intid*/, CID /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
+  itsMAPC(target_rd /* target Redistributor*/, CID /*collection*/);              // Map a Collection to a Redistributor
   itsSYNC(target_rd /* target Redistributor*/);                                // Sync the changes
 
   //
@@ -131,8 +137,26 @@ int main(void)
 
   configureLPI(rd, 8192 /*INTID*/, GICV3_LPI_ENABLE, 0 /*Priority*/);
   printf("main(): Sending LPI 8192\n");
-  itsINV(0 /*DeviceID*/, 0 /*EventID*/);
-  itsINT(0 /*DeviceID*/, 0 /*EventID*/);
+  itsINV(DID /*DeviceID*/, EID /*EventID*/);
+
+  // INT
+  // itsINT(DID /*DeviceID*/, EID /*EventID*/);
+  
+  // A55 write
+  // WRITE_GITS_TRANSLATER(0x00000001);
+
+  // MBI_TX
+  REG32(MSI_TX_BASE + 0x10) = (uint64_t)GIC600_MSI_RX_BASE & 0xFFFFFFFF;
+  REG32(MSI_TX_BASE + 0x14) = (uint64_t)GIC600_MSI_RX_BASE >> 32;
+  
+  REG32(MSI_TX_BASE + 0x30) = 1;
+
+  // Timer
+  timer_init_config_t timer_init_config = {
+		.int_mask = 0, .loadcount = 25000000, .timer_id = Timerx6_T1, .timer_mode = Mode_User_Defined
+	};
+	timer_init(&timer_init_config);
+  timer_enable(Timerx6_T1);
 
 
   // NOTE:

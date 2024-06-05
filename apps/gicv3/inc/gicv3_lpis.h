@@ -12,7 +12,7 @@
 // evaluation.
 //
 // You accept that the Software has not been tested by Arm therefore the Software
-// is provided “as is”, without warranty of any kind, express or implied. In no
+// is provided ï¿½as isï¿½, without warranty of any kind, express or implied. In no
 // event shall the authors or copyright holders be liable for any claim, damages
 // or other liability, whether in action or contract, tort or otherwise, arising
 // from, out of or in connection with the Software or the use of Software.
@@ -44,6 +44,8 @@ void setITSBaseAddress(void* ITS_base);
 #define GICV3_LPI_NORMAL_WBWA   (((uint64_t)0x5 << 56) | (uint64_t)(0x5 << 7))
 #define GICV3_LPI_DEVICE_nGnRnE (0)
 
+void WRITE_GITS_TRANSLATER(uint32_t val);
+uint32_t READ_GITS_TRANSLATER(void);
 
 // Set address of LPI config table for the selected Redistributor
 // rd         = Redistributor

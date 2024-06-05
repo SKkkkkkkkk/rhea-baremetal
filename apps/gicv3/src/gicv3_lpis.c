@@ -41,6 +41,17 @@ struct GICv3_its_int_if*      gic_its_ints;
 extern struct GICv3_dist_if*  gic_dist;
 extern struct GICv3_rdist_if* gic_rdist;
 
+void WRITE_GITS_TRANSLATER(uint32_t val)
+{
+  gic_its_ints->GITS_TRANSLATER = val;
+  return;
+}
+
+uint32_t READ_GITS_TRANSLATER(void)
+{
+  return gic_its_ints->GITS_TRANSLATER;
+}
+
 // Selects an ITS
 // ITS_base = virtual address of ITS_base register page
 void setITSBaseAddress(void* ITS_base)
