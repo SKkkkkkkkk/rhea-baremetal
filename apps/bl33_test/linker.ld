@@ -4,7 +4,7 @@ ENTRY(entrypoint)
 MEMORY {
  ROM (rx): ORIGIN = 0x00000000, LENGTH = 256K
  SRAM (rwx): ORIGIN = 0x00100000, LENGTH = 256K
- DRAM (rwx): ORIGIN = 0x40000000, LENGTH = 0xC0000000
+ DRAM (rwx): ORIGIN = 0x42000000, LENGTH = 0xC0000000
 }
 SECTIONS
 {
@@ -16,7 +16,7 @@ SECTIONS
   *(SORT_BY_ALIGNMENT(.rodata*))
   *(.vectors)
   _ro_end = .;
- } >ROM
+ } >DRAM
  .data :
  ALIGN(16)
  {
@@ -24,7 +24,7 @@ SECTIONS
   *(SORT_BY_ALIGNMENT(.data*))
   . = ALIGN(16);
   _data_end = .;
- } >SRAM AT>ROM
+ } >DRAM AT>DRAM
  _data_start_lma = LOADADDR(.data);
  _data_size = SIZEOF(.data);
  .bss (NOLOAD) :
@@ -35,19 +35,20 @@ SECTIONS
   *(COMMON)
   . = ALIGN(16);
   _bss_end = .;
- } >SRAM
+ } >DRAM
  .heap (NOLOAD) :
  {
   end = .;
   _heap_start = .;
   . += 0x4000;
   _heap_end = .;
- } >SRAM
+ } >DRAM
  .stack (NOLOAD) :
  {
   _stack_start = .;
   . += 0x4000;
   _stack_end = .;
   _stack_top = .;
- } >SRAM
+ } >DRAM
+ /DISCARD/ : { *(.eh_frame*) }
 }
