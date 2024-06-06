@@ -68,38 +68,38 @@ rtl_init_start:
     cmp     x5, #-1                 // x0 == -1 if FP not present
 	b.eq    rtl_init_end            // Skip FP initialization if not present
 
-	fmov    d0,  xzr
-	fmov    d1,  xzr
-	fmov    d2,  xzr
-	fmov    d3,  xzr
-	fmov    d4,  xzr
-	fmov    d5,  xzr
-	fmov    d6,  xzr
-	fmov    d7,  xzr
-	fmov    d8,  xzr
-	fmov    d9,  xzr
-	fmov    d10,  xzr
-	fmov    d11,  xzr
-	fmov    d12,  xzr
-	fmov    d13,  xzr
-	fmov    d14,  xzr
-	fmov    d15,  xzr
-	fmov    d16,  xzr
-	fmov    d17,  xzr
-	fmov    d18,  xzr
-	fmov    d19,  xzr
-	fmov    d20,  xzr
-	fmov    d21,  xzr
-	fmov    d22,  xzr
-	fmov    d23,  xzr
-	fmov    d24,  xzr
-	fmov    d25,  xzr
-	fmov    d26,  xzr
-	fmov    d27,  xzr
-	fmov    d28,  xzr
-	fmov    d29,  xzr
-	fmov    d30,  xzr
-	fmov    d31,  xzr
+	movi    v0.2d,   #0
+	movi    v1.2d,   #0
+	movi    v2.2d,   #0
+	movi    v3.2d,   #0
+	movi    v4.2d,   #0
+	movi    v5.2d,   #0
+	movi    v6.2d,   #0
+	movi    v7.2d,   #0
+	movi    v8.2d,   #0
+	movi    v9.2d,   #0
+	movi    v10.2d,  #0
+	movi    v11.2d,  #0
+	movi    v12.2d,  #0
+	movi    v13.2d,  #0
+	movi    v14.2d,  #0
+	movi    v15.2d,  #0
+	movi    v16.2d,  #0
+	movi    v17.2d,  #0
+	movi    v18.2d,  #0
+	movi    v19.2d,  #0
+	movi    v20.2d,  #0
+	movi    v21.2d,  #0
+	movi    v22.2d,  #0
+	movi    v23.2d,  #0
+	movi    v24.2d,  #0
+	movi    v25.2d,  #0
+	movi    v26.2d,  #0
+	movi    v27.2d,  #0
+	movi    v28.2d,  #0
+	movi    v29.2d,  #0
+	movi    v30.2d,  #0
+	movi    v31.2d,  #0
 
 	//! This code may cause synchronization issues if all cores are not released at the same time.
 	bl  get_core_id
@@ -124,8 +124,9 @@ rtl_init_end:
 	ldr	x1, =_bss_end
 	cmp x0, x1
 	b.eq clear_loop_end
+	movi    v0.2d,   #0
 clear_loop:
-	stp	xzr, xzr, [x0], #16
+	stp	q0, q0, [x0], #32
 	cmp	x0, x1
 	b.lo	clear_loop
 clear_loop_end:
@@ -137,9 +138,9 @@ clear_loop_end:
 	b.eq data_init_end
 data_init_start:
 	cbz x2, data_init_end
-	ldp	x3, x4, [x1], #16
-	stp	x3, x4, [x0], #16
-	sub	x2, x2, #16
+	ldp	q0, q1, [x1], #32
+	stp	q0, q1, [x0], #32
+	sub	x2, x2, #32
 	b data_init_start
 data_init_end:
 

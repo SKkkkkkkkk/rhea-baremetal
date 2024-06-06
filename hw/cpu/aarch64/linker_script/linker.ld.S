@@ -75,29 +75,29 @@ SECTIONS
 	} >RO_REGION
 
 	.data :
-	/* Make sure VMA & LMA alignment >= 16B, 
+	/* Make sure VMA & LMA alignment >= 32B, 
 	   which allows us to use 16-byte load/store instructions.
 	*/
-	ALIGN(16) 
+	ALIGN(32) 
 	{
 		_data_start = .;
 		*(SORT_BY_ALIGNMENT(.data*))
-		. = ALIGN(16); /* Not only the address should be 16B aligned, but also the size */
+		. = ALIGN(32); /* Not only the address should be 32B aligned, but also the size */
 		_data_end = .;
 	} >DATA_VMA_REGION AT>DATA_LMA_REGION
 	_data_start_lma = LOADADDR(.data);
 	_data_size = SIZEOF(.data);
 
 	.bss (NOLOAD) :
-	/* Make sure VMA & LMA alignment >= 16B, 
+	/* Make sure VMA & LMA alignment >= 32B, 
 	   which allows us to use 16-byte load/store instructions.
 	*/
-	ALIGN(16) 
+	ALIGN(32) 
 	{
 		_bss_start = .;
 		*(SORT_BY_ALIGNMENT(.bss*))
 		*(COMMON)
-		. = ALIGN(16); /* Not only the address should be 16B aligned, but also the size */
+		. = ALIGN(32); /* Not only the address should be 32B aligned, but also the size */
 		_bss_end = .;
 	} >BSS_REGION
 
