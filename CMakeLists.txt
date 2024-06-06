@@ -9,11 +9,14 @@ set(SDK_PATH ${CMAKE_SOURCE_DIR})
 set(PROJECT_NAME "a" CACHE STRING "Project Name")
 
 set(PROJECT_PATH "" CACHE PATH "Project Path") # since the type is PATH, set comman will convert it to absolute automatically.
-if("$CACHE{PROJECT_PATH}" STREQUAL "")
-	message(FATAL_ERROR "PROJECT_PATH must be set!")
-endif()
 
-set(BOARD "FPGA" CACHE STRING "QEMU, RTL, FPGA, EVB")
+set(EXTRA_SRCS "" CACHE FILEPATH "Extra Sources to join the compiling.")
+
+set(EXTRA_INCS "" CACHE PATH "Extra Directories to include.")
+
+set(EXTRA_LIBS "" CACHE FILEPATH "Extra Directories to include.")
+
+set(BOARD "RTL" CACHE STRING "QEMU, RTL, FPGA, EVB")
 
 set(MEM_SCHEME "ROM" CACHE STRING "ROM, SRAM, DRAM, CUSTOM")
 if($CACHE{MEM_SCHEME} STREQUAL "CUSTOM")
@@ -104,6 +107,8 @@ add_subdirectory(libs/flash/nor EXCLUDE_FROM_ALL)
 add_subdirectory(libs/flash/nand EXCLUDE_FROM_ALL)
 add_subdirectory(libs/systimer EXCLUDE_FROM_ALL)
 
+add_subdirectory(verification EXCLUDE_FROM_ALL)
+
 # app targets
 if(NOT $CACHE{PROJECT_PATH} STREQUAL "")
 	include($CACHE{PROJECT_PATH}/app.cmake)
@@ -113,11 +118,13 @@ add_executable($CACHE{PROJECT_NAME}.elf)
 target_sources($CACHE{PROJECT_NAME}.elf
 	PRIVATE
 		${app_src}
+		$CACHE{EXTRA_SRCS}
 )
 
 target_include_directories($CACHE{PROJECT_NAME}.elf
     PRIVATE
         ${app_inc}
+		$CACHE{EXTRA_INCS}
 )
 
 target_link_options($CACHE{PROJECT_NAME}.elf
@@ -133,6 +140,7 @@ target_link_libraries($CACHE{PROJECT_NAME}.elf
 		gicv3
 		${app_dep}
 		-lc -lm ${LIBGCC}
+		$CACHE{EXTRA_LIBS}
 )
 
 if("$CACHE{MEM_SCHEME}" STREQUAL "CUSTOM")
