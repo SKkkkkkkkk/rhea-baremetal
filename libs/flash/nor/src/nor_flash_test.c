@@ -64,10 +64,10 @@ static uint8_t case7_w_buf[CASE6_SIZE] /*__attribute__((section(".noncache_mem.c
 static uint8_t p25q40uj_r_buf[P25Q40UJ_SIZE] = {0};
 static uint8_t p25q40uj_w_buf[P25Q40UJ_SIZE] = {0};
 
-void nor_flash_test(spi_id_t spi_id, flash_model_t flash_model)
+void nor_flash_test(spi_id_t spi_id, flash_model_t flash_model, uint16_t clk_div)
 {
 	uint8_t _flash_id[3];
-	if(flash_init(spi_id, 2, 3, flash_model) == false)
+	if(flash_init(spi_id, clk_div, 3, flash_model) == false)
 	{
 		printf("flash_init error.\n\r");
 		return;
@@ -234,7 +234,7 @@ if((flash_model==GD25LQ255)||(flash_model==W25Q256JW))
 #define CASE5_SIZE (4096*2-1)
 static uint8_t case5_r_buf[CASE5_SIZE] /* 使用DMA时，接收首地址和大小需要对齐DU_CACHE_LINE_SIZE */ __attribute__((aligned(64))) /*__attribute__((section(".noncache_mem.case5_r_buf")))*/ = {0};
 static uint8_t case5_w_buf[CASE5_SIZE] /*__attribute__((section(".noncache_mem.case5_w_buf")))*/ = {0};
-void flash_fastest_read_test(spi_id_t spi_id, flash_model_t flash_model)
+void flash_fastest_read_test(spi_id_t spi_id, flash_model_t flash_model, uint16_t clk_div)
 {
 	printf("flash_fastest_read_test:\n\r");
 
@@ -246,13 +246,12 @@ void flash_fastest_read_test(spi_id_t spi_id, flash_model_t flash_model)
 	// #endif
 	
 	uint8_t flash_id[3];
-	uint16_t spi_div = 2;
-	if(!flash_init(spi_id, spi_div, 3, flash_model))
+	if(!flash_init(spi_id, clk_div, 3, flash_model))
 	{
 		printf("\tflash_init error.\n\r");
 		return;
 	}
-	printf("\tSPI_DIV: %u\n\r", spi_div);
+	printf("\tSPI_DIV: %u\n\r", clk_div);
 	printf("\tTest Addr: 0x%x\n\r", CASE5_ADDR);
 
 	// flash_reset(spi_id);

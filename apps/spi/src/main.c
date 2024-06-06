@@ -5,12 +5,12 @@
 
 int main()
 {
-	void flash_fastest_read_test(spi_id_t spi_id, flash_model_t flash_model);
-	void nor_flash_test(spi_id_t spi_id, flash_model_t flash_model);
+	void flash_fastest_read_test(spi_id_t spi_id, flash_model_t flash_model, uint16_t clk_div);
+	void nor_flash_test(spi_id_t spi_id, flash_model_t flash_model, uint16_t clk_div);
 	void nand_test();
-	// nor_flash_test(BOOTSPI_ID, GD25LQ128);
-	// flash_fastest_read_test(BOOTSPI_ID, GD25LQ128);
-	nand_test();
+	nor_flash_test(BOOTSPI_ID, UNKNOWN_FLASH, 30);
+	// flash_fastest_read_test(BOOTSPI_ID, UNKNOWN_FLASH, 30);
+	// nand_test();
 	return 0;
 }
 
@@ -21,7 +21,7 @@ int main()
 
 void nand_test()
 {
-	nand_flash_init(BOOTSPI_ID, 10, 3, UNKNOWN_NAND_FLASH);
+	nand_flash_init(BOOTSPI_ID, 30, 3, UNKNOWN_NAND_FLASH);
 	nand_flash_reset(BOOTSPI_ID);
 	uint8_t flash_id[3];
 	// while(1)
@@ -44,7 +44,7 @@ void nand_test()
 
 	printf("protection: 0x%x\n\r", nand_get_feature(BOOTSPI_ID, FEATURE_REG_NAND_BLKLOCK_REG_ADDR));
 
-#if 1
+#if 0
 	uint8_t w_buf[NAND_PAGE_SIZE];
 	uint8_t r_buf[NAND_PAGE_SIZE] = {0};
 	for(int i=0; i<NAND_PAGE_SIZE; i++)
