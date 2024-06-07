@@ -29,7 +29,7 @@ struct memory_mapped_timer_module
         volatile uint32_t CNTSCR;                 // +0x0010 - RW - Counter Scaling Value (ARMv8.4-CNTSC)
   const volatile uint32_t padding0[2];            // +0x0014 - RESERVED
   const volatile uint32_t CNTID;                  // +0x001C - RO - Counter ID register
-        volatile uint32_t CNTFID[3];              // +0x0020 - RW - Counter Access Control Register N
+  const volatile uint32_t CNTFID[3];              // +0x0020 - RW - Counter Access Control Register N
 };
 
 // ------------------------------------------------------------
@@ -118,11 +118,11 @@ uint32_t getCNTFID(uint32_t entry)
 }
 
 
-void setCNTFID(uint32_t entry, uint32_t value)
-{
-  counter_module->CNTFID[entry] = value;
-  return;
-}
+// void setCNTFID(uint32_t entry, uint32_t value)
+// {
+//   counter_module->CNTFID[entry] = value;
+//   return;
+// }
 
 
 // ------------------------------------------------------------
