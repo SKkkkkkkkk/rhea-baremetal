@@ -72,20 +72,18 @@ void console_config(int console_id, int console_input_clk, int baudrate)
 int _write (int fd __unused, char *ptr, int len)
 {
 	if(!console_init)
-	{
-	// #ifdef EVB
-	// 	(void)default_uart_clk;
-	// 	console_config(UART_ID, get_clk(CLK_UART_LP), DEFAULT_CONSOLE_BAUDRATE);
-	// #else
 		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
-	// #endif
-	}
-	int i;
-	for(i=0;i<len;i++)
+	
+	int i=0;
+	for(;i<len;i++)
 	{
-		uart_sendchar(UART_ID ,ptr[i]);
+		uart_sendchar(UART_ID, ptr[i]);
+		REG32(SYSCTRL_CFG_BASE + 0xfe0) = ptr[i];
 		if(ptr[i] == '\n')
+		{
 			uart_sendchar(UART_ID,'\r');
+			REG32(SYSCTRL_CFG_BASE + 0xfe0) = '\r';
+		}
 	}
 	return i;
 }
@@ -93,16 +91,10 @@ int _write (int fd __unused, char *ptr, int len)
 int _read(int fd __unused, char* ptr, int len)
 {
 	if(!console_init)
-	{
-	// #ifdef EVB
-	// 	(void)default_uart_clk;
-	// 	console_config(UART_ID, get_clk(CLK_UART_LP), DEFAULT_CONSOLE_BAUDRATE);
-	// #else
 		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
-	// #endif
-	}
-	int i;
-	for(i=0;i<len;i++)
+
+	int i=0;
+	for(;i<len;i++)
 		ptr[i] = uart_getchar(UART_ID);
 	return i;
 }
