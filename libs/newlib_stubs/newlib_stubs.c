@@ -8,6 +8,9 @@
 static uint32_t default_uart_clk = 25000000U;
 static bool console_init = false;
 
+#pragma weak _write
+#pragma weak _read
+
 #ifdef QEMU 
 	#define UART_ID 0
 #else
