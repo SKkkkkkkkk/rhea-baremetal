@@ -23,6 +23,10 @@ if($CACHE{MEM_SCHEME} STREQUAL "CUSTOM")
 	endif()
 endif()
 
+set(STACK_SIZE "0x4000" CACHE STRING "Stack Size(In Bytes)")
+
+set(HEAP_SIZE  "0x4000" CACHE STRING "Heap Size(In Bytes)")
+
 project("${PROJECT_NAME}"
 	VERSION 0.1.0
 	DESCRIPTION "${PROJECT_NAME}"
