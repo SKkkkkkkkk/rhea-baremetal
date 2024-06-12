@@ -618,7 +618,7 @@ DMA_Channel_t dw_spi_eeprom_read_dma_start(spi_id_t spi_id, void *t_buf, uint8_t
 	assert(t_buf);
 	assert(r_buf);
 	assert((t_size <= SPI_FIFO_DEPTH) && (t_size!=0));
-	assert(r_size <= DMAC_FIFO_DEPTH);
+	assert(r_size <= MIN(DMAC_FIFO_DEPTH, SPI_CTRLR1_MAX_SIZE));
 
 	DW_APB_SSI_TypeDef* spix = get_spi_base(spi_id);
 	assert(spix != NULL);
@@ -712,7 +712,7 @@ void dw_spi_transmit_only_dma(spi_id_t spi_id, void* t_buf, uint32_t t_size)
 	assert(spi_id <= BOOTSPI_ID);
 	assert(get_spi_state(spi_id)!=0);
 	assert(t_buf);
-	assert(t_size<=DMAC_FIFO_DEPTH);
+	assert(t_size<=MIN(DMAC_FIFO_DEPTH, SPI_CTRLR1_MAX_SIZE));
 
 	__DMB();
 	DW_APB_SSI_TypeDef* spix = get_spi_base(spi_id);
@@ -812,7 +812,7 @@ void dw_spi_enhanced_read_dma(spi_id_t spi_id, enhanced_transfer_format_t *enhan
 	assert(enhanced_transfer_format->addr_lenth<=60);
 	assert(enhanced_transfer_format->ins_lenth<=16);
 	assert(enhanced_transfer_format->data);
-	assert(enhanced_transfer_format->data_nums!=0 && enhanced_transfer_format->data_nums<=DMAC_FIFO_DEPTH);
+	assert(enhanced_transfer_format->data_nums!=0 && enhanced_transfer_format->data_nums<=MIN(DMAC_FIFO_DEPTH, SPI_CTRLR1_MAX_SIZE));
 	assert(enhanced_transfer_format->wait_cycles<=31);
 
 	DW_APB_SSI_TypeDef* spix = get_spi_base(spi_id);

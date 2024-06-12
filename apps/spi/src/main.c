@@ -9,7 +9,7 @@ int main()
 	void nor_flash_test(spi_id_t spi_id, flash_model_t flash_model, uint16_t clk_div);
 	void nand_test();
 	nor_flash_test(BOOTSPI_ID, UNKNOWN_FLASH, 30);
-	// flash_fastest_read_test(BOOTSPI_ID, UNKNOWN_FLASH, 30);
+	flash_fastest_read_test(BOOTSPI_ID, UNKNOWN_FLASH, 30);
 	// nand_test();
 	return 0;
 }

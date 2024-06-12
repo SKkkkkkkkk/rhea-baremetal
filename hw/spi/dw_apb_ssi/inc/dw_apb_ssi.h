@@ -9,9 +9,8 @@
 #endif
 
 #define SPI_FIFO_DEPTH 64
-#ifndef DMAC_FIFO_DEPTH
 #define DMAC_FIFO_DEPTH 4194304
-#endif
+#define SPI_CTRLR1_MAX_SIZE 65536
 
 typedef enum { T_R = 0, T_ONLY = 1, R_ONLY = 2, EEREAD = 3 } tmod_t;
 

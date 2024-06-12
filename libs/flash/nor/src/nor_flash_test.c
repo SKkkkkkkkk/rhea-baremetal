@@ -231,7 +231,7 @@ if((flash_model==GD25LQ255)||(flash_model==W25Q256JW))
 	#define BLOCK_SIZE_DMA (2048U)
 */
 #define CASE5_ADDR (OFF_RW_ADDR+10)
-#define CASE5_SIZE (4096*2-1)
+#define CASE5_SIZE (128*1024-1)
 static uint8_t case5_r_buf[CASE5_SIZE] /* 使用DMA时，接收首地址和大小需要对齐DU_CACHE_LINE_SIZE */ __attribute__((aligned(64))) /*__attribute__((section(".noncache_mem.case5_r_buf")))*/ = {0};
 static uint8_t case5_w_buf[CASE5_SIZE] /*__attribute__((section(".noncache_mem.case5_w_buf")))*/ = {0};
 void flash_fastest_read_test(spi_id_t spi_id, flash_model_t flash_model, uint16_t clk_div)
