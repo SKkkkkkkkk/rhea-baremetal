@@ -18,7 +18,7 @@ ENTRY(entrypoint)
 	#define __ROM_SIZE 256K
 
 	#define __SRAM_BASE APRAM_BASE
-	#define __SRAM_SIZE 256K
+	#define __SRAM_SIZE 512K
 
 	#define __DDR_BASE AP_DRAM_BASE
 	#define __DDR_SIZE 0xC0000000 //3G
@@ -117,5 +117,6 @@ SECTIONS
 		_stack_top = .;
 	} >STACK_REGION
 
+	_all_end = .;
 	/DISCARD/ : { *(.eh_frame*) }
 }
