@@ -84,7 +84,7 @@ uint32_t getCNTFID(uint32_t entry);
 // Set the specified CNTFIDn register
 // entry - 
 // value - 
-void setCNTFID(uint32_t entry, uint32_t value);
+// void setCNTFID(uint32_t entry, uint32_t value);
 
 
 #ifdef __cplusplus

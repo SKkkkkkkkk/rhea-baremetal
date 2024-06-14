@@ -152,6 +152,7 @@ data_init_end:
 #if defined(ENABLE_MMU_CACHE) && (ENABLE_MMU_CACHE != 0)
 	bl config_mmu
 #endif
+	bl _main
 	bl main
 dead:
 	wfi
