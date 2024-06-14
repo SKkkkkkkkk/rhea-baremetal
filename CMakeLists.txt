@@ -107,6 +107,7 @@ add_subdirectory(libs/newlib_stubs EXCLUDE_FROM_ALL)
 add_subdirectory(libs/flash/nor EXCLUDE_FROM_ALL)
 add_subdirectory(libs/flash/nand EXCLUDE_FROM_ALL)
 add_subdirectory(libs/systimer EXCLUDE_FROM_ALL)
+add_subdirectory(libs/crc EXCLUDE_FROM_ALL)
 
 # app targets
 if(NOT $CACHE{PROJECT_PATH} STREQUAL "")
