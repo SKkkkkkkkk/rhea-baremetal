@@ -50,9 +50,9 @@ int _read(int fd __unused, char* ptr, int len)
 {
 	if(!console_init)
 		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
-	int i;
-	for(i=0;i<len;i++)
-		while(uart_getchar(ptr+i)!=UART_OK);
+	int i=0;
+	for(;i<len;i++)
+		ptr[i] = uart_getchar();
 	return i;
 }
 

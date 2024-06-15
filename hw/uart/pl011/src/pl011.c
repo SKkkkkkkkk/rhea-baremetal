@@ -95,7 +95,7 @@ void uart_write(const char* data) {
     }
 }
 
-uart_error uart_getchar(char* c) {
+uart_error uart_getchar_nonblocking(char* c) {
     if (uart0->FR & FR_RXFE) {
         return UART_NO_DATA;
     }
@@ -107,4 +107,15 @@ uart_error uart_getchar(char* c) {
         return UART_RECEIVE_ERROR;
     }
     return UART_OK;
+}
+
+char uart_getchar() {
+    char c;
+    while (uart_getchar_nonblocking(&c) != UART_OK);
+    return c;
+}
+
+bool uart_tstc()
+{
+    return !(uart0->FR & FR_RXFE);
 }

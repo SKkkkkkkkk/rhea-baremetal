@@ -57,6 +57,8 @@ typedef struct {
 uart_error uart_configure(uart_config* config);
 void uart_putchar(char c);
 void uart_write(const char* data);
-uart_error uart_getchar(char* c);
+uart_error uart_getchar_nonblocking(char* c);
+char uart_getchar();
+bool uart_tstc();
 
 #endif
