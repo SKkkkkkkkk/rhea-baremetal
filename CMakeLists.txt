@@ -102,6 +102,7 @@ add_subdirectory(hw/spi/dw_apb_ssi EXCLUDE_FROM_ALL)
 add_subdirectory(hw/timer/dw_apb_timers EXCLUDE_FROM_ALL)
 add_subdirectory(hw/system_counter EXCLUDE_FROM_ALL)
 add_subdirectory(hw/mailbox EXCLUDE_FROM_ALL)
+add_subdirectory(hw/pcie_ep EXCLUDE_FROM_ALL)
 
 add_subdirectory(libs/newlib_stubs EXCLUDE_FROM_ALL)
 add_subdirectory(libs/flash/nor EXCLUDE_FROM_ALL)
