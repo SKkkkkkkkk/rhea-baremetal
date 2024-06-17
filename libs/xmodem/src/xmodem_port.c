@@ -11,18 +11,14 @@
 #define xmodem_tstc() 		uart_tstc(SEEHI_UART0)
 #endif
 
-int _inbyte(unsigned short timeout) // msec timeout
+int _inbyte(uint64_t timeout) // usec timeout
 {
-	char c;
-	uint64_t start = syscounter_read();
-	uint64_t wait_cycles = (timeout * read_cntfrq_el0()) / 1000;
-
-	while ((syscounter_read() - start) < wait_cycles) {
-		if (xmodem_tstc()) {
+	uint64_t start_count_val = syscounter_read();
+	uint64_t wait_cycles = (timeout * read_cntfrq_el0()) / 1000000;
+	while ((syscounter_read() - start_count_val) < wait_cycles) {
+		if (xmodem_tstc())
 			return xmodem_getchar();
-		}
 	}
-
 	return -1;
 }
 

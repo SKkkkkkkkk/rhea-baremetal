@@ -10,7 +10,7 @@
 #include <string.h>
 #include "crc.h"
 
-int _inbyte(unsigned short timeout); // msec timeout
+int _inbyte(uint64_t timeout); // msec timeout
 void _outbyte(int c);
 
 #define SOH  0x01
@@ -21,7 +21,7 @@ void _outbyte(int c);
 #define CAN  0x18
 #define CTRLZ 0x1A
 
-#define DLY_1S 1000
+#define DLY_US 1000000
 #define MAXRETRANS 25
 
 static int check(int crc, const unsigned char *buf, int sz)
@@ -47,7 +47,7 @@ static int check(int crc, const unsigned char *buf, int sz)
 
 static void flushinput(void)
 {
-	while (_inbyte(((DLY_1S)*3)>>1) >= 0)
+	while (_inbyte(((DLY_US)*3)>>1) >= 0)
 		;
 }
 
@@ -64,7 +64,7 @@ int xmodemReceive(unsigned char *dest, int destsz)
 	for(;;) {
 		for( retry = 0; retry < INT32_MAX; ++retry) {
 			if (trychar) _outbyte(trychar);
-			if ((c = _inbyte((DLY_1S)<<1)) >= 0) {
+			if ((c = _inbyte((DLY_US)<<1)) >= 0) {
 				switch (c) {
 				case SOH:
 					bufsz = 128;
@@ -77,7 +77,7 @@ int xmodemReceive(unsigned char *dest, int destsz)
 					_outbyte(ACK);
 					return len; /* normal end */
 				case CAN:
-					if ((c = _inbyte(DLY_1S)) == CAN) {
+					if ((c = _inbyte(DLY_US)) == CAN) {
 						flushinput();
 						_outbyte(ACK);
 						return -1; /* canceled by remote */
@@ -101,7 +101,7 @@ int xmodemReceive(unsigned char *dest, int destsz)
 		p = xbuff;
 		*p++ = c;
 		for (i = 0;  i < (bufsz+(crc?1:0)+3); ++i) {
-			if ((c = _inbyte(DLY_1S)) < 0) goto reject;
+			if ((c = _inbyte(DLY_US)) < 0) goto reject;
 			*p++ = c;
 		}
 
@@ -144,7 +144,7 @@ int xmodemTransmit(unsigned char *src, int srcsz)
 
 	for(;;) {
 		for( retry = 0; retry < 16; ++retry) {
-			if ((c = _inbyte((DLY_1S)<<1)) >= 0) {
+			if ((c = _inbyte((DLY_US)<<1)) >= 0) {
 				switch (c) {
 				case 'C':
 					crc = 1;
@@ -153,7 +153,7 @@ int xmodemTransmit(unsigned char *src, int srcsz)
 					crc = 0;
 					goto start_trans;
 				case CAN:
-					if ((c = _inbyte(DLY_1S)) == CAN) {
+					if ((c = _inbyte(DLY_US)) == CAN) {
 						_outbyte(ACK);
 						flushinput();
 						return -1; /* canceled by remote */
@@ -202,14 +202,14 @@ int xmodemTransmit(unsigned char *src, int srcsz)
 					for (i = 0; i < bufsz+4+(crc?1:0); ++i) {
 						_outbyte(xbuff[i]);
 					}
-					if ((c = _inbyte(DLY_1S)) >= 0 ) {
+					if ((c = _inbyte(DLY_US)) >= 0 ) {
 						switch (c) {
 						case ACK:
 							++packetno;
 							len += bufsz;
 							goto start_trans;
 						case CAN:
-							if ((c = _inbyte(DLY_1S)) == CAN) {
+							if ((c = _inbyte(DLY_US)) == CAN) {
 								_outbyte(ACK);
 								flushinput();
 								return -1; /* canceled by remote */
@@ -230,7 +230,7 @@ int xmodemTransmit(unsigned char *src, int srcsz)
 			else {
 				for (retry = 0; retry < 10; ++retry) {
 					_outbyte(EOT);
-					if ((c = _inbyte((DLY_1S)<<1)) == ACK) break;
+					if ((c = _inbyte((DLY_US)<<1)) == ACK) break;
 				}
 				flushinput();
 				return (c == ACK)?len:-5;
