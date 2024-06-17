@@ -313,9 +313,10 @@ int uart_sendchar(seehi_uart_no uart_no, const int c)
     return c;
 }
 
-int uart_tstc(unsigned int base)
+bool uart_tstc(seehi_uart_no uart_no)
 {
-    uart_reg *uart_reg_ptr = (uart_reg *)(uintptr_t)base;
+    uart_reg *uart_reg_ptr = (uart_reg *)(uintptr_t)get_uart_addr(uart_no);
+    assert(uart_reg_ptr != NULL);
     return (readl(&uart_reg_ptr->LSR) & 0x1);
 }
 

@@ -4,10 +4,11 @@
 #include "dw_apb_ssi.h"
 #include "nor_flash_port.h"
 #include "nor_flash.h"
+#include "utils_def.h"
 // #include "systimer.h" /* for flash_reset */
 
 #define CPU_READ_BLOCK_SIZE SPI_FIFO_DEPTH
-#define BLOCK_SIZE_DMA 		DMAC_FIFO_DEPTH
+#define BLOCK_SIZE_DMA 		MIN(DMAC_FIFO_DEPTH, SPI_CTRLR1_MAX_SIZE)
 
 static flash_model_t flash_model[BOOTSPI_ID + 1] = {UNKNOWN_FLASH};
 

@@ -26,6 +26,10 @@ if($CACHE{MEM_SCHEME} STREQUAL "CUSTOM")
 	endif()
 endif()
 
+set(STACK_SIZE "0x4000" CACHE STRING "Stack Size(In Bytes)")
+
+set(HEAP_SIZE  "0x4000" CACHE STRING "Heap Size(In Bytes)")
+
 project("${PROJECT_NAME}"
 	VERSION 0.1.0
 	DESCRIPTION "${PROJECT_NAME}"
@@ -101,11 +105,14 @@ add_subdirectory(hw/spi/dw_apb_ssi EXCLUDE_FROM_ALL)
 add_subdirectory(hw/timer/dw_apb_timers EXCLUDE_FROM_ALL)
 add_subdirectory(hw/system_counter EXCLUDE_FROM_ALL)
 add_subdirectory(hw/mailbox EXCLUDE_FROM_ALL)
+add_subdirectory(hw/pcie_ep EXCLUDE_FROM_ALL)
 
 add_subdirectory(libs/newlib_stubs EXCLUDE_FROM_ALL)
 add_subdirectory(libs/flash/nor EXCLUDE_FROM_ALL)
 add_subdirectory(libs/flash/nand EXCLUDE_FROM_ALL)
 add_subdirectory(libs/systimer EXCLUDE_FROM_ALL)
+add_subdirectory(libs/crc EXCLUDE_FROM_ALL)
+add_subdirectory(libs/xmodem EXCLUDE_FROM_ALL)
 
 add_subdirectory(verification EXCLUDE_FROM_ALL)
 

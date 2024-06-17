@@ -1,7 +1,6 @@
 # 添加app sources, 注意必须加上CMAKE_CURRENT_LIST_DIR!
 set(app_src
-	# ${CMAKE_CURRENT_LIST_DIR}/src/main.c
-	${CMAKE_CURRENT_LIST_DIR}/src/main_fip.c
+	${CMAKE_CURRENT_LIST_DIR}/src/main.c
 )
 
 # 添加app include dirs, 注意必须加上CMAKE_CURRENT_LIST_DIR!
@@ -11,7 +10,7 @@ set(app_inc
 
 # 添加app dependencies
 set(app_dep
-	dw_apb_ssi
-	nor_flash
-	nand_flash
+	pcie_ep
+	dw_apb_timers
+	systimer
 )

@@ -8,9 +8,17 @@ target_sources(${TARTGET_NAME}
 		src/config_mmu.c
 		src/entrypoint.S
 		src/exceptions.S
+		src/_main.c
 )
 
 target_include_directories(${TARTGET_NAME}
 	PUBLIC
 		inc
 )
+
+if(NOT $CACHE{BOARD} STREQUAL "QEMU")
+	target_link_libraries(${TARTGET_NAME}
+		PRIVATE
+			system_counter
+	)
+endif()
