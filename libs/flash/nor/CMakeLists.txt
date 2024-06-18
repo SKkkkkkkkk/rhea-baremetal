@@ -18,7 +18,7 @@ target_include_directories(${TARTGET_NAME}
 
 # 依赖模块
 target_link_libraries(${TARTGET_NAME} 
-	PRIVATE
+	PUBLIC
 		dw_apb_ssi
 		# systimer
 )

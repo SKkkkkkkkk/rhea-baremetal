@@ -11,4 +11,5 @@ set(app_inc
 # 添加app dependencies
 set(app_dep
 	xmodem
+	nor_flash
 )
