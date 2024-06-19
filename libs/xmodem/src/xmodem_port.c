@@ -1,4 +1,7 @@
 #include "delay.h"
+
+#define XMODEM_RECEIVE_ONLY
+
 #ifdef QEMU
 #include "pl011.h"
 #define xmodem_putchar(x) 	uart_putchar(x)

@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "crc.h"
+#include "xmodem.h"
 
 int _inbyte(uint64_t timeout); // msec timeout
 void _outbyte(int c);
@@ -51,7 +52,7 @@ static void flushinput(void)
 		;
 }
 
-int xmodemReceive(unsigned char *dest, int destsz)
+int xmodemReceiveWithAction(action_t action, int destsz)
 {
 	unsigned char xbuff[1030]; /* 1024 for XModem 1k + 3 head chars + 2 crc + nul */
 	unsigned char *p;
@@ -112,7 +113,7 @@ int xmodemReceive(unsigned char *dest, int destsz)
 				register int count = destsz - len;
 				if (count > bufsz) count = bufsz;
 				if (count > 0) {
-					memcpy (&dest[len], &xbuff[3], count);
+					action(&xbuff[3], count);
 					len += count;
 				}
 				++packetno;
@@ -134,6 +135,7 @@ int xmodemReceive(unsigned char *dest, int destsz)
 	}
 }
 
+#ifndef XMODEM_RECEIVE_ONLY
 int xmodemTransmit(unsigned char *src, int srcsz)
 {
 	unsigned char xbuff[1030]; /* 1024 for XModem 1k + 3 head chars + 2 crc + nul */
@@ -237,47 +239,5 @@ int xmodemTransmit(unsigned char *src, int srcsz)
 			}
 		}
 	}
-}
-
-#ifdef TEST_XMODEM_RECEIVE
-int main(void)
-{
-	int st;
-
-	printf ("Send data using the xmodem protocol from your terminal emulator now...\n");
-	/* the following should be changed for your environment:
-	   0x30000 is the download address,
-	   65536 is the maximum size to be written at this address
-	 */
-	st = xmodemReceive((char *)0x30000, 65536);
-	if (st < 0) {
-		printf ("Xmodem receive error: status: %d\n", st);
-	}
-	else  {
-		printf ("Xmodem successfully received %d bytes\n", st);
-	}
-
-	return 0;
-}
-#endif
-#ifdef TEST_XMODEM_SEND
-int main(void)
-{
-	int st;
-
-	printf ("Prepare your terminal emulator to receive data now...\n");
-	/* the following should be changed for your environment:
-	   0x30000 is the download address,
-	   12000 is the maximum size to be send from this address
-	 */
-	st = xmodemTransmit((char *)0x30000, 12000);
-	if (st < 0) {
-		printf ("Xmodem transmit error: status: %d\n", st);
-	}
-	else  {
-		printf ("Xmodem successfully transmitted %d bytes\n", st);
-	}
-
-	return 0;
 }
 #endif

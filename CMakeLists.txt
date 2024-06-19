@@ -43,6 +43,7 @@ set(compile_options_common
 	-ffunction-sections -fdata-sections
 	-mstrict-align
 	-I${SDK_PATH}/common/inc
+	--param=min-pagesize=0 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105523
 )
 
 set(link_options_common

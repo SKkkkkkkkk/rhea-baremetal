@@ -4,6 +4,7 @@ add_library(${TARTGET_NAME} OBJECT)
 
 target_sources(${TARTGET_NAME} 
 	PRIVATE
+		src/misc_helpers.S
 		src/cache_helpers.S
 		src/config_mmu.c
 		src/entrypoint.S

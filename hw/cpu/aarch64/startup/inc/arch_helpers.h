@@ -230,18 +230,13 @@ void flush_dcache_range(uintptr_t addr, size_t size);
 void clean_dcache_range(uintptr_t addr, size_t size);
 void inv_dcache_range(uintptr_t addr, size_t size);
 bool is_dcache_enabled(void);
-
 void invalidate_icache_all(void);
 
 void dcsw_op_louis(u_register_t op_type);
 void dcsw_op_all(u_register_t op_type);
 
-void disable_mmu_el1(void);
-void disable_mmu_el3(void);
-void disable_mpu_el2(void);
-void disable_mmu_icache_el1(void);
-void disable_mmu_icache_el3(void);
-void disable_mpu_icache_el2(void);
+void disable_mmu_elx(void);
+void disable_mmu_icache_elx(void);
 
 /*******************************************************************************
  * Misc. accessor prototypes
