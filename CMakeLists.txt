@@ -43,7 +43,6 @@ set(compile_options_common
 	-ffunction-sections -fdata-sections
 	-mstrict-align
 	-I${SDK_PATH}/common/inc
-	--param=min-pagesize=0 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105523
 )
 
 set(link_options_common
@@ -85,12 +84,14 @@ if(${IS_CLANG})
 	set(link_options_common -target aarch64-none-elf ${link_options_common})
 endif()
 
-### With ld.bfd version 2.39 and newer new warnings are added. 
-### Skip those since we are not loaded by a elf loader.
 if(${IS_GCC})
+	### With ld.bfd version 2.39 and newer new warnings are added. 
+	### Skip those since we are not loaded by a elf loader.
 	if(${CMAKE_C_COMPILER_VERSION} VERSION_GREATER_EQUAL 12.2.0)
 		set(link_options_common ${link_options_common} -Wl,--no-warn-rwx-segments)
 	endif()
+	# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105523
+	set(compile_options_common --param=min-pagesize=0 ${compile_options_common})
 endif()
 
 ## this apply to all targets
