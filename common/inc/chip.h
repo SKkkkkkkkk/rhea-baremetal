@@ -19,6 +19,14 @@
 #define D2D_SYS_VERSION		(REG32(SYSCTRL_CFG_BASE + 0xd18) & 0xFFFF)
 #define C2C_SYS_VERSION		(REG32(SYSCTRL_CFG_BASE + 0xd1c) & 0xFFFF)
 
+#define BOOTMODE_AP			(REG32(SYSCTRL_CFG_BASE + 0xC04) & 0x1)
+
+static inline void system_reset(void)
+{
+	REG32(SYSCTRL_CFG_BASE + 0x404) = 	0x1; // Software Reset Enable For Full Chip and WDT
+	REG32(SYSCTRL_CFG_BASE + 0x400)   = 0x0; // Software Reset
+}
+
 #ifdef __cplusplus
 }
 #endif
