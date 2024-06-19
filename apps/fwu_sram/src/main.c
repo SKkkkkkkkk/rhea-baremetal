@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include "chip.h"
 #include "xmodem.h"
-#include "delay.h"
 #include "nor_flash.h"
 
 #define NOR_FLASH_OFFSET (512*1024U)
@@ -21,15 +21,13 @@ void program_norflash(unsigned char *buf, int buflen)
 int main(void)
 {
 	int st;
-	printf ("Send data using the xmodem protocol from your terminal emulator now...\n");
 	flash_init(BOOTSPI_ID, 20, 3, UNKNOWN_FLASH);
-	st = xmodemReceiveWithAction(program_norflash, FIP_MAX_SIZE);
-	if (st < 0) {
-		printf ("Xmodem receive error: status: %d\n", st);
-	}
-	else  {
-		printf ("Xmodem successfully received %d bytes\n", st);
-	}
-	while(1);
+
+	printf("FWU_SRAM: Receiving FIP image...\n");
+	while( (st = xmodemReceiveWithAction(program_norflash, FIP_MAX_SIZE)) < 0)
+		printf("FWU_SRAM: Xmodem receive error: status: %d, retrying...\n", st);
+	printf("FWU_SRAM: Xmodem successfully received %d bytes\n", st);
+	printf("FWU_SRAM: System is about to restart...\n");
+	system_reset();
     return 0;
 }
