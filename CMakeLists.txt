@@ -49,7 +49,7 @@ set(link_options_common
 	-Wl,--gc-sections
 	-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/$CACHE{PROJECT_NAME}.map
 	-Wl,--print-memory-usage
-	-Wl,--wrap=memcpy -Wl,--wrap=memmove -Wl,--wrap=memset -Wl,--wrap=memcmp
+	-Wl,--wrap=memcpy -Wl,--wrap=memmove -Wl,--wrap=memset -Wl,--wrap=memcmp -Wl,--wrap=strlen
 )
 
 ## if CMAKE_BUILD_TYPE is not Debug or RelWithDebInfo, strip all symbols
