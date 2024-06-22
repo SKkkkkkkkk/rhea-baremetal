@@ -61,6 +61,7 @@ int xmodemReceiveWithAction(action_t action, int destsz)
 	unsigned char packetno = 1;
 	int i, c, len = 0;
 	int retry, retrans = MAXRETRANS;
+	int action_result;
 
 	for(;;) {
 		for( retry = 0; retry < INT32_MAX; ++retry) {
@@ -76,7 +77,7 @@ int xmodemReceiveWithAction(action_t action, int destsz)
 				case EOT:
 					flushinput();
 					_outbyte(ACK);
-					return len; /* normal end */
+					return (action_result = action(NULL, 0)) ? action_result : len; /* normal end */
 				case CAN:
 					if ((c = _inbyte(DLY_US)) == CAN) {
 						flushinput();
@@ -113,7 +114,14 @@ int xmodemReceiveWithAction(action_t action, int destsz)
 				register int count = destsz - len;
 				if (count > bufsz) count = bufsz;
 				if (count > 0) {
-					action(&xbuff[3], count);
+					if ((action_result = action(&xbuff[3], count)) != 0)
+					{
+						flushinput();
+						_outbyte(CAN);
+						_outbyte(CAN);
+						_outbyte(CAN);
+						return action_result;
+					}
 					len += count;
 				}
 				++packetno;

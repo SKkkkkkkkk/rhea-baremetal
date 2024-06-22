@@ -6,11 +6,12 @@
 #define  FWU_SRAM_BASE		APRAM_BASE
 #define  FWU_SRAM_MAX_SIZE	(512*1024U - 128*1024U)
 
-static void memcpy_to_fwu_sram_base(unsigned char *buf, int buflen)
+static int memcpy_to_fwu_sram_base(unsigned char *buf, int buflen)
 {
 	static uint32_t size = 0;
 	memcpy((void *)(uintptr_t)(FWU_SRAM_BASE + size), buf, buflen);
 	size += buflen;
+	return XMODEM_ERROR_OK;
 }
 
 static void setpc(uintptr_t pc) 
