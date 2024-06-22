@@ -2,6 +2,10 @@
 #include <string.h>
 #include "nand_flash.h"
 
+#include "arch_helpers.h"
+#define CLEAN_DCACHE_RANGE(addr, size) clean_dcache_range((uintptr_t)addr, size)
+#define FLUSH_DCACHE_RANGE(addr, size) flush_dcache_range((uintptr_t)addr, size)
+
 #define DUMMY_BYTE 0xFF
 
 static nand_flash_model_t nand_flash_model[BOOTSPI_ID + 1] = {UNKNOWN_NAND_FLASH};
@@ -106,6 +110,9 @@ int nand_flash_read(spi_id_t spi_id, uint32_t addr, uint8_t * buf, uint32_t buf_
 	assert(buf);
 	if(buf_size == 0)
 		return 0;
+
+	FLUSH_DCACHE_RANGE(buf, buf_size);
+
 	if(((addr&(NAND_PAGE_SIZE-1)) + buf_size) <= NAND_PAGE_SIZE)
 		return nand_flash_page_read(spi_id, addr, buf, buf_size);
 

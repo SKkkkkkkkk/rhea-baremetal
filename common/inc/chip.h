@@ -25,6 +25,8 @@ static inline void system_reset(void)
 {
 	REG32(SYSCTRL_CFG_BASE + 0x404) = 	0x1; // Software Reset Enable For Full Chip and WDT
 	REG32(SYSCTRL_CFG_BASE + 0x400)   = 0x0; // Software Reset
+	while(1) __asm__ __volatile__("");
+	UNREACHABLE();
 }
 
 #ifdef __cplusplus

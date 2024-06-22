@@ -27,7 +27,7 @@ void nand_test()
 	// while(1)
 	// {
 		nand_flash_read_id(BOOTSPI_ID, flash_id, 3);
-		printf("flash_id: %x %x %x\n\r", flash_id[0], flash_id[1], flash_id[2]);
+		printf("flash_id: 0x%02x%02x%02x\n\r", flash_id[0], flash_id[1], flash_id[2]);
 	// }
 
 	uint8_t protection = nand_get_feature(BOOTSPI_ID, FEATURE_REG_NAND_BLKLOCK_REG_ADDR);
@@ -51,9 +51,21 @@ void nand_test()
 		w_buf[i] = i%256;
 
 	#define TEST_ADDR 0
-	nand_flash_erase(BOOTSPI_ID, TEST_ADDR); // erase 1 block(64 pages)
-	nand_flash_page_program(BOOTSPI_ID, TEST_ADDR, w_buf);
-	nand_flash_read(BOOTSPI_ID, TEST_ADDR, r_buf, NAND_PAGE_SIZE);
+	if(nand_flash_erase(BOOTSPI_ID, TEST_ADDR) != 0)
+	{
+		printf("nand flash erase fail\n\r");
+		return;
+	}
+	if(nand_flash_page_program(BOOTSPI_ID, TEST_ADDR, w_buf) != 0)
+	{
+		printf("nand flash page program fail\n\r");
+		return;
+	}
+	if(nand_flash_read(BOOTSPI_ID, TEST_ADDR, r_buf, NAND_PAGE_SIZE) != 0)
+	{
+		printf("nand flash read fail\n\r");
+		return;
+	}
 
 	if(memcmp(w_buf, r_buf, NAND_PAGE_SIZE)==0)
 		printf("nand flash rw test pass\n\r");
