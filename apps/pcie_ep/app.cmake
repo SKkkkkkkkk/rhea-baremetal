@@ -11,6 +11,5 @@ set(app_inc
 # 添加app dependencies
 set(app_dep
 	pcie_ep
-	dw_apb_timers
 	systimer
 )

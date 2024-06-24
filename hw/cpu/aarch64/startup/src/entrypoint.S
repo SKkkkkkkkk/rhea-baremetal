@@ -149,9 +149,6 @@ data_init_end:
 	bl get_core_id
 	cmp x0, x19
 	bne secondary_core_boot
-#if defined(ENABLE_MMU_CACHE) && (ENABLE_MMU_CACHE != 0)
-	bl config_mmu
-#endif
 	bl _main
 	bl main
 dead:

@@ -4,7 +4,7 @@
 #include "gicv3.h"
 #include "dw_apb_timers.h"
 
-#define SYSTIMER_USE_NUMS   4   //最多可同时使用的定时器数目
+#define SYSTIMER_USE_NUMS   8   //最多可同时使用的定时器数目
 #define SYSTIMER_CNT_BITS   32  //CNT占的bit数
 #define SYSTIMER_UP         0   //向下计数
 
@@ -28,7 +28,7 @@
 // #define portSYSTIMER_EXIT_CRITICAL()
 
 
-static inline void systimer_init(void)
+static inline void port_systimer_init(void)
 {
     timer_init_config_t timer_init_config = {
                                                 .int_mask = 0,
