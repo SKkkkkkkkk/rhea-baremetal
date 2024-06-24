@@ -1,13 +1,16 @@
 #ifndef __XMODEM_H__
 #define __XMODEM_H__
 
-typedef int (*action_t)(unsigned char *buf, int buflen);
-int xmodemReceiveWithAction(action_t action, int destsz);
+// action_t - action type
+// @buf: buffer containing the data to be processed
+// @buflen: length of the buffer
+// @return: 0 on success, error code otherwise
+typedef unsigned int (*action_t)(unsigned char *buf, int buflen);
 
-#define XMODEM_ERROR_OK			 0
-#define XMODEM_ERROR_CANCEL		-1
-#define XMODEM_ERROR_SYNC		-2
-#define XMODEM_ERROR_RETRY		-3
-#define XMODEM_ERROR_USER_BEGIN	-6
+// xmodemReceiveWithAction - XMODEM receive with action
+// @action: action to be performed on the received data
+// @maxsz:  maximum size of the received data
+// @return: < 0 on error, size of the received data otherwise
+int xmodemReceiveWithAction(action_t action, int maxsz);
 
 #endif

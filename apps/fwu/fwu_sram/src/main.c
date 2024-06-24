@@ -8,14 +8,15 @@
 #include "nand_flash.h"
 
 // Error codes
-#define XMODEM_ERROR_NO_FLASH		(XMODEM_ERROR_USER_BEGIN-0) // -6
-#define XMODEM_ERROR_NAND_ERASE		(XMODEM_ERROR_USER_BEGIN-1) // -7
-#define XMODEM_ERROR_NAND_PROGRAM	(XMODEM_ERROR_USER_BEGIN-2) // -8
+#define XMODEM_ERROR_OK				0
+#define XMODEM_ERROR_NO_FLASH		1
+#define XMODEM_ERROR_NAND_ERASE		2
+#define XMODEM_ERROR_NAND_PROGRAM	3
 
 /******************/
 #define FLASH_OFFSET (512*1024U)
 #define FIP_MAX_SIZE 	 (1024*1024U)
-int program_nor(unsigned char *buf, int buflen)
+static unsigned int program_nor(unsigned char *buf, int buflen)
 {
 	assert((FLASH_OFFSET & 0xfff) == 0);
 
@@ -32,7 +33,7 @@ int program_nor(unsigned char *buf, int buflen)
 	return XMODEM_ERROR_OK;
 }
 
-int program_nand(unsigned char *buf, int buflen)
+static unsigned int program_nand(unsigned char *buf, int buflen)
 {
     assert((FLASH_OFFSET & (NAND_BLOCK_SIZE-1)) == 0);
 
@@ -79,13 +80,12 @@ int program_nand(unsigned char *buf, int buflen)
     return XMODEM_ERROR_OK;
 }
 
-int program_flash(unsigned char *buf, int buflen)
+static unsigned int program_flash(unsigned char *buf, int buflen)
 {
 	static bool is_init = false;
 	static bool is_nand = false;
 	if (!is_init) {
 		flash_init(BOOTSPI_ID, 10, 3, UNKNOWN_FLASH);
-		is_init = true;
 		uint8_t flash_id[3];
 		flash_read_id(BOOTSPI_ID, flash_id, 3);
 		if(flash_id[1]==0xff || flash_id[2]==0xff || flash_id[1]==0x00 || flash_id[2]==0x00)
@@ -98,6 +98,8 @@ int program_flash(unsigned char *buf, int buflen)
 		}
 		else
 			is_nand = false;
+
+		is_init = true;
 	}
 
 	return is_nand ? program_nand(buf, buflen) : program_nor(buf, buflen);
