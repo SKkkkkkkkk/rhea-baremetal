@@ -112,6 +112,7 @@ add_subdirectory(libs/flash/nand EXCLUDE_FROM_ALL)
 add_subdirectory(libs/systimer EXCLUDE_FROM_ALL)
 add_subdirectory(libs/crc EXCLUDE_FROM_ALL)
 add_subdirectory(libs/xmodem EXCLUDE_FROM_ALL)
+add_subdirectory(libs/time_stamp EXCLUDE_FROM_ALL)
 
 # app targets
 if(NOT $CACHE{PROJECT_PATH} STREQUAL "")

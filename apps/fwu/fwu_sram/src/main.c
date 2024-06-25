@@ -14,8 +14,8 @@
 #define XMODEM_ERROR_NAND_PROGRAM	3
 
 /******************/
-#define FLASH_OFFSET (512*1024U)
-#define FIP_MAX_SIZE 	 (1024*1024U)
+#define FLASH_OFFSET	(512*1024U)
+#define FIP_MAX_SIZE	(1024*1024U)
 static unsigned int program_nor(unsigned char *buf, int buflen)
 {
 	assert((FLASH_OFFSET & 0xfff) == 0);
