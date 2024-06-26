@@ -87,3 +87,7 @@ Rhea BareMetal是由一系列封装成模块的drivers和libs构成的集合，�
 见targets.cmake，该文件存放了Rhea BareMetal所有模块
 
 ![](docs/images/targets.png)
+
+## Note
+
+1. build_all.sh会运行所有apps/目录下的build.sh脚本，上传代码前请运行build_all.sh，检查所有工程是否正常运行
