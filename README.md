@@ -4,7 +4,7 @@ Rhea BareMetal提供一个干净的完全可控的裸机开发和测试平台
 
 Rhea BareMetal是由一系列封装成模块的drivers和libs构成的集合，向下对硬件进行抽象，向上为App提供APIs
 
-![](/Volumes/Workspace/seehi/Rhea/rhea-baremetal/docs/images/rhea_baremetal_stack.png)
+![](docs/images/rhea_baremetal_stack.png)
 
 ## Requirements
 
@@ -42,7 +42,7 @@ Rhea BareMetal是由一系列封装成模块的drivers和libs构成的集合，�
 
 可以通过--graphviz选项在config阶段生成targets的依赖关系图，如下：
 
-![](/Volumes/Workspace/seehi/Rhea/rhea-baremetal/docs/images/dep.png)
+![](docs/images/dep.png)
 
 ### 对于App开发者
 
@@ -80,10 +80,10 @@ Rhea BareMetal是由一系列封装成模块的drivers和libs构成的集合，�
    
    3. 可以参考libs/flash/nand/CMakeLists.txt
    
-   ![](/Volumes/Workspace/seehi/Rhea/rhea-baremetal/docs/images/how_to_write_a_target_cmake.png)
+   ![](docs/images/how_to_write_a_target_cmake.png)
 
 #### 放到Rhea BareMetal模块集合中
 
 见targets.cmake，该文件存放了Rhea BareMetal所有模块
 
-![](/Users/sk/Library/Application%20Support/marktext/images/2024-06-26-17-23-20-image.png)
+![](docs/images/targets.png)
