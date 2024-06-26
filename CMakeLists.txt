@@ -95,24 +95,7 @@ endif()
 add_compile_options(-DA55 -D$CACHE{BOARD} ${compile_options_arch} ${compile_options_common})
 
 # targets
-add_subdirectory(hw/cpu/aarch64 EXCLUDE_FROM_ALL)
-add_subdirectory(hw/gic/v3_v4 EXCLUDE_FROM_ALL)
-add_subdirectory(hw/uart/pl011 EXCLUDE_FROM_ALL)
-add_subdirectory(hw/uart/dw_apb_uart EXCLUDE_FROM_ALL)
-add_subdirectory(hw/gpio/dw_apb_gpio EXCLUDE_FROM_ALL)
-add_subdirectory(hw/spi/dw_apb_ssi EXCLUDE_FROM_ALL)
-add_subdirectory(hw/timer/dw_apb_timers EXCLUDE_FROM_ALL)
-add_subdirectory(hw/system_counter EXCLUDE_FROM_ALL)
-add_subdirectory(hw/mailbox EXCLUDE_FROM_ALL)
-add_subdirectory(hw/pcie_ep EXCLUDE_FROM_ALL)
-
-add_subdirectory(libs/newlib_stubs EXCLUDE_FROM_ALL)
-add_subdirectory(libs/flash/nor EXCLUDE_FROM_ALL)
-add_subdirectory(libs/flash/nand EXCLUDE_FROM_ALL)
-add_subdirectory(libs/systimer EXCLUDE_FROM_ALL)
-add_subdirectory(libs/crc EXCLUDE_FROM_ALL)
-add_subdirectory(libs/xmodem EXCLUDE_FROM_ALL)
-add_subdirectory(libs/time_stamp EXCLUDE_FROM_ALL)
+include(targets.cmake)
 
 # app targets
 if(NOT $CACHE{PROJECT_PATH} STREQUAL "")
