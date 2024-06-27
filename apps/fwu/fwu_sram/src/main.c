@@ -6,12 +6,15 @@
 #include "dw_apb_gpio.h"
 #include "nor_flash.h"
 #include "nand_flash.h"
+#include "dw_mmc.h"
 
 // Error codes
 #define XMODEM_ERROR_OK				0
 #define XMODEM_ERROR_NO_FLASH		1
 #define XMODEM_ERROR_NAND_ERASE		2
 #define XMODEM_ERROR_NAND_PROGRAM	3
+#define XMODEM_ERROR_MMC_NO_INIT	4
+#define XMODEM_ERROR_MMC_WRITE		5
 
 /******************/
 #define FLASH_OFFSET	(512*1024U)
@@ -105,6 +108,40 @@ static unsigned int program_flash(unsigned char *buf, int buflen)
 	return is_nand ? program_nand(buf, buflen) : program_nor(buf, buflen);
 }
 
+#define MMC_OFFSET	(1024)
+static unsigned int program_mmc(unsigned char *buf, int buflen)
+{
+	static uint8_t write_buf[DWMMC_DMA_MAX_BUFFER_SIZE] __aligned(512) = {0};
+	static uint32_t offset = MMC_OFFSET;
+	static uint32_t buf_pos = 0;
+	size_t write_len = 0;
+	int ret;
+
+	if (dw_mmc_init())
+		return XMODEM_ERROR_MMC_NO_INIT;
+
+	if (buflen == 0) {
+		write_len = (buf_pos + MMC_BLOCK_MASK) & ~MMC_BLOCK_MASK;
+		memset(write_buf + buf_pos, 0x0, write_len - buf_pos);
+	} else if (buf_pos < DWMMC_DMA_MAX_BUFFER_SIZE) {
+		memcpy(write_buf + buf_pos, buf, buflen);
+		buf_pos += buflen;
+		if (buf_pos >= DWMMC_DMA_MAX_BUFFER_SIZE) {
+			write_len = buf_pos;
+			buf_pos = 0;
+		}
+	}
+
+	if (write_len != 0) {
+		ret = mmc_write_blocks(offset, (uintptr_t) write_buf, write_len);
+		if (ret != write_len)
+			return XMODEM_ERROR_MMC_WRITE;
+
+		offset += write_len / MMC_BLOCK_SIZE;
+	}
+
+	return XMODEM_ERROR_OK;
+}
 
 /******************/
 #define FWU_KEY_PIN 1
@@ -136,14 +173,14 @@ enum boot_device get_boot_dev(void)
 }
 
 static action_t program_table[] = {
-	[BOOT_DEVICE_EMMC]		= program_flash, // TODO: Currently using program_flash instead
+	[BOOT_DEVICE_EMMC]		= program_mmc,
 	[BOOT_DEVICE_BOOTSPI]	= program_flash,
 };
 
 int main(void)
 {
 	int st;
-	
+
 	// Get boot device
 	boot_dev = get_boot_dev();
 	if (boot_dev == BOOT_DEVICE_NONE) {
