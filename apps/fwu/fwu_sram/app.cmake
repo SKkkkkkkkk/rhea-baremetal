@@ -14,4 +14,5 @@ set(app_dep
 	nor_flash
 	nand_flash
 	dw_apb_gpio
+	dw_mmc
 )
