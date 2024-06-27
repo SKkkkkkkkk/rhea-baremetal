@@ -1,4 +1,49 @@
 #include "systimer.h"
+#include "systimer_port.h"
+
+#define USEC_TO_COUNT(us, clockFreqInHz) (uint64_t)(((uint64_t)(us) * (clockFreqInHz)) / 1000000U)
+#define COUNT_TO_USEC(count, clockFreqInHz) (uint64_t)((uint64_t)(count) * 1000000U / (clockFreqInHz))
+#define MSEC_TO_COUNT(ms, clockFreqInHz) (uint64_t)((uint64_t)(ms) * (clockFreqInHz) / 1000U)
+#define COUNT_TO_MSEC(count, clockFreqInHz) (uint64_t)((uint64_t)(count) * 1000U / (clockFreqInHz))
+#define SEC_TO_COUNT(ms, clockFreqInHz) (uint64_t)((uint64_t)(s) * (clockFreqInHz) / 1U)
+#define COUNT_TO_SEC(count, clockFreqInHz) (uint64_t)((uint64_t)(count) * 1U / (clockFreqInHz))
+
+/* systimer个数 */
+#if SYSTIMER_USE_NUMS >= UINT8_MAX
+    #error SYSTIMER_NUMS must less than UINT8_MAX!
+#endif
+
+/* timer计数器的bit数 */
+#ifndef SYSTIMER_CNT_BITS
+    #error please define SYSTIMER_CNT_BITS!
+#else
+    #if SYSTIMER_CNT_BITS == 8
+        typedef uint8_t cnt_type;
+        #define SYSTIMER_CNT_MAX    0xFFUL	//加不加1,取决于是溢出产生中断，还是匹配产生中断
+    #endif
+
+    #if SYSTIMER_CNT_BITS == 16
+        typedef uint16_t cnt_type;
+        #define SYSTIMER_CNT_MAX    0xFFFFUL	//加不加1,取决于是溢出产生中断，还是匹配产生中断
+    #endif
+
+    #if SYSTIMER_CNT_BITS == 32
+        typedef uint32_t cnt_type;
+        #define SYSTIMER_CNT_MAX    0xFFFFFFFFUL	//加不加1,取决于是溢出产生中断，还是匹配产生中断
+    #endif
+#endif
+
+/* 向上 or 向下计数 */
+#ifndef SYSTIMER_UP
+    #error please indicate whether to count up or down!
+#else
+    #if SYSTIMER_UP == 0
+        #define SYSTIMER_CNT_INIT   SYSTIMER_CNT_MAX
+    #else
+        #define SYSTIMER_CNT_INIT   0U
+    #endif
+#endif
+
 typedef struct _systimer
 {
     volatile bool     running;
@@ -9,6 +54,10 @@ typedef struct _systimer
 
 static systimer_t systimer_arry[SYSTIMER_USE_NUMS] ={0};
 
+void systimer_init(void)
+{
+    port_systimer_init();
+}
 
 /*开启一个空闲定时器*/
 systimer_id_t systimer_acquire_timer(void)

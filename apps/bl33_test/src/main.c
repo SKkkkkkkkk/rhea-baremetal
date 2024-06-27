@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdint.h>
-#include "memmap.h"
+#include "time_stamp.h"
+#include "chip.h"
 
 int main()
 {
+	TIME_STAMP();
 	printf("Hello World From NS World!\n\r");
-	*(volatile uint32_t*)(SYSCTRL_CFG_BASE + 0x400) = 0;
+	system_reset();
 	return 0;
 }

@@ -27,6 +27,13 @@
 
 #define SPI_CS_USE_GPIO 1
 
+#define BOOTSPI_CLK_PIN 12
+#define BOOTSPI_CSN_PIN 13
+#define BOOTSPI_IO0_PIN 14
+#define BOOTSPI_IO1_PIN 15
+#define BOOTSPI_IO2_PIN 16
+#define BOOTSPI_IO3_PIN 17
+
 /**
  * @brief SPI 状态位.
  * 0 - 未初始化
@@ -55,19 +62,19 @@ static inline void spix_pinmux(spi_init_config_t const * const spi_init_config)
 	};
 	switch (spi_init_config->spi_id) {
 	case BOOTSPI_ID:
-		pinmux_select(PORTB, 26, 0);
+		pinmux_select(PORTB,BOOTSPI_CLK_PIN, 0);
 	#if (SPI_CS_USE_GPIO != 1)
-		pinmux_select(PORTB, 27, 0);
+		pinmux_select(PORTB, BOOTSPI_CSN_PIN, 0);
 	#else
 		gpio_init_config.port = PORTB;
-		gpio_init_config.pin = 27;
+		gpio_init_config.pin = BOOTSPI_CSN_PIN;
 		gpio_init(&gpio_init_config);
-		pinmux_select(PORTB, 27, 7); //as gpio
+		pinmux_select(PORTB, BOOTSPI_CSN_PIN, 7); //as gpio
 	#endif
-		pinmux_select(PORTB, 28, 0);
-		pinmux_select(PORTB, 29, 0);
-		pinmux_select(PORTB, 30, 0);
-		pinmux_select(PORTB, 31, 0);
+		pinmux_select(PORTB, BOOTSPI_IO0_PIN, 0);
+		pinmux_select(PORTB, BOOTSPI_IO1_PIN, 0);
+		pinmux_select(PORTB, BOOTSPI_IO2_PIN, 0);
+		pinmux_select(PORTB, BOOTSPI_IO3_PIN, 0);
 		return;
 	default:
 		return;
@@ -98,7 +105,7 @@ static inline void spi_disable(spi_id_t spi_id)
 	switch (spi_id)
 	{
 	case BOOTSPI_ID:
-		gpio_write_pin(PORTB, 27, GPIO_PIN_SET);
+		gpio_write_pin(PORTB, BOOTSPI_CSN_PIN, GPIO_PIN_SET);
 		break;
 	default:
 		break;
@@ -125,7 +132,7 @@ static inline void spi_select_slave(spi_id_t spi_id, uint8_t cs)
 	switch (spi_id)
 	{
 	case BOOTSPI_ID:
-		cs ? gpio_write_pin(PORTB, 27, GPIO_PIN_RESET) : gpio_write_pin(PORTB, 27, GPIO_PIN_SET);
+		cs ? gpio_write_pin(PORTB, BOOTSPI_CSN_PIN, GPIO_PIN_RESET) : gpio_write_pin(PORTB, BOOTSPI_CSN_PIN, GPIO_PIN_SET);
 	default:
 		break;
 	}

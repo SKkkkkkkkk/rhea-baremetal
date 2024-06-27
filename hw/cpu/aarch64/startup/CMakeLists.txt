@@ -6,7 +6,7 @@ target_sources(${TARTGET_NAME}
 	PRIVATE
 		src/misc_helpers.S
 		src/cache_helpers.S
-		src/config_mmu.c
+		# src/config_mmu.c
 		src/entrypoint.S
 		src/exceptions.S
 		src/_main.c

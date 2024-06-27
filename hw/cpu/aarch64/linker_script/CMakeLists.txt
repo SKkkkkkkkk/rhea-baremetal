@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.15...3.28)
 
 set(TARTGET_NAME "linker_script")
 

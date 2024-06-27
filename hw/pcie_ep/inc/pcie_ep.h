@@ -42,59 +42,67 @@ typedef int32_t HAL_PCI_DevT;
  * @brief PCI size type
  */
 typedef enum {
-    PCI_SIZE_8,
-    PCI_SIZE_16,
-    PCI_SIZE_32,
+	PCI_SIZE_8,
+	PCI_SIZE_16,
+	PCI_SIZE_32,
 } ePCI_Size;
 
 /** HAL boolean type definition */
 typedef enum {
-    HAL_FALSE = 0x00U,
-    HAL_TRUE  = 0x01U
+	HAL_FALSE = 0x00U,
+	HAL_TRUE  = 0x01U
 } HAL_Check;
 
 /** HAL error code definition */
 typedef enum {
-    HAL_OK      = 0x00U,
-    HAL_ERROR   = (-1),
-    HAL_BUSY    = (-16),
-    HAL_NODEV   = (-19),
-    HAL_INVAL   = (-22),
-    HAL_NOSYS   = (-38),
-    HAL_TIMEOUT = (-110)
+	HAL_OK      = 0x00U,
+	HAL_ERROR   = (-1),
+	HAL_BUSY    = (-16),
+	HAL_NODEV   = (-19),
+	HAL_INVAL   = (-22),
+	HAL_NOSYS   = (-38),
+	HAL_TIMEOUT = (-110)
 } HAL_Status;
 
 /** HAL functional status definition */
 typedef enum {
-    HAL_DISABLE = 0x00U,
-    HAL_ENABLE  = 0x01U
+	HAL_DISABLE = 0x00U,
+	HAL_ENABLE  = 0x01U
 } HAL_FuncStatus;
 
 /** HAL lock structures definition */
 typedef enum {
-    HAL_UNLOCKED = 0x00U,
-    HAL_LOCKED   = 0x01U
+	HAL_UNLOCKED = 0x00U,
+	HAL_LOCKED   = 0x01U
 } HAL_LockStatus;
 
 
 struct HAL_PHY_SNPS_PCIE3_DEV {
-    uint32_t phyMode;
+	uint32_t phyMode;
 };
 
 /** PCIe handler */
 struct HAL_PCIE_DEV {
-    uint32_t apbBase;
-    uint32_t dbiBase;
-    uint32_t cfgBase;
-    uint8_t lanes;
-    uint8_t gen;
-    uint8_t firstBusNo;
-    uint32_t legacyIrqNum;
-    void *phy;
+	uint64_t dbiBase;
+	uint64_t engineBase;
+	uint64_t apbBase;
+	uint64_t cfgBase;
+	uint64_t phyBase;
+	uint64_t ssBase;
+	uint64_t drouterBase;
+	uint64_t crouterBase;
+	uint64_t dniuBase;
+	uint64_t cniuBase;
+	uint64_t mbitxBase;
+	uint8_t lanes;
+	uint8_t gen;
+	uint8_t firstBusNo;
+	uint32_t legacyIrqNum;
+	void *phy;
 };
 
 struct HAL_PCIE_HANDLE {
-    struct HAL_PCIE_DEV *dev;
+	struct HAL_PCIE_DEV *dev;
 };
 /** @} */
 /***************************** Function Declare ******************************/

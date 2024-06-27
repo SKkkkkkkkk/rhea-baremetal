@@ -14,6 +14,12 @@
 int _inbyte(uint64_t timeout); // msec timeout
 void _outbyte(int c);
 
+#define XMODEM_ERROR_OK			 0
+#define XMODEM_ERROR_CANCEL		-1
+#define XMODEM_ERROR_SYNC		-2
+#define XMODEM_ERROR_RETRY		-3
+#define XMODEM_ERROR_USER_BEGIN	-5
+
 #define SOH  0x01
 #define STX  0x02
 #define EOT  0x04
@@ -61,6 +67,7 @@ int xmodemReceiveWithAction(action_t action, int destsz)
 	unsigned char packetno = 1;
 	int i, c, len = 0;
 	int retry, retrans = MAXRETRANS;
+	int action_result;
 
 	for(;;) {
 		for( retry = 0; retry < INT32_MAX; ++retry) {
@@ -76,7 +83,8 @@ int xmodemReceiveWithAction(action_t action, int destsz)
 				case EOT:
 					flushinput();
 					_outbyte(ACK);
-					return len; /* normal end */
+					return ((action_result = action(NULL, 0)) == 0) ? \
+							len : XMODEM_ERROR_USER_BEGIN - action_result;
 				case CAN:
 					if ((c = _inbyte(DLY_US)) == CAN) {
 						flushinput();
@@ -113,7 +121,14 @@ int xmodemReceiveWithAction(action_t action, int destsz)
 				register int count = destsz - len;
 				if (count > bufsz) count = bufsz;
 				if (count > 0) {
-					action(&xbuff[3], count);
+					if ((action_result = action(&xbuff[3], count)) != 0)
+					{
+						flushinput();
+						_outbyte(CAN);
+						_outbyte(CAN);
+						_outbyte(CAN);
+						return XMODEM_ERROR_USER_BEGIN - action_result;
+					}
 					len += count;
 				}
 				++packetno;

@@ -12,4 +12,6 @@ set(app_inc
 set(app_dep
 	xmodem
 	nor_flash
+	nand_flash
+	dw_apb_gpio
 )
