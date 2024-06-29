@@ -617,7 +617,7 @@ int16_t dw_spi_tuning(spi_id_t spi_id, void *t_buf, uint8_t t_size, void *r_buf,
 uint8_t dma_channel_state[8] = {0};
 #include "dma.h"
 
-DMA_Channel_t dw_spi_eeprom_read_dma_start(spi_id_t spi_id, void *t_buf, uint8_t t_size, void *r_buf, uint32_t r_size)
+DMA_Channel_t dw_spi_eeprom_read_dma_start(spi_id_t spi_id, void *t_buf, uint8_t t_size, void *r_buf, uint16_t r_size)
 {
 	//0. 判断输入合法性
 	assert(get_spi_state(spi_id)!=0);
