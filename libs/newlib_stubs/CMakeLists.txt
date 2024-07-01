@@ -7,11 +7,6 @@ target_sources(${TARTGET_NAME}
 		newlib_stubs.c
 )
 
-target_link_libraries(${TARTGET_NAME}
-	PRIVATE
-		aarch64
-)
-
 if($CACHE{BOARD} STREQUAL "QEMU")
 	target_link_libraries(${TARTGET_NAME}
 		PRIVATE

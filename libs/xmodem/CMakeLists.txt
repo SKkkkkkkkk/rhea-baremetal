@@ -16,7 +16,6 @@ target_include_directories( ${TARTGET_NAME}
 target_link_libraries(${TARTGET_NAME} 
 	PRIVATE 
 		crc
-		aarch64
 )
 
 if($CACHE{BOARD} STREQUAL "QEMU")

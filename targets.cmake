@@ -15,6 +15,7 @@ add_subdirectory(hw/pcie_ep EXCLUDE_FROM_ALL)
 add_subdirectory(hw/mmc/dw_mmc EXCLUDE_FROM_ALL)
 
 # libs
+add_subdirectory(libs/linker_script EXCLUDE_FROM_ALL)
 add_subdirectory(libs/newlib_stubs EXCLUDE_FROM_ALL)
 add_subdirectory(libs/flash/nor EXCLUDE_FROM_ALL)
 add_subdirectory(libs/flash/nand EXCLUDE_FROM_ALL)

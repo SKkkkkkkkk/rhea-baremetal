@@ -15,6 +15,5 @@ target_include_directories(${TARTGET_NAME}
 
 target_link_libraries(${TARTGET_NAME}
 	PRIVATE
-		aarch64
 		dw_apb_gpio
 )

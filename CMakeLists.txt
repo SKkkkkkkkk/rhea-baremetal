@@ -40,6 +40,7 @@ set(compile_options_common
 	-ffunction-sections -fdata-sections
 	-mstrict-align
 	-I${SDK_PATH}/common/inc
+	-I${SDK_PATH}/hw/cpu/aarch64/inc # aarch64 helper
 )
 
 set(link_options_common
@@ -92,6 +93,9 @@ if(${IS_GCC})
 endif()
 
 ## this apply to all targets
+
+### Adds options to the COMPILE_OPTIONS directory property. 
+### These options are used when compiling targets from the current directory and below.
 add_compile_options(-DA55 -D$CACHE{BOARD} ${compile_options_arch} ${compile_options_common})
 
 # targets
@@ -120,12 +124,13 @@ target_link_options($CACHE{PROJECT_NAME}.elf
 
 target_link_libraries($CACHE{PROJECT_NAME}.elf
 	PRIVATE
-		aarch64
+		aarch64_startup
 		newlib_stubs
-		wakeup_core
 		gicv3
 		${app_dep}
-		-lc -lm ${LIBGCC}
+		-lc
+		-lm 
+		${LIBGCC}
 )
 
 if("$CACHE{MEM_SCHEME}" STREQUAL "CUSTOM")
