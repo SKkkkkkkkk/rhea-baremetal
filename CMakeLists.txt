@@ -27,6 +27,11 @@ set(STACK_SIZE "0x4000" CACHE STRING "Stack Size(In Bytes)")
 
 set(HEAP_SIZE  "0x4000" CACHE STRING "Heap Size(In Bytes)")
 
+set(ENABLE_LTO "OFF" CACHE BOOL "Enable Link Time Optimization")
+if($CACHE{ENABLE_LTO})
+	set(LTO_FLAG "-flto")
+endif()
+
 project("${PROJECT_NAME}"
 	VERSION 0.1.0
 	DESCRIPTION "${PROJECT_NAME}"
@@ -39,6 +44,7 @@ set(compile_options_common
 	-Wall -Werror -Wno-unused-variable -Wno-unused-function
 	-ffunction-sections -fdata-sections
 	-mstrict-align
+	${LTO_FLAG}
 	-I${SDK_PATH}/common/inc
 	-I${SDK_PATH}/hw/cpu/aarch64/inc # aarch64 helper
 )
@@ -46,6 +52,7 @@ set(compile_options_common
 set(link_options_common
 	-static
 	-nostdlib # we will explicitly link libc.a, libm.a and libgcc.a later
+	${LTO_FLAG}
 	-Wl,--fatal-warnings
 	-Wl,--gc-sections
 	-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/$CACHE{PROJECT_NAME}.map

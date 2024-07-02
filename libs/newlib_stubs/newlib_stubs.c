@@ -103,39 +103,39 @@ int _read(int fd __unused, char* ptr, int len)
 
 
 /* _exit */
-void _exit(int status __unused) {
+__attribute__((__used__)) void _exit(int status __unused) {
 	while(1);
 }
 
 /* close */
-int _close(int file __unused) {
+__attribute__((__used__)) int _close(int file __unused) {
 	return -1;
 }
 
 /* fstat */
-int _fstat(int file __unused, struct stat *st) {
+__attribute__((__used__)) int _fstat(int file __unused, struct stat *st) {
 	st->st_mode = S_IFCHR;
 	return 0;
 }
 
-int _getpid(void) {
+__attribute__((__used__)) int _getpid(void) {
 	return 1;
 }
 
-int _isatty(int file __unused) {
+__attribute__((__used__)) int _isatty(int file __unused) {
 	return 1;
 }
 
-int _kill(int pid __unused, int sig __unused) {
+__attribute__((__used__)) int _kill(int pid __unused, int sig __unused) {
 	errno = EINVAL;
 	return -1;
 }
 
-int _lseek(int file __unused, int ptr __unused, int dir __unused) {
+__attribute__((__used__)) int _lseek(int file __unused, int ptr __unused, int dir __unused) {
 	return 0;
 }
 
-void *_sbrk(int incr) {
+__attribute__((__used__)) void *_sbrk(int incr) {
 	extern char _heap_start;
 	extern char _heap_end;
 	static unsigned char *heap = (unsigned char *)(uintptr_t)(&_heap_start);
@@ -154,7 +154,7 @@ void *_sbrk(int incr) {
 
 #include "FreeRTOS.h"
 #include "task.h"
-void __malloc_lock(struct _reent *r __unused)   
+__attribute__((__used__)) void __malloc_lock(struct _reent *r __unused)   
 {
 	configASSERT(!xPortIsInsideInterrupt()); // 禁止在中断中使用malloc
 	if(xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED)
@@ -162,7 +162,7 @@ void __malloc_lock(struct _reent *r __unused)
 	vTaskSuspendAll();
 }
 
-void __malloc_unlock(struct _reent *r __unused) 
+__attribute__((__used__)) void __malloc_unlock(struct _reent *r __unused) 
 {
 	configASSERT(!xPortIsInsideInterrupt()); // 禁止在中断中使用malloc
 	if(xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED)
@@ -175,12 +175,12 @@ void __malloc_unlock(struct _reent *r __unused)
 char *__env[1] = { 0 };
 char **environ = __env;
 
-int link(char *old __unused, char *new __unused) {
+__attribute__((__used__)) __attribute__((__used__)) int link(char *old __unused, char *new __unused) {
 	errno = EMLINK;
 	return -1;
 }
 
-int _open(const char *name __unused, int flags __unused, int mode __unused) {
+__attribute__((__used__)) __attribute__((__used__)) int _open(const char *name __unused, int flags __unused, int mode __unused) {
 	return -1;
 }
 
@@ -191,13 +191,13 @@ int _open(const char *name __unused, int flags __unused, int mode __unused) {
 // }
 
 /* fork */
-int fork(void) {
+__attribute__((__used__)) __attribute__((__used__)) int fork(void) {
 	errno = EAGAIN;
 	return -1;
 }
 
 
-int stat (const char *__restrict __path __unused, struct stat *__restrict __sbuf ) {
+__attribute__((__used__)) __attribute__((__used__)) int stat (const char *__restrict __path __unused, struct stat *__restrict __sbuf ) {
 	__sbuf->st_mode = S_IFCHR;
 	return 0;
 }
@@ -206,12 +206,12 @@ int stat (const char *__restrict __path __unused, struct stat *__restrict __sbuf
 //   return -1;
 // }
 
-int unlink(char *name __unused) {
+__attribute__((__used__)) __attribute__((__used__)) int unlink(char *name __unused) {
 	errno = ENOENT;
 	return -1;
 }
 
-int wait(int *status __unused) {
+__attribute__((__used__)) __attribute__((__used__)) int wait(int *status __unused) {
 	errno = ECHILD;
 	return -1;
 }
@@ -254,7 +254,7 @@ int wait(int *status __unused) {
 
 
 
-void _fini()
+__attribute__((__used__)) void _fini()
 {
 	return;
 }
