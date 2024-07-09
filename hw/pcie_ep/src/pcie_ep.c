@@ -36,7 +36,7 @@
 #define SMLH_LINKUP              BIT(0)
 #define RDLH_LINKUP              BIT(1)
 
-#define PCIE_ATU_OFFSET 0x300000
+#define PCIE_ATU_OFFSET 0x30000
 
 #define PCIE_ATU_ENABLE          BIT(31)
 #define PCIE_ATU_BAR_MODE_ENABLE BIT(30)
@@ -92,23 +92,25 @@
 /********************* Private Function Definition ***************************/
 static void HAL_DelayUs(uint32_t count)
 {
-	uint32_t i, j;
+	uint32_t i, j, k;
 
 	if(count > 1000)
 		count = 1000;
 
-	for(j = 0; j < count; j++)
-		for(i = 0; i < 1000; i++);
+	for(i = 0; i < count; i++)
+		for(j = 0; j < 1000; j++)
+			for(k = 0; k < 1000; k++);
 }
 
-static inline void writel(uint32_t address, uint32_t value)
+static inline void writel(uint64_t address, uint32_t value)
 {
 	uintptr_t addr = (uintptr_t)address;
 
+	// printf("writel 0x%lx= 0x%x\n", addr, value);
 	*((volatile uint32_t *)(addr)) = value;
 }
 
-static inline uint32_t readl(uint32_t address)
+static inline uint32_t readl(uint64_t address)
 {
 	uintptr_t addr = (uintptr_t)address;
 
@@ -430,6 +432,82 @@ HAL_Status HAL_PCIE_OutboundConfig(struct HAL_PCIE_HANDLE *pcie, int32_t index, 
 	return HAL_ERROR;
 }
 
+#define PCIE_ATU_VIEWPORT		0x900
+#define PCIE_ATU_REGION_INBOUND		BIT(31)
+#define PCIE_ATU_REGION_OUTBOUND	0
+#define PCIE_ATU_CR1			0x904
+// #define PCIE_ATU_INCREASE_REGION_SIZE	BIT(13)
+// #define PCIE_ATU_TYPE_MEM		0x0
+// #define PCIE_ATU_TYPE_IO		0x2
+// #define PCIE_ATU_TYPE_CFG0		0x4
+// #define PCIE_ATU_TYPE_CFG1		0x5
+// #define PCIE_ATU_TD			BIT(8)
+// #define PCIE_ATU_FUNC_NUM(pf)           ((pf) << 20)
+#define PCIE_ATU_CR2			0x908
+// #define PCIE_ATU_ENABLE			BIT(31)
+// #define PCIE_ATU_BAR_MODE_ENABLE	BIT(30)
+// #define PCIE_ATU_FUNC_NUM_MATCH_EN      BIT(19)
+#define PCIE_ATU_LOWER_BASE		0x90C
+#define PCIE_ATU_UPPER_BASE		0x910
+#define PCIE_ATU_LIMIT			0x914
+#define PCIE_ATU_LOWER_TARGET		0x918
+#define PCIE_ATU_UPPER_TARGET		0x91C
+#define PCIE_ATU_UPPER_LIMIT		0x924
+
+HAL_Status dw_pcie_prog_inbound_atu(struct HAL_PCIE_HANDLE *pcie, int32_t index, int32_t bar, uint64_t cpuAddr)
+{
+	uint32_t val, i;
+	uint32_t off;
+
+	off = 0x0;
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_VIEWPORT, PCIE_ATU_REGION_INBOUND |index);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_LOWER_TARGET, cpuAddr & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UPPER_TARGET, (cpuAddr >> 32) & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_CR1, PCIE_ATU_TYPE_MEM);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_CR2, PCIE_ATU_ENABLE | PCIE_ATU_BAR_MODE_ENABLE | (bar << 8));
+
+	for (i = 0; i < 5000; i++) {
+		val = HAL_PCIE_DbiReadl(pcie, off + PCIE_ATU_CR2);
+		if (val & PCIE_ATU_ENABLE) {
+			return HAL_OK;
+		}
+		HAL_DelayUs(LINK_WAIT_IATU);
+	}
+
+	return HAL_ERROR;
+}
+
+HAL_Status dw_pcie_prog_outbound_atu(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint32_t size)
+{
+	uint32_t off;
+	uint32_t val;
+	uint64_t limit_addr;
+	int32_t i;
+
+	limit_addr = cpuAddr + size - 1;
+
+	off = 0x0;
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_VIEWPORT, PCIE_ATU_REGION_OUTBOUND |index);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_LOWER_BASE, cpuAddr & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UPPER_BASE, (cpuAddr >> 32) & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_LIMIT, limit_addr & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UPPER_LIMIT, (limit_addr >> 32) & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_LOWER_TARGET, busAddr & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UPPER_TARGET, (busAddr >> 32) & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_CR1, type);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_CR2, PCIE_ATU_ENABLE);
+
+	for (i = 0; i < 5000; i++) {
+		val = HAL_PCIE_DbiReadl(pcie, off + PCIE_ATU_CR2);
+		if (val & PCIE_ATU_ENABLE) {
+			return HAL_OK;
+		}
+		HAL_DelayUs(LINK_WAIT_IATU);
+	}
+
+	return HAL_ERROR;
+}
+
 /**
  * @brief  Setting PCIe config space outbound atu.
  * @param  pcie: PCIe host.
@@ -454,6 +532,7 @@ int32_t HAL_PCIE_OutboundConfigCFG0(struct HAL_PCIE_HANDLE *pcie, HAL_PCI_DevT d
 
 	return index;
 }
+
 
 /** @} */
 
