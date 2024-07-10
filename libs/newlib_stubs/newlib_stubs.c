@@ -5,7 +5,13 @@
 #include <stdint.h>
 
 #define DEFAULT_CONSOLE_BAUDRATE 115200U
-static uint32_t default_uart_clk = 25000000U;
+#ifdef QEMU
+#	define default_uart_clk 25000000U
+#else
+#	include "cru.h"
+#	define default_uart_clk get_clk(CLK_UART)
+#endif
+
 static bool console_init = false;
 
 #pragma weak _write

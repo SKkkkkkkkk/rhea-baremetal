@@ -16,5 +16,6 @@ else()
 	target_link_libraries(${TARTGET_NAME}
 		PRIVATE
 			dw_apb_uart
+			cru
 	)
 endif()

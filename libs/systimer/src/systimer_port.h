@@ -3,12 +3,13 @@
 
 #include "gicv3.h"
 #include "dw_apb_timers.h"
+#include "cru.h"
 
 #define SYSTIMER_USE_NUMS   8   //最多可同时使用的定时器数目
 #define SYSTIMER_CNT_BITS   32  //CNT占的bit数
 #define SYSTIMER_UP         0   //向下计数
 
-#define SYSTIMER_CLOCK      25000000
+#define SYSTIMER_CLOCK      get_clk(CLK_TIMER)
 #define SYSTIMER_CNT        (TIMERX6->Timer1CurrentValue)
 #define SYSTIMER_CLEAR_INT_FLAG() ((void)TIMERX6->Timer1EOI)
 #define systimer_stop()     timer_disable(Timerx6_T1)
