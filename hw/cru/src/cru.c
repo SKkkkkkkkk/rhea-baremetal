@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include "cru.h"
 
-const uint8_t fpga_clock[] = {
+static const uint8_t fpga_clock[] = {
     24,         // clk_cfg
     24,         // clk_tile
     60,         // clk_tcm
