@@ -16,4 +16,5 @@ target_include_directories(${TARTGET_NAME}
 target_link_libraries(${TARTGET_NAME}
 	PRIVATE
 		dw_apb_gpio
+		cru
 )
