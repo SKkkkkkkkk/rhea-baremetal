@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "systimer.h"
 #define OFF_RW_ADDR (2*1024*1024)
 
 #define DMA_READ
@@ -270,8 +271,9 @@ void flash_fastest_read_test(spi_id_t spi_id, flash_model_t flash_model, uint16_
 	sr[1] = _flash_read_sr_high(spi_id);
 	printf("after sr: 0x%x 0x%x\n\r", sr[0], sr[1]);
 
-	// systimer_id_t timer;
+	systimer_id_t timer;
 	uint64_t delta = 0;
+	systimer_init();
 
 #if !defined(DMA_WRITE) // flash_write
 	printf("\tflash_write\n\r");
@@ -281,16 +283,16 @@ void flash_fastest_read_test(spi_id_t spi_id, flash_model_t flash_model, uint16_
 
 	for(uint32_t i = 0;i<CASE5_SIZE;i++)
 		case5_w_buf[i] = i%256;
-	for(uint32_t i = 0;i<(CASE5_SIZE/4096+2);i++)
-		flash_sector_erase(spi_id, (CASE5_ADDR&0xfffff000)+4096*i);
-	FLASH_WRITE(spi_id, CASE5_ADDR, case5_w_buf, CASE5_SIZE);
+	// for(uint32_t i = 0;i<(CASE5_SIZE/4096+2);i++)
+	// 	flash_sector_erase(spi_id, (CASE5_ADDR&0xfffff000)+4096*i);
+	// FLASH_WRITE(spi_id, CASE5_ADDR, case5_w_buf, CASE5_SIZE);
 	
 	//1. cpu方式 + 标准spi模式
 	memset(case5_r_buf, 0xa5, CASE5_SIZE);
- 	// timer = systimer_acquire_timer();
+ 	timer = systimer_acquire_timer();
 	flash_read(spi_id, CASE5_ADDR, case5_r_buf, CASE5_SIZE);
-	// delta = systimer_get_elapsed_time(timer, IN_MS);
-	// systimer_release_timer(timer);
+	delta = systimer_get_elapsed_time(timer, IN_MS);
+	systimer_release_timer(timer);
 	if(memcmp(case5_w_buf,case5_r_buf,CASE5_SIZE)==0) //比对
 	{
 		printf("\tcpu + std: %d\n\r", (int)delta);
@@ -302,10 +304,10 @@ void flash_fastest_read_test(spi_id_t spi_id, flash_model_t flash_model, uint16_
 
 	//2. dma方式 + 标准spi模式
 	memset(case5_r_buf, 0xa5, CASE5_SIZE);
-	// timer = systimer_acquire_timer();
+	timer = systimer_acquire_timer();
 	flash_read_dma(spi_id, CASE5_ADDR, case5_r_buf, CASE5_SIZE);
-	// delta = systimer_get_elapsed_time(timer, IN_MS);
-	// systimer_release_timer(timer);
+	delta = systimer_get_elapsed_time(timer, IN_MS);
+	systimer_release_timer(timer);
 	if(memcmp(case5_w_buf,case5_r_buf,CASE5_SIZE)==0) //比对
 	{
 		printf("\tdma + std: %d\n\r", (int)delta);
@@ -317,10 +319,10 @@ void flash_fastest_read_test(spi_id_t spi_id, flash_model_t flash_model, uint16_
 
 	//3. cpu方式 + quad
 	memset(case5_r_buf, 0xa5, CASE5_SIZE);
-	// timer = systimer_acquire_timer();
+	timer = systimer_acquire_timer();
 	flash_read_quad(spi_id, CASE5_ADDR, case5_r_buf, CASE5_SIZE);
-	// delta = systimer_get_elapsed_time(timer, IN_MS);
-	// systimer_release_timer(timer);
+	delta = systimer_get_elapsed_time(timer, IN_MS);
+	systimer_release_timer(timer);
 	if(memcmp(case5_w_buf,case5_r_buf,CASE5_SIZE)==0) //比对
 	{
 		printf("\tcpu + quad: %d\n\r", (int)delta);
@@ -332,10 +334,10 @@ void flash_fastest_read_test(spi_id_t spi_id, flash_model_t flash_model, uint16_
 
 	//4. dma方式 + quad
 	memset(case5_r_buf, 0xa5, CASE5_SIZE);
-	// timer = systimer_acquire_timer();
+	timer = systimer_acquire_timer();
 	flash_read_quad_dma(spi_id, CASE5_ADDR, case5_r_buf, CASE5_SIZE);
-	// delta = systimer_get_elapsed_time(timer, IN_MS);
-	// systimer_release_timer(timer);
+	delta = systimer_get_elapsed_time(timer, IN_MS);
+	systimer_release_timer(timer);
 	if(memcmp(case5_w_buf,case5_r_buf,CASE5_SIZE)==0) //比对
 	{
 		printf("\tdma + quad: %d\n\r", (int)delta);

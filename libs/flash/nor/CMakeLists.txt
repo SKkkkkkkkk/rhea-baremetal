@@ -20,7 +20,7 @@ target_include_directories(${TARTGET_NAME}
 target_link_libraries(${TARTGET_NAME} 
 	PUBLIC
 		dw_apb_ssi
-		# systimer
+		systimer
 )
 
 
