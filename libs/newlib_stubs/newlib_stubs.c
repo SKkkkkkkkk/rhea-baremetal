@@ -84,11 +84,11 @@ int _write (int fd __unused, char *ptr, int len)
 	for(;i<len;i++)
 	{
 		uart_sendchar(UART_ID, ptr[i]);
-		REG32(SYSCTRL_CFG_BASE + 0xfe0) = ptr[i];
+		REG32(SYSCTRL_BASE + 0xfe0) = ptr[i];
 		if(ptr[i] == '\n')
 		{
 			uart_sendchar(UART_ID,'\r');
-			REG32(SYSCTRL_CFG_BASE + 0xfe0) = '\r';
+			REG32(SYSCTRL_BASE + 0xfe0) = '\r';
 		}
 	}
 	return i;
