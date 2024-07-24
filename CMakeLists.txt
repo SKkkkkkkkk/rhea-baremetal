@@ -37,6 +37,8 @@ endif()
 
 set(ENABLE_MMU "OFF" CACHE BOOL "Enable MMU")
 
+set(PRIMARY_CORE "0" CACHE STRING "Primary Core")
+
 project("${PROJECT_NAME}"
 	VERSION 0.1.0
 	DESCRIPTION "${PROJECT_NAME}"
@@ -50,6 +52,7 @@ set(compile_options_common
 	-ffunction-sections -fdata-sections
 	-mstrict-align
 	${LTO_FLAG}
+	-DA55 -D$CACHE{BOARD} -DPRIMARY_CORE=$CACHE{PRIMARY_CORE}
 	-I${SDK_PATH}/common/inc
 	-I${SDK_PATH}/hw/cpu/aarch64/inc # aarch64 helper
 )
@@ -112,7 +115,7 @@ endif()
 
 ### Adds options to the COMPILE_OPTIONS directory property. 
 ### These options are used when compiling targets from the current directory and below.
-add_compile_options(-DA55 -D$CACHE{BOARD} ${compile_options_arch} ${compile_options_common})
+add_compile_options(${compile_options_arch} ${compile_options_common})
 
 # targets
 include(targets.cmake)
