@@ -97,17 +97,18 @@ static void GIC_Discovery()
 	// 				(gicv2_compat == 0U) ? "" : "out");
 
 	uint8_t index = 0;
-	do 
+	while(1) 
 	{
-		// printf("GICR[%u] with Affinity: 0x%x\n", index, GICRedistributor[index].RD_base.TYPER[1]);
-		if( getAffinity() == (GICRedistributor[index].RD_base.TYPER>>32))
+		printf("GICR[%u] with Affinity: 0x%lx\n", index, GICRedistributor[index].RD_base.TYPER);
+		if(getAffinity() == (GICRedistributor[index].RD_base.TYPER>>32))
 		{
 			current_gicr_index = index;
 			break;
 		}
+		if(GICRedistributor[index].RD_base.TYPER & (1U << TYPER_LAST_BIT))
+			break;
 		index++;
-	} while((GICRedistributor[index].RD_base.TYPER & (1<<4)) == 0); // Keep incrementing until GICR_TYPER.Last reports no more RDs in block
-	// printf("GICR[%u] with Affinity: 0x%x\n", index, GICRedistributor[index].RD_base.TYPER[1]);
+	}
 	assert(current_gicr_index != 0xff);
 	// printf("Current GICR index is %u\n", current_gicr_index);
 }
