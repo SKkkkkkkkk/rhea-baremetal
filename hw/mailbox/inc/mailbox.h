@@ -3,9 +3,9 @@
 
 #include "memmap.h"
 
-#define MAILBOX_A2B_ADDR  (Mailbox_BASE+0x000)
-#define MAILBOX_B2A_ADDR  (Mailbox_BASE+0x028)
-#define MAILBOX_LOCK_ADDR (Mailbox_BASE+0x100)
+#define MAILBOX_A2B_ADDR  (MAILBOX_BASE+0x000)
+#define MAILBOX_B2A_ADDR  (MAILBOX_BASE+0x028)
+#define MAILBOX_LOCK_ADDR (MAILBOX_BASE+0x100)
 
 typedef struct {
     // 0x000

@@ -11,8 +11,3 @@ target_include_directories(${TARTGET_NAME}
 	PUBLIC
 		inc
 )
-
-target_link_libraries(${TARTGET_NAME}
-	PRIVATE
-		aarch64
-)

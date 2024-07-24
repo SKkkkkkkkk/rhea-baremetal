@@ -14,6 +14,7 @@
 #include "delay.h"
 #include "dw_apb_gpio.h"
 #include "memmap.h"
+#include "cru.h"
 
 #define DWMMC_CTRL (0x00)
 #define CTRL_IDMAC_EN (1 << 25)
@@ -116,8 +117,6 @@
 #define TIMEOUT 100000
 
 #define DW_MMC_CLK_DIV 2
-
-#define DW_MMC_CLK_IN_HZ          U(100000000)
 
 struct dw_idmac_desc {
 	unsigned int des0;
@@ -501,12 +500,12 @@ int dw_mmc_init(void)
 		return 0;
 
 	memset(&dw_params, 0, sizeof(dw_mmc_params_t));
-	dw_params.reg_base = EMMC4_5_BASE;
+	dw_params.reg_base = EMMC_BASE;
 	dw_params.desc_base = (unsigned long int)dma_desc;
 	dw_params.desc_size = sizeof(dma_desc);
-	dw_params.clk_rate = DW_MMC_CLK_IN_HZ;
+	dw_params.clk_rate = get_clk(CLK_EMMC_2X);
 	dw_params.flags = 0;
-	dw_params.reg_base = EMMC4_5_BASE;
+	dw_params.reg_base = EMMC_BASE;
 	dw_params.max_clk = 40000000;
 
 	for (i = 0; i < sizeof(emmc_bus_width) / sizeof(emmc_bus_width[0]); i++) {

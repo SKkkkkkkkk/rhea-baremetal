@@ -94,6 +94,7 @@ struct HAL_PCIE_DEV {
 	uint64_t dniuBase;
 	uint64_t cniuBase;
 	uint64_t mbitxBase;
+	uint8_t max_lanes;
 	uint8_t lanes;
 	uint8_t gen;
 	uint8_t firstBusNo;
@@ -119,6 +120,7 @@ HAL_Status HAL_PCIE_Init(struct HAL_PCIE_HANDLE *pcie, struct HAL_PCIE_DEV *dev)
 HAL_Status HAL_PCIE_DeInit(struct HAL_PCIE_HANDLE *pcie);
 HAL_Status HAL_PCIE_InboundConfig(struct HAL_PCIE_HANDLE *pcie, int32_t index, int32_t bar, uint64_t cpuAddr);
 HAL_Status HAL_PCIE_OutboundConfig(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint32_t size);
+HAL_Status dw_pcie_prog_inbound_atu(struct HAL_PCIE_HANDLE *pcie, int32_t index, int32_t bar, uint64_t cpuAddr);
 int32_t HAL_PCIE_OutboundConfigCFG0(struct HAL_PCIE_HANDLE *pcie, HAL_PCI_DevT bdf, uint32_t size);
 
 #endif // __PCIE_EP_H__

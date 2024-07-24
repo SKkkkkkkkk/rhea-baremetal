@@ -16,4 +16,5 @@ target_link_libraries(${TARTGET_NAME}
 	PRIVATE
 		dw_apb_timers
 		gicv3
+		cru
 )

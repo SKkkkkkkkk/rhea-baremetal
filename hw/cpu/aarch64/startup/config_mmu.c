@@ -1,5 +1,20 @@
 #include <stdint.h>
 #include "arch_features.h"
+#include "memmap.h"
+
+#ifndef QEMU
+#	define ROM_BASE BOOTROM_BASE
+#	define ROM_SIZE (256*1024)
+
+#	define SRAM_BASE APRAM_BASE
+#	define SRAM_SIZE (512*1024)
+
+#	define FLASH_BASE UART0_BASE
+#	define FLASH_SIZE (16*1024*1024)
+
+#	define DEVICE_BASE UART0_BASE
+#	define DEVICE_SIZE (round_up(TCM_CFG_BASE + 16*1024*1024U, 2*1024*1024) - DEVICE_BASE)
+#endif
 
 #define TT_S1_TABLE          0x00000000000000003    // NSTable=0 PXNTable=0 UXNTable=0 APTable=0
 
@@ -62,21 +77,19 @@ void config_mmu(void)
 #ifndef QEMU
 	// L2 Table, 2M细粒度
 	tt_l2[0] = TT_S1_TABLE | (uint64_t)&tt_l3_1; // [0, 0x20_0000)  table entry => tt_l3_1
-	tt_l2[256] = TT_S1_TABLE | (uint64_t)&tt_l3_2; // [0x2000_0000, 0x2020_0000) table entry => tt_l3_2
 
-#if defined(HW_VERSION_MPW)
-	for(uint16_t i = 264; i<376; i++) // [0x21000000, 0x2F000000) DEVICE_nGnRnE
-#else
-	for(uint16_t i = 264; i<377; i++) // [0x21000000, 0x2F200000) DEVICE_nGnRnE
-#endif
-		tt_l2[i] =  TT_S1_DEVICE_nGnRnE | (i*2*1024*1024);
+	for(uint16_t i = 0; i<(FLASH_SIZE/(2*1024*1024)); i++) // NORMAL_WBWA INNER_SHARED RO
+		tt_l2[i + (FLASH_BASE/(2*1024*1024))] =  TT_S1_NORMAL_WBWA | TT_S1_OUTER_SHARED | TT_S1_PRIV_RO | (i*2*1024*1024 | FLASH_BASE);
+
+	for(uint16_t i = 0; i<(DEVICE_SIZE/(2*1024*1024)); i++) // DEVICE_nGnRnE
+		tt_l2[i + (DEVICE_BASE/(2*1024*1024))] =  TT_S1_DEVICE_nGnRnE | (i*2*1024*1024 | DEVICE_BASE);
 
 	// L3 Table, 4KB细粒度
-	for(uint8_t i = 0; i<64 ; i++) // 256KB ROM, NORMAL_WBWA INNER_SHARED RO
-		tt_l3_1[i] = 3 | TT_S1_NORMAL_WBWA | TT_S1_OUTER_SHARED | TT_S1_PRIV_RO | (i*4096);
+	for(uint8_t i = 0; i<(ROM_SIZE/4096) ; i++) // 256KB ROM, NORMAL_WBWA INNER_SHARED RO
+		tt_l3_1[i] = 3 | TT_S1_NORMAL_WBWA | TT_S1_OUTER_SHARED | TT_S1_PRIV_RO | (i*4096 | ROM_BASE);
 
-	for(uint8_t i = 0; i<64 ; i++) // 256KB SYSRAM, NORMAL_WBWA INNER_SHARED RW
-		tt_l3_2[i] = 3 | TT_S1_NORMAL_WBWA | TT_S1_OUTER_SHARED | (i*4096 + 0x20000000);
+	for(uint8_t i = 0; i<(SRAM_SIZE/4096) ; i++) // 256KB SYSRAM, NORMAL_WBWA INNER_SHARED RW
+		tt_l3_1[i + (SRAM_BASE/4096)] = 3 | TT_S1_NORMAL_WBWA | TT_S1_OUTER_SHARED | (i*4096 | SRAM_BASE);
 #else // QEMU
 	for(uint16_t i = 0;i<64;i++) // flash
 		tt_l2[i] =  TT_S1_NORMAL_WBWA | TT_S1_OUTER_SHARED | TT_S1_PRIV_RO | (i*2*1024*1024);

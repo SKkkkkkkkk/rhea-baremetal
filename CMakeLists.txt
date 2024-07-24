@@ -30,6 +30,13 @@ set(STACK_SIZE "0x4000" CACHE STRING "Stack Size(In Bytes)")
 
 set(HEAP_SIZE  "0x4000" CACHE STRING "Heap Size(In Bytes)")
 
+set(ENABLE_LTO "OFF" CACHE BOOL "Enable Link Time Optimization")
+if($CACHE{ENABLE_LTO})
+	set(LTO_FLAG "-flto")
+endif()
+
+set(ENABLE_MMU "OFF" CACHE BOOL "Enable MMU")
+
 project("${PROJECT_NAME}"
 	VERSION 0.1.0
 	DESCRIPTION "${PROJECT_NAME}"
@@ -42,18 +49,25 @@ set(compile_options_common
 	-Wall -Werror -Wno-unused-variable -Wno-unused-function
 	-ffunction-sections -fdata-sections
 	-mstrict-align
+	${LTO_FLAG}
 	-I${SDK_PATH}/common/inc
+	-I${SDK_PATH}/hw/cpu/aarch64/inc # aarch64 helper
 )
 
 set(link_options_common
 	-static
 	-nostdlib # we will explicitly link libc.a, libm.a and libgcc.a later
+	${LTO_FLAG}
 	-Wl,--fatal-warnings
 	-Wl,--gc-sections
 	-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/$CACHE{PROJECT_NAME}.map
 	-Wl,--print-memory-usage
 	-Wl,--wrap=memcpy -Wl,--wrap=memmove -Wl,--wrap=memset -Wl,--wrap=memcmp -Wl,--wrap=strlen
 )
+
+if($CACHE{ENABLE_MMU})
+	list(APPEND compile_options_common -DENABLE_MMU)
+endif()
 
 ## if CMAKE_BUILD_TYPE is not Debug or RelWithDebInfo, strip all symbols
 if(NOT $CACHE{CMAKE_BUILD_TYPE} STREQUAL "Debug" AND NOT $CACHE{CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
@@ -95,6 +109,9 @@ if(${IS_GCC})
 endif()
 
 ## this apply to all targets
+
+### Adds options to the COMPILE_OPTIONS directory property. 
+### These options are used when compiling targets from the current directory and below.
 add_compile_options(-DA55 -D$CACHE{BOARD} ${compile_options_arch} ${compile_options_common})
 
 # targets
@@ -127,13 +144,14 @@ target_link_options($CACHE{PROJECT_NAME}.elf
 
 target_link_libraries($CACHE{PROJECT_NAME}.elf
 	PRIVATE
-		aarch64
+		aarch64_startup
 		newlib_stubs
-		wakeup_core
 		gicv3
 		${app_dep}
-		-lc -lm ${LIBGCC}
 		$CACHE{EXTRA_LIBS}
+		-lc
+		-lm 
+		${LIBGCC}
 )
 
 if("$CACHE{MEM_SCHEME}" STREQUAL "CUSTOM")
