@@ -32,6 +32,8 @@ if($CACHE{ENABLE_LTO})
 	set(LTO_FLAG "-flto")
 endif()
 
+set(ENABLE_MMU "OFF" CACHE BOOL "Enable MMU")
+
 project("${PROJECT_NAME}"
 	VERSION 0.1.0
 	DESCRIPTION "${PROJECT_NAME}"
@@ -59,6 +61,10 @@ set(link_options_common
 	-Wl,--print-memory-usage
 	-Wl,--wrap=memcpy -Wl,--wrap=memmove -Wl,--wrap=memset -Wl,--wrap=memcmp -Wl,--wrap=strlen
 )
+
+if($CACHE{ENABLE_MMU})
+	list(APPEND compile_options_common -DENABLE_MMU)
+endif()
 
 ## if CMAKE_BUILD_TYPE is not Debug or RelWithDebInfo, strip all symbols
 if(NOT $CACHE{CMAKE_BUILD_TYPE} STREQUAL "Debug" AND NOT $CACHE{CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")

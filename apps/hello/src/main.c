@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include "wakeup_core.h"
-#include "chip.h"
+#ifndef QEMU
+#	include "chip.h"
+#endif
 
 void core1_entry()
 {
@@ -24,6 +26,7 @@ void core3_entry()
 	while(1) __asm__ volatile("");
 }
 
+#ifndef QEMU
 void chip_info()
 {
 	printf("*** CHIP INFO ***\n\r");
@@ -38,10 +41,13 @@ void chip_info()
 	printf("D2D_SYS_VERSION: 0x%04x\n\r", D2D_SYS_VERSION);
 	printf("C2C_SYS_VERSION: 0x%04x\n\r", C2C_SYS_VERSION);
 }
+#endif
 
 int main()
 {
+#ifndef QEMU
 	chip_info();
+#endif
 	printf("hello world from core0\n\r");
 	wakeup_core(1, core1_entry);
 	return 0;

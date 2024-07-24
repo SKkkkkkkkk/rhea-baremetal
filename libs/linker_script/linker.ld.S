@@ -14,7 +14,7 @@ ENTRY(entrypoint)
 	#define __DDR_BASE VIRT_MEM
 	#define __DDR_SIZE 0xC0000000 //3G
 #else
-	#define __ROM_BASE A55_BOOTROM_BASE
+	#define __ROM_BASE BOOTROM_BASE
 	#define __ROM_SIZE 256K
 
 	#define __SRAM_BASE APRAM_BASE
