@@ -1,7 +1,9 @@
 #include "arch.h"
 #include "asm_macros.S"
 
-#define PRIMARY_CORE 0
+#ifndef PRIMARY_CORE
+#	define PRIMARY_CORE 0
+#endif
 
 	.globl entrypoint
 func entrypoint
