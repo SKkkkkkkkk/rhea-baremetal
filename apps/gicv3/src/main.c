@@ -29,6 +29,8 @@ int main(void)
 	IRQ_SetHandler(29, irq29_handler);
 	IRQ_SetHandler(32, irq32_handler);
 
+	GIC_SetRouting(32, getAffinity(), 0);
+
 	GIC_SetPendingIRQ(0);
 	GIC_SetPendingIRQ(29);
 	GIC_SetPendingIRQ(32);

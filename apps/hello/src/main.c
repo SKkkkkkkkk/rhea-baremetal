@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include "wakeup_core.h"
+#include "arch_helpers.h"
 #ifndef QEMU
 #	include "chip.h"
 #endif
 
 void core1_entry()
 {
-	printf("hello world from core1\n\r");
+	printf("hello world from core1, mpidr_el1: 0x%lx\n\r", read_mpidr_el1());
 	void core2_entry();
 	wakeup_core(2, core2_entry);
 	while(1) __asm__ volatile("");
@@ -14,7 +15,7 @@ void core1_entry()
 
 void core2_entry()
 {
-	printf("hello world from core2\n\r");
+	printf("hello world from core2, mpidr_el1: 0x%lx\n\r", read_mpidr_el1());
 	void core3_entry();
 	wakeup_core(3, core3_entry);
 	while(1) __asm__ volatile("");
@@ -22,7 +23,7 @@ void core2_entry()
 
 void core3_entry()
 {
-	printf("hello world from core3\n\r");
+	printf("hello world from core3, mpidr_el1: 0x%lx\n\r", read_mpidr_el1());
 	while(1) __asm__ volatile("");
 }
 
@@ -48,7 +49,7 @@ int main()
 #ifndef QEMU
 	chip_info();
 #endif
-	printf("hello world from core0\n\r");
+	printf("hello world from core0, mpidr_el1: 0x%lx\n\r", read_mpidr_el1());
 	wakeup_core(1, core1_entry);
 	return 0;
 }

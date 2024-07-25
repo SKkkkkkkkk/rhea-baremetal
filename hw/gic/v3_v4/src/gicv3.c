@@ -99,7 +99,7 @@ static void GIC_Discovery()
 	uint8_t index = 0;
 	while(1) 
 	{
-		printf("GICR[%u] with Affinity: 0x%lx\n", index, GICRedistributor[index].RD_base.TYPER);
+		// printf("GICR[%u] with Affinity: 0x%lx\n", index, GICRedistributor[index].RD_base.TYPER);
 		if(getAffinity() == (GICRedistributor[index].RD_base.TYPER>>32))
 		{
 			current_gicr_index = index;
@@ -155,7 +155,7 @@ void GIC_Distributor_Init()
 		GICDistributor->ICFGR[i >> ICFGR_SHIFT] = 0U;
 	
 	/* Target SPIs to the this core & IRM set to the affinity co-ordinates specified */
-	for (uint16_t i = MIN_SPI_ID; i <= max_spi_id; i++)
+	for (uint16_t i = 0; i <= (max_spi_id - MIN_SPI_ID); i++)
 		GICDistributor->IROUTER[i] = (read_mpidr_el1() & 0xFF00FFFFFF) | (0U << IROUTER_IRM_SHIFT);
 
 	/* Enable the G0/G1S/G1NS interrupts */
@@ -247,9 +247,10 @@ void GIC_SetRouting(uint16_t int_id, uint32_t affinity, bool irm)
 		printf("INTID %u is not a valid SPI\n", int_id);
 		return;
 	}
-	GICDistributor->IROUTER[int_id] = (uint64_t)(affinity & 0x00FFFFFF) |
+	uint16_t spi_id = int_id - MIN_SPI_ID;
+	GICDistributor->IROUTER[spi_id] = ((uint64_t)(affinity & 0x00FFFFFF)) |
 								(((uint64_t)affinity & 0xFF000000) << 8U) |
-								(uint64_t)irm << IROUTER_IRM_SHIFT;
+								((uint64_t)irm << IROUTER_IRM_SHIFT);
 }
 
 uint32_t GIC_GetRouting(uint16_t int_id)
