@@ -70,37 +70,37 @@ void dw_apb_timer_test(bool sample)
 	timer_init(&timer_init_config);
 
 	void timerx6_t1_irqhandler(void);
-	// GIC_SetTarget(Timerx6_T1_IRQn, 1 << 0);
+	GIC_SetRouting(Timerx6_T1_IRQn, getAffinity(), 0);
 	IRQ_SetHandler(Timerx6_T1_IRQn, timerx6_t1_irqhandler);
 	GIC_SetPriority(Timerx6_T1_IRQn, 2 << 3);
 	GIC_EnableIRQ(Timerx6_T1_IRQn);
 
 	void timerx6_t2_irqhandler(void);
-	// GIC_SetTarget(Timerx6_T2_IRQn, 1 << 0);
+	GIC_SetRouting(Timerx6_T2_IRQn, getAffinity(), 0);
 	IRQ_SetHandler(Timerx6_T2_IRQn, timerx6_t2_irqhandler);
 	GIC_SetPriority(Timerx6_T2_IRQn, 3 << 3);
 	GIC_EnableIRQ(Timerx6_T2_IRQn);
 
 	void timerx6_t3_irqhandler(void);
-	// GIC_SetTarget(Timerx6_T3_IRQn, 1 << 0);
+	GIC_SetRouting(Timerx6_T3_IRQn, getAffinity(), 0);
 	IRQ_SetHandler(Timerx6_T3_IRQn, timerx6_t3_irqhandler);
 	GIC_SetPriority(Timerx6_T3_IRQn, 4 << 3);
 	GIC_EnableIRQ(Timerx6_T3_IRQn);
 
 	void timerx6_t4_irqhandler(void);
-	// GIC_SetTarget(Timerx6_T4_IRQn, 1 << 0);
+	GIC_SetRouting(Timerx6_T4_IRQn, getAffinity(), 0);
 	IRQ_SetHandler(Timerx6_T4_IRQn, timerx6_t4_irqhandler);
 	GIC_SetPriority(Timerx6_T4_IRQn, 5 << 3);
 	GIC_EnableIRQ(Timerx6_T4_IRQn);
 
 	void timerx6_t5_irqhandler(void);
-	// GIC_SetTarget(Timerx6_T5_IRQn, 1 << 0);
+	GIC_SetRouting(Timerx6_T5_IRQn, getAffinity(), 0);
 	IRQ_SetHandler(Timerx6_T5_IRQn, timerx6_t5_irqhandler);
 	GIC_SetPriority(Timerx6_T5_IRQn, 6 << 3);
 	GIC_EnableIRQ(Timerx6_T5_IRQn);
 
 	void timerx6_t6_irqhandler(void);
-	// GIC_SetTarget(Timerx6_T6_IRQn, 1 << 0);
+	GIC_SetRouting(Timerx6_T6_IRQn, getAffinity(), 0);
 	IRQ_SetHandler(Timerx6_T6_IRQn, timerx6_t6_irqhandler);
 	GIC_SetPriority(Timerx6_T6_IRQn, 7 << 3);
 	GIC_EnableIRQ(Timerx6_T6_IRQn);
