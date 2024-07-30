@@ -1,13 +1,13 @@
-set(TARTGET_NAME "pcie_ep")
+set(TARGET_NAME "pcie_ep")
 
-add_library(${TARTGET_NAME} STATIC)
+add_library(${TARGET_NAME} STATIC)
 
-target_sources(${TARTGET_NAME}
+target_sources(${TARGET_NAME}
 	PRIVATE
 		src/pcie_ep.c
 )
 
-target_include_directories(${TARTGET_NAME}
+target_include_directories(${TARGET_NAME}
 	PUBLIC
 		inc
 )

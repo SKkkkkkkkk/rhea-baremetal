@@ -1,13 +1,13 @@
-set(TARTGET_NAME "cru")
+set(TARGET_NAME "cru")
 
-add_library(${TARTGET_NAME} STATIC)
+add_library(${TARGET_NAME} STATIC)
 
-target_sources(${TARTGET_NAME}
+target_sources(${TARGET_NAME}
 	PRIVATE
 		src/cru.c
 )
 
-target_include_directories(${TARTGET_NAME}
+target_include_directories(${TARGET_NAME}
 	PUBLIC
 		inc
 )
