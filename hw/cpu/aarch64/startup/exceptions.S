@@ -14,7 +14,7 @@ vector_base vector_table
 	 * -----------------------------------------------------
 	*/
 vector_entry sync_exception_spt
-	b .
+	b _sync_exception_spt
 end_vector_entry sync_exception_spt
 
 vector_entry irq_spt
@@ -22,7 +22,7 @@ vector_entry irq_spt
 end_vector_entry irq_spt
 
 vector_entry fiq_spt
-	b .
+	b _fiq_spt
 end_vector_entry fiq_spt
 
 vector_entry serror_spt
@@ -185,10 +185,14 @@ func _fiq_sph
 	ERET
 endfunc _fiq_sph
 
+	.global _sync_exception_spt
+	.weak _sync_exception_spt
 func _sync_exception_spt
 	b .
 endfunc _sync_exception_spt
 
-func _irq_spt
+	.global _fiq_spt
+	.weak _fiq_spt
+func _fiq_spt
 	b .
-endfunc _irq_spt
+endfunc _fiq_spt

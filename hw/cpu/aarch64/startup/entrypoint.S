@@ -24,8 +24,7 @@ func entrypoint
 	mrs     x1, CurrentEL
 	cmp     x1, #(MODE_EL3 << MODE_EL_SHIFT)
 	b.ne    rtl_init_start
-	mrs x0, scr_el3
-	mov x0, #0x53e                 	// #568
+	mov x0, #0x53e
 	msr scr_el3, x0
 
 rtl_init_start:
@@ -158,9 +157,9 @@ dead:
 	b	dead
 endfunc entrypoint
 
-#define CORE_STACK_SIZE (16*1024/4)
 // x0 - core_id
 func setup_stack
+	.extern _stack_start
 	.extern _stack_top
 	ldr x1, =_stack_top
 	bfi x1, xzr, #0, #4 // clear bit0-3
@@ -170,9 +169,11 @@ func setup_stack
 	** x1 => stack_top
 	** x2 => offset_size 
 	*/
-	ldr x2, =CORE_STACK_SIZE
-	mul x2, x2, x0                  //stack offset for each cpuid
-	sub x1, x1, x2                  //stack top for each cpuid
+	ldr x2, =_stack_start
+	sub x2, x1, x2				// x2 = _stack_top - _stack_start
+	lsr x2, x2, #2				// x2 = x2 / core_num(4)
+	mul x2, x2, x0              // stack offset for each cpuid
+	sub x1, x1, x2              // stack top for each cpuid
 	mov sp, x1
 
 	ret

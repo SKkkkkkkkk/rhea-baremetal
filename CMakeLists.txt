@@ -21,11 +21,10 @@ if($CACHE{MEM_SCHEME} STREQUAL "CUSTOM")
 	if("$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
 		message(FATAL_ERROR "CUSTOM_LINKER_SCRIPT must be set, with MEM_SCHEME=CUSTOM")
 	endif()
+else()
+	set(STACK_SIZE "0x4000" CACHE STRING "Stack Size(In Bytes)")
+	set(HEAP_SIZE  "0x4000" CACHE STRING "Heap Size(In Bytes)")
 endif()
-
-set(STACK_SIZE "0x4000" CACHE STRING "Stack Size(In Bytes)")
-
-set(HEAP_SIZE  "0x4000" CACHE STRING "Heap Size(In Bytes)")
 
 set(ENABLE_LTO "OFF" CACHE BOOL "Enable Link Time Optimization")
 if($CACHE{ENABLE_LTO})
@@ -115,14 +114,13 @@ endif()
 add_compile_options(${compile_options_arch} ${compile_options_common})
 
 # targets
-include(targets.cmake)
-
-# app targets
 if(NOT $CACHE{PROJECT_PATH} STREQUAL "")
 	include($CACHE{PROJECT_PATH}/app.cmake)
 endif()
 add_executable($CACHE{PROJECT_NAME}.elf)
+include(targets.cmake)
 
+# app targets
 target_sources($CACHE{PROJECT_NAME}.elf
 	PRIVATE
 		${app_src}
