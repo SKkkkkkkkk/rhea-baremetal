@@ -3,8 +3,8 @@ OUTPUT_ARCH(aarch64)
 ENTRY(entrypoint)
 MEMORY {
  ROM (rx): ORIGIN = 0x00000000, LENGTH = 256K
- SRAM (rwx): ORIGIN = 0x00100000, LENGTH = 256K
- DRAM (rwx): ORIGIN = 0x42000000, LENGTH = 0xC0000000
+ SRAM (rwx): ORIGIN = 0x00100000+4K, LENGTH = 512K
+ DRAM (rwx): ORIGIN = 0x40000000, LENGTH = 0xC0000000
 }
 SECTIONS
 {
@@ -16,39 +16,40 @@ SECTIONS
   *(SORT_BY_ALIGNMENT(.rodata*))
   *(.vectors)
   _ro_end = .;
- } >DRAM
+ } >SRAM
  .data :
- ALIGN(16)
+ ALIGN(32)
  {
   _data_start = .;
   *(SORT_BY_ALIGNMENT(.data*))
-  . = ALIGN(16);
+  . = ALIGN(32);
   _data_end = .;
- } >DRAM AT>DRAM
+ } >SRAM AT>SRAM
  _data_start_lma = LOADADDR(.data);
  _data_size = SIZEOF(.data);
  .bss (NOLOAD) :
- ALIGN(16)
+ ALIGN(32)
  {
   _bss_start = .;
   *(SORT_BY_ALIGNMENT(.bss*))
   *(COMMON)
-  . = ALIGN(16);
+  . = ALIGN(32);
   _bss_end = .;
- } >DRAM
+ } >SRAM
  .heap (NOLOAD) :
  {
   end = .;
   _heap_start = .;
   . += 0x4000;
   _heap_end = .;
- } >DRAM
+ } >SRAM
  .stack (NOLOAD) :
  {
   _stack_start = .;
   . += 0x4000;
   _stack_end = .;
   _stack_top = .;
- } >DRAM
+ } >SRAM
+ _all_end = .;
  /DISCARD/ : { *(.eh_frame*) }
 }

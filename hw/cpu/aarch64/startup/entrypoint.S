@@ -27,6 +27,8 @@ func entrypoint
 	mov x0, #0x53e
 	msr scr_el3, x0
 
+	msr 	cptr_el3, xzr
+	isb
 rtl_init_start:
 #if defined(RTL)
 	// Initialise the register bank
