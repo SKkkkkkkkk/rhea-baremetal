@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "pcie_ep.h"
+#include "pcie.h"
 
 // #ifdef HAL_PCIE_MODULE_ENABLED
 
@@ -106,7 +106,7 @@ static inline void writel(uint64_t address, uint32_t value)
 {
 	uintptr_t addr = (uintptr_t)address;
 
-	// printf("writel 0x%lx= 0x%x\n", addr, value);
+	printf("writel 0x%lx= 0x%x\n", addr, value);
 	*((volatile uint32_t *)(addr)) = value;
 }
 
@@ -403,20 +403,24 @@ HAL_Status HAL_PCIE_InboundConfig(struct HAL_PCIE_HANDLE *pcie, int32_t index, i
  * @param  size: outbound atu size limit.
  * @return HAL_Status.
  */
-HAL_Status HAL_PCIE_OutboundConfig(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint32_t size)
+HAL_Status HAL_PCIE_OutboundConfig(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint64_t size)
 {
 	uint32_t val, off;
 	int32_t i;
+	uint64_t limit_addr;
 
 	if(index > 7){
 		printf("index max 7\n");
 		return HAL_ERROR;
 	}
 
+	limit_addr = cpuAddr + size - 1;
+
 	off = PCIE_ATU_OFFSET + 0x200 * index;
 	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_LOWER_BASE, cpuAddr & 0xFFFFFFFF);
 	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_UPPER_BASE, (cpuAddr >> 32) & 0xFFFFFFFF);
-	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_LOWER_LIMIT, (cpuAddr + size - 1) & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_LOWER_LIMIT, (limit_addr) & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_UPPER_LIMIT, (limit_addr >> 32) & 0xFFFFFFFF);
 	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_LOWER_TARGET, busAddr & 0xFFFFFFFF);
 	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_UPPER_TARGET, (busAddr >> 32) & 0xFFFFFFFF);
 	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_REGION_CTRL1, type);
@@ -477,7 +481,7 @@ HAL_Status dw_pcie_prog_inbound_atu(struct HAL_PCIE_HANDLE *pcie, int32_t index,
 	return HAL_ERROR;
 }
 
-HAL_Status dw_pcie_prog_outbound_atu(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint32_t size)
+HAL_Status dw_pcie_prog_outbound_atu(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint64_t size)
 {
 	uint32_t off;
 	uint32_t val;

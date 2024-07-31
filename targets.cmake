@@ -11,7 +11,7 @@ add_subdirectory(hw/spi/dw_apb_ssi EXCLUDE_FROM_ALL)
 add_subdirectory(hw/timer/dw_apb_timers EXCLUDE_FROM_ALL)
 add_subdirectory(hw/system_counter EXCLUDE_FROM_ALL)
 add_subdirectory(hw/mailbox EXCLUDE_FROM_ALL)
-add_subdirectory(hw/pcie_ep EXCLUDE_FROM_ALL)
+add_subdirectory(hw/pcie EXCLUDE_FROM_ALL)
 add_subdirectory(hw/mmc/dw_mmc EXCLUDE_FROM_ALL)
 add_subdirectory(hw/cru EXCLUDE_FROM_ALL)
 
