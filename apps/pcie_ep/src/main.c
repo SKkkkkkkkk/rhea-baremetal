@@ -8,7 +8,7 @@
 
 #define SEEHI_PLD_PCIE_TEST			1
 #define SEEHI_FPGA_PCIE_TEST		0
-#define SEEHI_MSIX_ENABLE			1
+#define SEEHI_MSIX_ENABLE			0
 
 #define TCM_CFG_BASE          0x15000000
 #define C2C_SYS_CFG_03       0x8180000000ULL
