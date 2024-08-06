@@ -6,8 +6,8 @@
 // Error codes
 #define XMODEM_ERROR_OK				0
 
-#define  FWU_SRAM_BASE		APRAM_BASE
-#define  FWU_SRAM_MAX_SIZE	(512*1024U - 128*1024U)
+#define  FWU_SRAM_BASE		(APRAM_BASE + 4*1024U)
+#define  FWU_SRAM_MAX_SIZE	(512*1024U - 4*1024U - 128*1024U)
 
 static unsigned int memcpy_to_fwu_sram_base(unsigned char *buf, int buflen)
 {

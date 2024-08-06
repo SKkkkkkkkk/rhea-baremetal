@@ -3,7 +3,7 @@ CC=clang cmake -S ../../../ -B build -G Ninja \
 -DPROJECT_NAME=fwu_sram \
 -DPROJECT_PATH=. \
 -DBOARD=FPGA \
--DMEM_SCHEME=SRAM \
 -DCMAKE_BUILD_TYPE=MinSizeRel \
--DENABLE_LTO=ON
+-DENABLE_LTO=ON \
+-DMEM_SCHEME=CUSTOM -DCUSTOM_LINKER_SCRIPT=linker.ld
 cmake --build build
