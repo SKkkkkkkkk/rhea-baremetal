@@ -37,14 +37,14 @@ volatile unsigned int flag;
 
 // These locations are based on the memory map of the Base Platform model
 
-#define CONFIG_TABLE      (0x80020000)
-#define PENDING_TABLE     (0x80030000)
+#define CONFIG_TABLE      (0x40020000)
+#define PENDING_TABLE     (0x40030000)
 
-#define CMD_QUEUE         (0x80040000)
-#define DEVICE_TABLE      (0x80050000)
-#define COLLECTION_TABLE  (0x80060000)
+#define CMD_QUEUE         (0x40040000)
+#define DEVICE_TABLE      (0x40050000)
+#define COLLECTION_TABLE  (0x40060000)
 
-#define ITT               (0x80070000)
+#define ITT               (0x40070000)
 
 #ifdef QEMU
   #define DIST_BASE_ADDR    (VIRT_GIC_DIST)
@@ -171,43 +171,6 @@ int main(void)
   printf("Main(): Test end\n");
 
   return 1;
-}
-
-// --------------------------------------------------------
-
-void fiqHandler(void)
-{
-  uint32_t ID;
-  uint32_t group = 0;
-
-  // Read the IAR to get the INTID of the interrupt taken
-  ID = readIARGrp0();
-
-  printf("FIQ: Received INTID %d\n", ID);
-
-  switch (ID)
-  {
-    case 1021:
-      printf("FIQ: Received Non-secure interrupt from the ITS\n");
-      ID = readIARGrp1();
-      printf("FIQ: Read INTID %d from IAR1\n", ID);
-      group = 1;
-      break;
-    case 1023:
-      printf("FIQ: Interrupt was spurious\n");
-      return;
-    default:
-      printf("FIQ: Panic, unexpected INTID\n");
-  }
-
-  // Write EOIR to deactivate interrupt
-  if (group == 0)
-    writeEOIGrp0(ID);
-  else
-    writeEOIGrp1(ID);
-
-  flag++;
-  return;
 }
 
 // --------------------------------------------------------

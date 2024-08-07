@@ -131,6 +131,11 @@ target_include_directories($CACHE{PROJECT_NAME}.elf
         ${app_inc}
 )
 
+target_compile_options($CACHE{PROJECT_NAME}.elf
+	PRIVATE
+		${app_compile_options}
+)
+
 target_link_options($CACHE{PROJECT_NAME}.elf
 	PRIVATE
 		${link_options_common}
