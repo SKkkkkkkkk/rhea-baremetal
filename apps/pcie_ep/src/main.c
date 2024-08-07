@@ -92,10 +92,13 @@ struct PCIE_IDB_CFG {
 // #define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x00440000000           //AP SYS DRAM
 // #define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00540000000   //Vtile 0 5
 															//
-#define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x10410000000  //AP SYS UART    bit40 来做C&N 区分
-#define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x00440000000           //AP SYS DRAM
-#define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00500000000   //tile 0 5
+// #define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x10410000000  //AP SYS UART    bit40 来做C&N 区分
+// #define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x00440000000           //AP SYS DRAM
+// #define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00500000000   //tile 0 5
 
+#define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x18a00000000  //tile 14 cfg
+#define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x01440000000   //tile 14 dram
+#define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00500000000   //tile 0 5
 
 #define AP_SYS_C2C0_CPU_ADDRESS		C2C_SYS_CFG_03
 #define DWC_PCIE_CTL_X16_DBI		(AP_SYS_C2C0_CPU_ADDRESS + 0x0)
@@ -445,8 +448,8 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 
 	bar = 0;
 	resbar_base = dbi_base + 0x10000;
-	writeq(0x0fffffff, resbar_base + 0x10 + bar * 0x4);   //256M
-	// writeq(0xc0000000, dbi_base + bar * 0x4);   //1024M
+	// writeq(0x0fffffff, resbar_base + 0x10 + bar * 0x4);   //256M
+	writeq(0x3fffffff, dbi_base + bar * 0x4);   //1G
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
 
 	bar = 1;
@@ -454,9 +457,12 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
 
 	bar = 2;
-	writeq(0x0fffffff, resbar_base + 0x10 + bar * 0x4);   //
-	writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //256M
-	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
+	// writeq(0x0fffffff, resbar_base + 0x10 + bar * 0x4);   //
+	// writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //256M
+	// seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
+	writeq(0x7fffffff, resbar_base + 0x10 + bar * 0x4);   //
+	writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //2G
+	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);   //64 有预取
 	// writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
 	// writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //4G
 	// seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);   //64 有预取
@@ -554,7 +560,7 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 #if  SEEHI_PLD_PCIE_TEST
 	HAL_PCIE_InboundConfig(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);    //iATU 地址用0x3_0000 还是用 0x30_0000. 我们最大映射size是多少
 	HAL_PCIE_InboundConfig(pcie, 1, 2, BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS);    //CPU 的地址我用那个物理地址和虚拟地址需要不同映射吗，对于CNOC和DNOC的访问
-	HAL_PCIE_InboundConfig(pcie, 2, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);    //关于动态映射，每次只需要该inbound就可以吗,64G映射验证说需要特殊配置，具体是什么他没说清楚, RC 的空间没有32位
+	// HAL_PCIE_InboundConfig(pcie, 2, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);    //关于动态映射，每次只需要该inbound就可以吗,64G映射验证说需要特殊配置，具体是什么他没说清楚, RC 的空间没有32位
 
 #elif SEEHI_FPGA_PCIE_TEST
 	dw_pcie_prog_inbound_atu(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
