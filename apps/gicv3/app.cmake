@@ -1,5 +1,5 @@
 # 该工程保护几个不同的测试case
-set(TEST_CASE "BASIC" CACHE STRING "BASIC, LPI")
+set(TEST_CASE "BASIC" CACHE STRING "BASIC, LPI, D2D")
 
 # 添加app sources, 注意必须加上CMAKE_CURRENT_LIST_DIR!
 set(app_src
