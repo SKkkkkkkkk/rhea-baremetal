@@ -93,8 +93,8 @@ struct PCIE_IDB_CFG {
 // #define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00540000000   //Vtile 0 5
 															//
 #define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x10410000000  //AP SYS UART    bit40 来做C&N 区分
-#define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x00400000000           //AP SYS DRAM
-#define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00440000000   //tile 0 5
+#define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x00440000000           //AP SYS DRAM
+#define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00500000000   //tile 0 5
 
 
 #define AP_SYS_C2C0_CPU_ADDRESS		C2C_SYS_CFG_03
@@ -402,10 +402,6 @@ void BSP_PCIE_EP_Init(const struct HAL_PCIE_HANDLE *pcie)
 	writeq(val, apb_base + 0x100);  //disable app_ltssm_enable
 
 #if  SEEHI_PLD_PCIE_TEST
-
-#elif SEEHI_FPGA_PCIE_TEST
-
-#else
 	if(lanes == 16){
 		writeq(0, phy_base + 0x0);  //bif_en X16
 		writeq(0, phy_base + 0x94);  //pipe8_lane_mode  //
@@ -415,6 +411,9 @@ void BSP_PCIE_EP_Init(const struct HAL_PCIE_HANDLE *pcie)
 	}else{
 		printf("PHY bifurcation error !\n");
 	}
+#elif SEEHI_FPGA_PCIE_TEST
+
+#else
 #endif
 
 	writeq(0, apb_base + 0x110);  ////close fast link
@@ -467,8 +466,8 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	writeq(0x0000000f, resbar_base + 0x10 + bar * 0x4 + 0x4);   //64G
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);   //64 有预取
 
-	vid = 0x7368;    //sh
-	did = 0xa530;    //a510
+	vid = 0x5348;    //SH
+	did = 0xa510;    //a510
 	writeq(did << 16 | vid, dbi_base + 0x00);  //vendor id & device id
 
 	writeq(0x12000001, dbi_base + 0x08);  //class processing accelerators
@@ -477,9 +476,13 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 								   //
 	writeq(0x00102130, dbi_base + 0x78);   //验证配置,DEVICE_CONTROL_DEVICE_STATUS 和MAX PAYLOAD SIZE 相关
 
-	val = readq(dbi_base + 0x7c);   //LINK_CAPABILITIES_REG  No ASPM Support
-	val &= ~(3 << 10);
-	writeq(val, dbi_base + 0x7c);
+	// val = readq(dbi_base + 0x7c);   //LINK_CAPABILITIES_REG  No ASPM Support
+	// val &= ~(3 << 10);
+	// writeq(val, dbi_base + 0x7c);
+
+	val = readq(dbi_base + 0x80c);   //GEN2_CTRL_OFF
+	val |= 1 << 17;
+	writeq(val, dbi_base + 0x80c);
 
 	switch (pcie->dev->gen) {  //gen speed
 	case 1:
@@ -508,11 +511,8 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	writeq(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
 	writeq(0x4d004071, dbi_base + 0x8a8);  //GEN3_EQ_CONTROL_OFF
 
-#if SEEHI_MSIX_ENABLE
 	dw_pcie_ep_set_msix(dbi_base, 31, 0x70000, 1);  //有默认值不需要软件配置
-#else
 	dw_pcie_ep_set_msi(dbi_base, 5);
-#endif
 
 	val = readq(apb_base + 0x100);  // 验证配置的0x25
 	val |= 0x1;
@@ -788,7 +788,7 @@ struct HAL_PCIE_DEV g_pcieDevX16 =
 	.mbitxBase = MBI_TX,
 	.max_lanes = 16,
 	.lanes = 16,
-	.gen = 3,
+	.gen = 5,
 	.firstBusNo = 0x0,
 	.legacyIrqNum = 0,
 };
@@ -845,6 +845,8 @@ int main()
 	mc_init(TCM_CFG_BASE, 4);
 
 	s_pcie.dev = &g_pcieDevX16;
+	// s_pcie.dev = &g_pcieDevX16toX8;
+	// s_pcie.dev = &g_pcieDevX8;
 #endif
 
 	// systimer_init();
