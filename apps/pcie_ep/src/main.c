@@ -10,7 +10,8 @@
 #define SEEHI_FPGA_PCIE_TEST		0
 #define SEEHI_MSIX_ENABLE			0
 
-#define TCM_CFG_BASE          0x15000000
+#define TCM_04_CFG_BASE         0x0015000000
+#define TCM_14_CFG_BASE			0x8a22000000
 #define C2C_SYS_CFG_03       0x8180000000ULL
 #define C2C_SYS_CFG_02       0x8100000000ULL
 #define C2C_SYS_CFG_73       0xB980000000ULL
@@ -97,7 +98,7 @@ struct PCIE_IDB_CFG {
 // #define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00500000000   //tile 0 5
 
 #define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x18a30000000  //tile 14 cfg
-#define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x01440000000   //tile 14 dram
+#define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x01400000000   //tile 14 dram
 #define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00500000000   //tile 0 5
 
 #define AP_SYS_C2C0_CPU_ADDRESS		C2C_SYS_CFG_03
@@ -449,7 +450,7 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	bar = 0;
 	resbar_base = dbi_base + 0x10000;
 	// writeq(0x0fffffff, resbar_base + 0x10 + bar * 0x4);   //256M
-	writeq(0x00ffffff, resbar_base + 0x10 + bar * 0x4);   //16M
+	writeq(0x01ffffff, resbar_base + 0x10 + bar * 0x4);   //32M
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
 
 	bar = 1;
@@ -460,12 +461,12 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	// writeq(0x0fffffff, resbar_base + 0x10 + bar * 0x4);   //
 	// writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //256M
 	// seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
-	writeq(0x7fffffff, resbar_base + 0x10 + bar * 0x4);   //
-	writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //2G
-	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);   //64 有预取
-	// writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
-	// writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //4G
+	// writeq(0x7fffffff, resbar_base + 0x10 + bar * 0x4);   //
+	// writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //2G
 	// seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);   //64 有预取
+	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
+	writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //4G
+	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);   //64 有预取
 
 	bar = 4;
 	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
@@ -848,7 +849,8 @@ int main()
 #if SEEHI_FPGA_PCIE_TEST
 	s_pcie.dev = &g_pcieDevX8;
 #elif SEEHI_PLD_PCIE_TEST
-	mc_init(TCM_CFG_BASE, 4);
+	mc_init(TCM_04_CFG_BASE, 4);
+	mc_init(TCM_14_CFG_BASE, 4);
 
 	s_pcie.dev = &g_pcieDevX16;
 	// s_pcie.dev = &g_pcieDevX16toX8;
