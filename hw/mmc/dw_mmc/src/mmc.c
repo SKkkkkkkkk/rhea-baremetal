@@ -848,3 +848,38 @@ int mmc_init(const struct mmc_ops *ops_ptr, unsigned int clk,
 
 	return mmc_enumerate(clk, width);
 }
+
+int mmc_boot_pwr_wp(enum mmc_boot_area area)
+{
+	int ret;
+	unsigned int data = 0;
+
+	switch (area)
+	{
+		case MMC_BOOT_AREA1:
+			data |= BOOT_SEC_WP_SEL;
+			data &= ~BOOT_PWR_WP_SEC_SEL;
+			break;
+		case MMC_BOOT_AREA2:
+			data |= BOOT_SEC_WP_SEL;
+			data |= BOOT_PWR_WP_SEC_SEL;
+			break;
+		case MMC_BOOT_AREA_BOTH:
+			data &= ~BOOT_SEC_WP_SEL;
+			break;
+		default:
+			return -EINVAL;
+	}
+	data |= BOOT_PWR_WP_EN;
+
+	ret = mmc_set_ext_csd(CMD_EXTCSD_BOOT_WP, data);
+	if (ret)
+		return ret;
+
+	return mmc_fill_device_info();
+}
+
+unsigned char mmc_get_wp_status(void)
+{
+	return mmc_ext_csd[CMD_EXTCSD_BOOT_STATUS];
+}
