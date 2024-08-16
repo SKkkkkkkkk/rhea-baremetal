@@ -1,4 +1,5 @@
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Debug, Release, RelWithDebInfo, MinSizeRel")
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
 
 set(CMAKE_C_FLAGS_DEBUG "-Og -g3 -DDEBUG=1" CACHE INTERNAL "Flags used by the C compiler during DEBUG builds.")
 set(CMAKE_C_FLAGS_MINSIZEREL "-Os -DNDEBUG" CACHE INTERNAL "Flags used by the C compiler during MINSIZEREL builds.")
