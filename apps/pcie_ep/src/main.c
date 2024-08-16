@@ -8,6 +8,7 @@
 
 #define SEEHI_PLD_PCIE_TEST			1
 #define SEEHI_FPGA_PCIE_TEST		0
+#define SEEHI_TILE14_PCIE_TEST		1
 #define SEEHI_MSIX_ENABLE			0
 
 #define TCM_04_CFG_BASE         0x0015000000
@@ -92,14 +93,16 @@ struct PCIE_IDB_CFG {
 // #define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x10410000000  //AP SYS UART    bit40 来做C&N 区分
 // #define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x00440000000           //AP SYS DRAM
 // #define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00540000000   //Vtile 0 5
-															//
-// #define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x10410000000  //AP SYS UART    bit40 来做C&N 区分
-// #define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x00440000000           //AP SYS DRAM
-// #define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00500000000   //tile 0 5
 
+#if SEEHI_TILE14_PCIE_TEST
 #define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x18a30000000  //tile 14 cfg
 #define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x01400000000   //tile 14 dram
 #define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00500000000   //tile 0 5
+#else
+#define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x10410000000  //AP SYS UART    bit40 来做C&N 区分
+#define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x00440000000           //AP SYS DRAM
+#define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00500000000   //tile 0 5
+#endif
 
 #define AP_SYS_C2C0_CPU_ADDRESS		C2C_SYS_CFG_03
 #define DWC_PCIE_CTL_X16_DBI		(AP_SYS_C2C0_CPU_ADDRESS + 0x0)
@@ -438,6 +441,9 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	uint64_t ss_base = pcie->dev->ssBase;
 	uint32_t dniu_base = 0x11002000;
 	uint32_t mbitx_ap_base = 0x10050000;
+#if SEEHI_TILE14_PCIE_TEST
+	uint64_t mbitx_14tile_base = 0x8a20000000;
+#endif
 	uint64_t resbar_base;
 	int32_t i, timeout = 0, phy_linkup = 0;
 	uint16_t vid, did;
@@ -618,7 +624,7 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 		writeq(0x4001e, ss_base + 0x10c);    // int_mbi_message_for_vector_30
 		writeq(0, ss_base + 0x110);    // int_mbi_message_for_vector_31
 
-		writeq(0x1 << 1, ss_base + 0x194);    // pcie_x16 outbound bit0
+		writeq(0x1 << 0, ss_base + 0x194);    // pcie_x16 outbound bit0
 		writeq(0x6, ss_base + 0x1a0);    // pcie_x16 int_tx_msi_doorbell_x16
 												//
 		writeq(0x60000001, dbi_base + 0x940);   //MSIX_ADDRESS_MATCH_LOW_OFF  doorbell 只有32位，高位截断
@@ -657,7 +663,7 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 		writeq(0x4001e, ss_base + 0x18c);    // int_mbi_message_for_vector_30
 		writeq(0, ss_base + 0x190);    // int_mbi_message_for_vector_31
 
-		writeq(0x1 << 0, ss_base + 0x194);    // pcie_x8 outbound bit1
+		writeq(0x1 << 1, ss_base + 0x194);    // pcie_x8 outbound bit1
 		writeq(0x7, ss_base + 0x1b0);    // pcie_x16 int_tx_msi_doorbell_x8
 												//
 		writeq(0x70000001, dbi_base + 0x940);   //MSIX_ADDRESS_MATCH_LOW_OFF  doorbell 只有32位，高位截断
@@ -685,7 +691,11 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 
 	if(pcie->dev->max_lanes == 16){
 		writeq(0x40000, ss_base + 0x94);    // int_mbi_message_for_vector_00
+#if SEEHI_TILE14_PCIE_TEST
+		writeq(0x00140020, ss_base + 0x98);    // int_mbi_message_for_vector_00
+#else
 		writeq(0x40001, ss_base + 0x98);    // int_mbi_message_for_vector_01
+#endif
 		writeq(0x40002, ss_base + 0x9c);    // int_mbi_message_for_vector_02
 		writeq(0x40003, ss_base + 0xa0);    // int_mbi_message_for_vector_03
 		writeq(0x40004, ss_base + 0xa4);    // int_mbi_message_for_vector_04
@@ -717,7 +727,7 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 		writeq(0x4001e, ss_base + 0x10c);    // int_mbi_message_for_vector_30
 		writeq(0, ss_base + 0x110);    // int_mbi_message_for_vector_31
 
-		writeq(0x0 << 1, ss_base + 0x194);    // pcie_x16 outbound bit0
+		writeq(0x0 << 0, ss_base + 0x194);    // pcie_x16 outbound bit0
 		writeq(0x40000000, ss_base + 0x198);    // pcie_x16 int_tx_msi_doorbell_x16
 	}else if(pcie->dev->max_lanes == 8){
 		writeq(0x40000, ss_base + 0x114);    // int_mbi_message_for_vector_00
@@ -753,12 +763,27 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 		writeq(0x4001e, ss_base + 0x18c);    // int_mbi_message_for_vector_30
 		writeq(0, ss_base + 0x190);    // int_mbi_message_for_vector_31
 
-		writeq(0x0 << 0, ss_base + 0x194);    // pcie_x8 outbound bit1
+		writeq(0x0 << 1, ss_base + 0x194);    // pcie_x8 outbound bit1
 		writeq(0x50000000, ss_base + 0x1a8);    // pcie_x16 int_tx_msi_doorbell_x8
 	}else{
 		printf("msi config error !!!\n");
 	}
 
+#if SEEHI_TILE14_PCIE_TEST
+	if(pcie->dev->max_lanes == 16){
+		writeq(0x40000000, mbitx_14tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
+	}else if(pcie->dev->max_lanes == 8){
+		writeq(0x50000000, mbitx_14tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+	}else{
+		printf("msi config error !!!\n");
+	}
+
+	writeq(0x03, mbitx_14tile_base + 0x14);
+	// writel(0x7fffffff, mbitx_14tile_base + 0x30);    //时能对应bit中断，总共32个bit
+	writeq(0x1, mbitx_14tile_base + 0x34);    //时能对应bit中断，总共32个bit
+	// writel(0x0, mbitx_14tile_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
+#else
+	// writeq((0 << 4), apb_base + 0x70);    //4:8  产生msi对应中断 bit0=1
 
 	//配置AP SYS MBI_TX 0x1005_0000
 	if(pcie->dev->max_lanes == 16){
@@ -772,9 +797,9 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	writel(0x81, mbitx_ap_base + 0x14);
 	writel(0x7fffffff, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
 	writel(0x0, mbitx_ap_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
+#endif //SEEHI_TILE14_PCIE_TEST
 
-	// writeq((0 << 4), apb_base + 0x70);    //4:8  产生msi对应中断 bit0=1
-#endif
+#endif //SEEHI_MSIX_ENABLE
 	/////////////////////////////////////END//////////////////////////////////////////////////////
 	dw_pcie_dbi_ro_wr_dis(dbi_base);
 
