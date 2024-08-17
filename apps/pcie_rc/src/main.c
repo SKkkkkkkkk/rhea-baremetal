@@ -475,7 +475,7 @@ static void gpio_perst_init(void)
 	gpio_init_config_t gpio_init_config = {
 		.port = PORTB,
 		.gpio_control_mode = Software_Mode,
-		.gpio_mode = GPIO_Input_Mode,
+		.gpio_mode = GPIO_Output_Mode,
 		.pin = 3
 	};
 	gpio_init(&gpio_init_config);
@@ -565,7 +565,9 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 
 #endif
 
+	printf("gpiob3 out %x\n", REG32(0x10300010));
 	gpio_write_pin(PORTB, 3, GPIO_PIN_RESET);
+	printf("gpiob3 0x%x\n", gpio_read_pin(PORTB, 3));
 
 	val = readq(apb_base + 0x100);  // 验证配置的0x25
 	val |= 0x1;
@@ -577,6 +579,7 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 #endif
 
 	gpio_write_pin(PORTB, 3, GPIO_PIN_SET);
+	printf("gpiob3 0x%x\n", gpio_read_pin(PORTB, 3));
 
 	while (1) {   //判断状态link up 用smlh_link_up和rdlh_link_up,smlh_ltssm_state
 		val = readq(apb_base + 0x150);
