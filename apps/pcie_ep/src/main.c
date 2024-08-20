@@ -8,11 +8,18 @@
 
 #define SEEHI_PLD_PCIE_TEST			1
 #define SEEHI_FPGA_PCIE_TEST		0
-#define SEEHI_TILE14_PCIE_TEST		1
+
+#define SEEHI_AP_PCIE_TEST			0
+#define SEEHI_TILE14_PCIE_TEST		0
+#define SEEHI_4TILE_PCIE_TEST		1
+
 #define SEEHI_MSIX_ENABLE			0
 
 #define TCM_04_CFG_BASE         0x0015000000
 #define TCM_14_CFG_BASE			0x8a22000000
+#define TCM_15_CFG_BASE			0x8aa2000000
+#define TCM_24_CFG_BASE			0x9222000000
+#define TCM_25_CFG_BASE			0x92a2000000
 #define C2C_SYS_CFG_03       0x8180000000ULL
 #define C2C_SYS_CFG_02       0x8100000000ULL
 #define C2C_SYS_CFG_73       0xB980000000ULL
@@ -97,6 +104,10 @@ struct PCIE_IDB_CFG {
 #if SEEHI_TILE14_PCIE_TEST
 #define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x18a30000000  //tile 14 cfg
 #define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x01400000000   //tile 14 dram
+#define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00500000000   //tile 0 5
+#elif SEEHI_4TILE_PCIE_TEST
+#define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x180b0000000  //tile 14 cfg
+#define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x01000000000   //tile 14 dram
 #define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00500000000   //tile 0 5
 #else
 #define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x10410000000  //AP SYS UART    bit40 来做C&N 区分
@@ -443,6 +454,8 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	uint32_t mbitx_ap_base = 0x10050000;
 #if SEEHI_TILE14_PCIE_TEST
 	uint64_t mbitx_14tile_base = 0x8a20000000;
+#elif SEEHI_4TILE_PCIE_TEST
+	uint64_t mbitx_24tile_base = 0x9220000000;
 #endif
 	uint64_t resbar_base;
 	int32_t i, timeout = 0, phy_linkup = 0;
@@ -456,7 +469,11 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	bar = 0;
 	resbar_base = dbi_base + 0x10000;
 	// writeq(0x0fffffff, resbar_base + 0x10 + bar * 0x4);   //256M
+#if SEEHI_4TILE_PCIE_TEST
+	writeq(0x00ffffff, resbar_base + 0x10 + bar * 0x4);   //16M
+#else
 	writeq(0x01ffffff, resbar_base + 0x10 + bar * 0x4);   //32M
+#endif
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
 
 	bar = 1;
@@ -470,8 +487,13 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	// writeq(0x7fffffff, resbar_base + 0x10 + bar * 0x4);   //
 	// writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //2G
 	// seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);   //64 有预取
+#if SEEHI_4TILE_PCIE_TEST
+	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
+	writeq(0x00000007, resbar_base + 0x10 + bar * 0x4 + 0x4);   //32G
+#else
 	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
 	writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //4G
+#endif
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);   //64 有预取
 
 	bar = 4;
@@ -565,9 +587,9 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	delay(1);
 
 #if  SEEHI_PLD_PCIE_TEST
-	HAL_PCIE_InboundConfig(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);    //iATU 地址用0x3_0000 还是用 0x30_0000. 我们最大映射size是多少
-	HAL_PCIE_InboundConfig(pcie, 1, 2, BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS);    //CPU 的地址我用那个物理地址和虚拟地址需要不同映射吗，对于CNOC和DNOC的访问
-	// HAL_PCIE_InboundConfig(pcie, 2, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);    //关于动态映射，每次只需要该inbound就可以吗,64G映射验证说需要特殊配置，具体是什么他没说清楚, RC 的空间没有32位
+	HAL_PCIE_InboundConfig(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
+	HAL_PCIE_InboundConfig(pcie, 1, 2, BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS);
+	// HAL_PCIE_InboundConfig(pcie, 2, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);
 
 #elif SEEHI_FPGA_PCIE_TEST
 	dw_pcie_prog_inbound_atu(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
@@ -692,7 +714,9 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	if(pcie->dev->max_lanes == 16){
 		writeq(0x40000, ss_base + 0x94);    // int_mbi_message_for_vector_00
 #if SEEHI_TILE14_PCIE_TEST
-		writeq(0x00140020, ss_base + 0x98);    // int_mbi_message_for_vector_00
+		writeq(0x00140020, ss_base + 0x98);    // int_mbi_message_for_vector_01
+#elif SEEHI_4TILE_PCIE_TEST
+		writeq(0x00240020, ss_base + 0x98);    // int_mbi_message_for_vector_01
 #else
 		writeq(0x40001, ss_base + 0x98);    // int_mbi_message_for_vector_01
 #endif
@@ -781,6 +805,19 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	writeq(0x03, mbitx_14tile_base + 0x14);
 	// writel(0x7fffffff, mbitx_14tile_base + 0x30);    //时能对应bit中断，总共32个bit
 	writeq(0x1, mbitx_14tile_base + 0x34);    //时能对应bit中断，总共32个bit
+	// writel(0x0, mbitx_14tile_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
+#elif SEEHI_4TILE_PCIE_TEST
+	if(pcie->dev->max_lanes == 16){
+		writeq(0x40000000, mbitx_24tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
+	}else if(pcie->dev->max_lanes == 8){
+		writeq(0x50000000, mbitx_24tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+	}else{
+		printf("msi config error !!!\n");
+	}
+
+	writeq(0x03, mbitx_24tile_base + 0x14);
+	// writel(0x7fffffff, mbitx_14tile_base + 0x30);    //时能对应bit中断，总共32个bit
+	writeq(0x1, mbitx_24tile_base + 0x34);    //时能对应bit中断，总共32个bit
 	// writel(0x0, mbitx_14tile_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
 #else
 	// writeq((0 << 4), apb_base + 0x70);    //4:8  产生msi对应中断 bit0=1
@@ -875,7 +912,15 @@ int main()
 	s_pcie.dev = &g_pcieDevX8;
 #elif SEEHI_PLD_PCIE_TEST
 	mc_init(TCM_04_CFG_BASE, 4);
+
+#if SEEHI_TILE14_PCIE_TEST
 	mc_init(TCM_14_CFG_BASE, 4);
+#elif SEEHI_4TILE_PCIE_TEST
+	mc_init(TCM_14_CFG_BASE, 4);
+	mc_init(TCM_15_CFG_BASE, 4);
+	mc_init(TCM_24_CFG_BASE, 4);
+	mc_init(TCM_24_CFG_BASE, 4);
+#endif
 
 	s_pcie.dev = &g_pcieDevX16;
 	// s_pcie.dev = &g_pcieDevX16toX8;
