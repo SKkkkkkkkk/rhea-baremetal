@@ -919,7 +919,7 @@ int main()
 	mc_init(TCM_14_CFG_BASE, 4);
 	mc_init(TCM_15_CFG_BASE, 4);
 	mc_init(TCM_24_CFG_BASE, 4);
-	mc_init(TCM_24_CFG_BASE, 4);
+	mc_init(TCM_25_CFG_BASE, 4);
 #endif
 
 	s_pcie.dev = &g_pcieDevX16;
