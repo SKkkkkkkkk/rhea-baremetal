@@ -12,4 +12,5 @@ set(app_inc
 set(app_dep
 	pcie
 	systimer
+	dw_apb_gpio
 )

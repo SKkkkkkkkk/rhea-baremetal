@@ -181,7 +181,7 @@ static inline void writel(uint32_t value, uint32_t address)
 {
 	uintptr_t addr = (uintptr_t)address;
 
-	printf("writel addr 0x%lx value 0x%x\n", addr, value);
+	// printf("writel addr 0x%lx value 0x%x\n", addr, value);
 	*((volatile uint32_t *)(addr)) = value;
 }
 
@@ -198,7 +198,7 @@ static inline void writeq(uint32_t value, uint64_t address)
 {
 	uintptr_t addr = (uintptr_t)address;
 
-	printf("writeq addr 0x%lx value 0x%x\n", addr, value);
+	// printf("writeq addr 0x%lx value 0x%x\n", addr, value);
 	*((volatile uint32_t *)(addr)) = value;
 }
 
@@ -481,6 +481,19 @@ static void gpio_perst_init(void)
 	gpio_init(&gpio_init_config);
 }
 
+static void gpio_sync_init(void)
+{
+	pinmux_select(PORTA, 24, 7);
+	gpio_init_config_t gpio_init_config = {
+		.port = PORTA,
+		.gpio_control_mode = Software_Mode,
+		.gpio_mode = GPIO_Output_Mode,
+		.pin = 24
+	};
+	gpio_init(&gpio_init_config);
+	gpio_write_pin(PORTA, 24, GPIO_PIN_SET);
+}
+
 HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 {
 	uint32_t val, val_cmp = 0xf55a55aa;
@@ -494,16 +507,10 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 	int32_t i, timeout = 0, phy_linkup = 0;
 	uint16_t vid, did;
 	uint32_t temp;
-	// struct PCIE_IDB_CFG *idb_cfg = (struct PCIE_IDB_CFG *)__pcie_idb_boot_cfg__;
 
 	a510_pcie_ap_dniu(pcie);
 
 	dw_pcie_dbi_ro_wr_en(dbi_base);
-
-#if	SEEHI_PLD_PCIE_TEST
-	// temp = readq(dbi_base + 0x8bc);
-	// REG32(0x12000fec)=temp;
-#endif
 
 	BSP_PCIE_RC_Init(pcie);    //时钟同步，链路稳定，状态机进入polling，ltssm可以继续
 
@@ -544,10 +551,10 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 	}
 	dw_pcie_link_set_lanes(dbi_base, pcie->dev->lanes);  //lanes
 
-	delay(1);
+	systimer_delay(1, IN_MS);
 
-	// writeq(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
-	// writeq(0x4d004071, dbi_base + 0x8a8);  //GEN3_EQ_CONTROL_OFF
+	writeq(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
+	writeq(0x4d004071, dbi_base + 0x8a8);  //GEN3_EQ_CONTROL_OFF
 
 #if  SEEHI_PLD_PCIE_TEST
 	HAL_PCIE_OutboundConfig(pcie, 1, PCIE_ATU_TYPE_MEM, PCIE_X8_2_32_MEM_BASE, PCIE_X8_2_32_MEM_BASE, PCIE_X8_2_32_MEM_BASE_SIZE);
@@ -565,21 +572,21 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 
 #endif
 
-	printf("gpiob3 out %x\n", REG32(0x10300010));
+#if SEEHI_FPGA_PCIE_TEST
 	gpio_write_pin(PORTB, 3, GPIO_PIN_RESET);
-	printf("gpiob3 0x%x\n", gpio_read_pin(PORTB, 3));
+	systimer_delay(100, IN_MS);
+	gpio_write_pin(PORTB, 3, GPIO_PIN_SET);
+
+	gpio_write_pin(PORTA, 24, GPIO_PIN_RESET);
+	systimer_delay(100, IN_MS);
+	gpio_write_pin(PORTA, 24, GPIO_PIN_SET);
+#endif
 
 	val = readq(apb_base + 0x100);  // 验证配置的0x25
 	val |= 0x1;
 	writeq(val, apb_base + 0x100);  //enable app_ltssm_enable
 
-#if SEEHI_FPGA_PCIE_TEST
-	// delay(1000);
-	systimer_delay(100, IN_MS);
-#endif
-
-	gpio_write_pin(PORTB, 3, GPIO_PIN_SET);
-	printf("gpiob3 0x%x\n", gpio_read_pin(PORTB, 3));
+	systimer_delay(1, IN_MS);
 
 	while (1) {   //判断状态link up 用smlh_link_up和rdlh_link_up,smlh_ltssm_state
 		val = readq(apb_base + 0x150);
@@ -593,10 +600,7 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 			// break;
 		}
 
-#if SEEHI_FPGA_PCIE_TEST
-		systimer_delay(1000, IN_US);
-#endif
-		// delay(1);
+		systimer_delay(1, IN_MS);
 		timeout++;
 
 		if (val != val_cmp) {
@@ -611,16 +615,13 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 		BSP_First_Reset();
 	}
 
-#if SEEHI_FPGA_PCIE_TEST
 	printf("Link up\n");
 
-	/* Wait for link stable */   //RK 有特殊操作，会等一下等待Data link layer ok，我们是否需要等
 	val = readq(apb_base + 0x150);
 	printf("Link stable, ltssm: 0x%x\n", val);
 
 	val = readq(dbi_base + 0x00);  //vendor id & device id
 	printf("read dbi vid 0x%x\n", val);
-#endif
 	/////////////////////////////////////END//////////////////////////////////////////////////////
 
 	dw_pcie_dbi_ro_wr_dis(dbi_base);
@@ -689,8 +690,6 @@ struct HAL_PCIE_HANDLE s_pcie;
 
 int main()
 {
-	//C2C_ENGINE_X8 这个寄存器干什么用的
-	// struct PCIE_IDB_CFG *idb_cfg = (struct PCIE_IDB_CFG *)__pcie_idb_boot_cfg__;
 	uint32_t result = HAL_ERROR;
 	struct HAL_PCIE_HANDLE *pcie = &s_pcie;
 
@@ -699,10 +698,8 @@ int main()
 #if SEEHI_FPGA_PCIE_TEST
 	s_pcie.dev = &g_pcieDevX8;
 
-	systimer_init();
-
-	GIC_Init();
-
+	gpio_perst_init();
+	gpio_sync_init();
 #elif SEEHI_PLD_PCIE_TEST
 	mc_init(TCM_CFG_BASE, 4);
 
@@ -710,7 +707,9 @@ int main()
 	s_pcie.dev = &g_pcieDevX16;
 #endif
 
-	gpio_perst_init();
+	systimer_init();
+
+	GIC_Init();
 
 #if SEEHI_FPGA_PCIE_TEST
 	printf("PCIe_RC_Init start !!!\n");

@@ -4,14 +4,16 @@
 #include "pcie.h"
 #include "systimer.h"
 #include "common.h"
+#include "dw_apb_gpio.h"
 
 
-#define SEEHI_PLD_PCIE_TEST			1
-#define SEEHI_FPGA_PCIE_TEST		0
+#define SEEHI_PLD_PCIE_TEST			0
+#define SEEHI_FPGA_PCIE_TEST		1
 
-#define SEEHI_AP_PCIE_TEST			0
+#define SEEHI_AP_PCIE_TEST			1
+#define SEEHI_C2C_PCIE_TEST			0
 #define SEEHI_TILE14_PCIE_TEST		0
-#define SEEHI_4TILE_PCIE_TEST		1
+#define SEEHI_4TILE_PCIE_TEST		0
 
 #define SEEHI_MSIX_ENABLE			0
 
@@ -443,9 +445,21 @@ void BSP_First_Reset(void)
 	// printf("BSP_First_Reset\n");
 }
 
+static void gpio_sync_init(void)
+{
+	pinmux_select(PORTA, 24, 7);
+	gpio_init_config_t gpio_init_config = {
+		.port = PORTA,
+		.gpio_control_mode = Software_Mode,
+		.gpio_mode = GPIO_Input_Mode,
+		.pin = 24
+	};
+	gpio_init(&gpio_init_config);
+}
+
 HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 {
-	uint32_t val, val_cmp = 0xf55a55aa;
+	uint32_t val, temp = 0, val_cmp = 0xf55a55aa;
 	uint32_t bar;
 	uint64_t dbi_base = pcie->dev->dbiBase;
 	uint64_t apb_base = pcie->dev->apbBase;
@@ -462,17 +476,20 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	uint16_t vid, did;
 	// struct PCIE_IDB_CFG *idb_cfg = (struct PCIE_IDB_CFG *)__pcie_idb_boot_cfg__;
 
-	BSP_PCIE_EP_Init(pcie);    //时钟同步，链路稳定，状态机进入polling，ltssm可以继续
-
 	dw_pcie_dbi_ro_wr_en(dbi_base);
+
+	BSP_PCIE_EP_Init(pcie);    //时钟同步，链路稳定，状态机进入polling，ltssm可以继续
 
 	bar = 0;
 	resbar_base = dbi_base + 0x10000;
-	// writeq(0x0fffffff, resbar_base + 0x10 + bar * 0x4);   //256M
 #if SEEHI_4TILE_PCIE_TEST
 	writeq(0x00ffffff, resbar_base + 0x10 + bar * 0x4);   //16M
-#else
+#elif SEEHI_TILE14_PCIE_TEST
 	writeq(0x01ffffff, resbar_base + 0x10 + bar * 0x4);   //32M
+#elif SEEHI_C2C_PCIE_TEST
+	writeq(0x007fffff, resbar_base + 0x10 + bar * 0x4);   //8M
+#else
+	writeq(0x00ffffff, resbar_base + 0x10 + bar * 0x4);   //16M
 #endif
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
 
@@ -480,25 +497,43 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	writeq(0x000fffff, resbar_base + 0x10 + bar * 0x4);   //1M
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
 
+#if SEEHI_AP_PCIE_TEST
 	bar = 2;
-	// writeq(0x0fffffff, resbar_base + 0x10 + bar * 0x4);   //
-	// writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //256M
-	// seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
-	// writeq(0x7fffffff, resbar_base + 0x10 + bar * 0x4);   //
-	// writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //2G
-	// seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);   //64 有预取
+	writeq(0x00ffffff, resbar_base + 0x10 + bar * 0x4);   //16M
+	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
+
+	bar = 3;
+	writeq(0x0000ffff, resbar_base + 0x10 + bar * 0x4);   //64K
+	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
+#else
+	bar = 2;
 #if SEEHI_4TILE_PCIE_TEST
 	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
 	writeq(0x00000007, resbar_base + 0x10 + bar * 0x4 + 0x4);   //32G
-#else
+#elif SEEHI_TILE14_PCIE_TEST
 	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
 	writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //4G
+#elif SEEHI_C2C_PCIE_TEST
+	writeq(0x3fffffff, resbar_base + 0x10 + bar * 0x4);   //
+	writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //1G
 #endif
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);   //64 有预取
+#endif
 
 	bar = 4;
+#if SEEHI_4TILE_PCIE_TEST
 	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
 	writeq(0x0000000f, resbar_base + 0x10 + bar * 0x4 + 0x4);   //64G
+#elif SEEHI_TILE14_PCIE_TEST
+	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
+	writeq(0x0000000f, resbar_base + 0x10 + bar * 0x4 + 0x4);   //64G
+#elif SEEHI_C2C_PCIE_TEST
+	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
+	writeq(0x00000001, resbar_base + 0x10 + bar * 0x4 + 0x4);   //8G
+#else
+	writeq(0x1fffffff, resbar_base + 0x10 + bar * 0x4);   //
+	writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //512M
+#endif
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);   //64 有预取
 
 	vid = 0x5348;    //SH
@@ -540,14 +575,27 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	}
 	dw_pcie_link_set_lanes(dbi_base, pcie->dev->lanes);  //lanes
 
-	// systimer_delay(100, IN_US);
-	delay(1);
+	systimer_delay(1, IN_MS);
 
 	writeq(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
 	writeq(0x4d004071, dbi_base + 0x8a8);  //GEN3_EQ_CONTROL_OFF
 
 	dw_pcie_ep_set_msix(dbi_base, 31, 0x70000, 1);  //有默认值不需要软件配置
 	dw_pcie_ep_set_msi(dbi_base, 5);
+
+#if SEEHI_FPGA_PCIE_TEST
+	while(1){
+		val = gpio_read_pin(PORTA, 24);
+		if(val == 0){
+			temp = 0x55;
+		}
+		if(val == 1 && temp == 0x55){
+			printf("get rc sysc single\n");
+			break;
+		}
+		systimer_delay(1, IN_MS);
+	}
+#endif
 
 	val = readq(apb_base + 0x100);  // 验证配置的0x25
 	val |= 0x1;
@@ -566,13 +614,12 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 			// break;
 		}
 
-		// systimer_delay(1000, IN_US);
-		delay(10);
+		systimer_delay(1, IN_MS);
 		timeout++;
 
 		if (val != val_cmp) {
 			val_cmp = val;
-			// printf("ctrl_link_status = 0x%x\n", val);
+			printf("ctrl_link_status = 0x%x\n", val);
 		}
 	}
 
@@ -582,14 +629,12 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 
 #if SEEHI_FPGA_PCIE_TEST
 	printf("Link up\n");
-	// systimer_delay(300, IN_US);
 #endif
-	delay(1);
 
 #if  SEEHI_PLD_PCIE_TEST
 	HAL_PCIE_InboundConfig(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
 	HAL_PCIE_InboundConfig(pcie, 1, 2, BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS);
-	// HAL_PCIE_InboundConfig(pcie, 2, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);
+	HAL_PCIE_InboundConfig(pcie, 2, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);
 
 #elif SEEHI_FPGA_PCIE_TEST
 	dw_pcie_prog_inbound_atu(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
@@ -910,6 +955,9 @@ int main()
 
 #if SEEHI_FPGA_PCIE_TEST
 	s_pcie.dev = &g_pcieDevX8;
+
+	gpio_sync_init();
+
 #elif SEEHI_PLD_PCIE_TEST
 	mc_init(TCM_04_CFG_BASE, 4);
 
@@ -927,9 +975,9 @@ int main()
 	// s_pcie.dev = &g_pcieDevX8;
 #endif
 
-	// systimer_init();
+	systimer_init();
 
-	// GIC_Init();
+	GIC_Init();
 
 #if SEEHI_FPGA_PCIE_TEST
 	printf("PCIe_EP_Init start !!!\n");

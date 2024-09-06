@@ -106,7 +106,7 @@ static inline void writel(uint64_t address, uint32_t value)
 {
 	uintptr_t addr = (uintptr_t)address;
 
-	printf("writel 0x%lx= 0x%x\n", addr, value);
+	// printf("writel 0x%lx= 0x%x\n", addr, value);
 	*((volatile uint32_t *)(addr)) = value;
 }
 
