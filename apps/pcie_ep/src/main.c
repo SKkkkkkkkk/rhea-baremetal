@@ -7,8 +7,8 @@
 #include "dw_apb_gpio.h"
 
 
-#define SEEHI_PLD_PCIE_TEST			0
-#define SEEHI_FPGA_PCIE_TEST		1
+#define SEEHI_PLD_PCIE_TEST			1
+#define SEEHI_FPGA_PCIE_TEST		0
 
 #define SEEHI_AP_PCIE_TEST			1
 #define SEEHI_C2C_PCIE_TEST			0
@@ -546,9 +546,9 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 								   //
 	writeq(0x00102130, dbi_base + 0x78);   //验证配置,DEVICE_CONTROL_DEVICE_STATUS 和MAX PAYLOAD SIZE 相关
 
-	// val = readq(dbi_base + 0x7c);   //LINK_CAPABILITIES_REG  No ASPM Support
-	// val &= ~(3 << 10);
-	// writeq(val, dbi_base + 0x7c);
+	val = readq(dbi_base + 0x7c);   //LINK_CAPABILITIES_REG  No ASPM Support
+	val &= ~(3 << 10);
+	writeq(val, dbi_base + 0x7c);
 
 	val = readq(dbi_base + 0x80c);   //GEN2_CTRL_OFF
 	val |= 1 << 17;
@@ -578,7 +578,13 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	systimer_delay(1, IN_MS);
 
 	writeq(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
+	writeq(0x01402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
+	writeq(0x02402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
 	writeq(0x4d004071, dbi_base + 0x8a8);  //GEN3_EQ_CONTROL_OFF
+
+	// val = readq(dbi_base + 0x890);   //GEN3_RELATED_OFF
+	// val |= 1 << 16;
+	// writeq(val, dbi_base + 0x890);
 
 	dw_pcie_ep_set_msix(dbi_base, 31, 0x70000, 1);  //有默认值不需要软件配置
 	dw_pcie_ep_set_msi(dbi_base, 5);
@@ -619,7 +625,9 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 
 		if (val != val_cmp) {
 			val_cmp = val;
+// #if SEEHI_FPGA_PCIE_TEST
 			printf("ctrl_link_status = 0x%x\n", val);
+// #endif
 		}
 	}
 
@@ -739,16 +747,51 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 		printf("msi config error !!!\n");
 	}
 
-	//配置AP SYS MBI_TX 0x1005_0000
-	if(pcie->dev->max_lanes == 16){
-		writel(0xe0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
-	}else if(pcie->dev->max_lanes == 8){
-		writel(0xf0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
-	}else{
-		printf("msi config error !!!\n");
-	}
+	if(g_c2c_base == C2C_SYS_CFG_02){
+		//配置AP SYS MBI_TX 0x1005_0000
+		if(pcie->dev->max_lanes == 16){
+			writel(0x60000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
+		}else if(pcie->dev->max_lanes == 8){
+			writel(0x70000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+		}else{
+			printf("msi config error !!!\n");
+		}
 
-	writel(0x81, mbitx_ap_base + 0x14);
+		writel(0x81, mbitx_ap_base + 0x14);
+	}else if(g_c2c_base == C2C_SYS_CFG_03){
+		//配置AP SYS MBI_TX 0x1005_0000
+		if(pcie->dev->max_lanes == 16){
+			writel(0xe0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
+		}else if(pcie->dev->max_lanes == 8){
+			writel(0xf0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+		}else{
+			printf("msi config error !!!\n");
+		}
+
+		writel(0x81, mbitx_ap_base + 0x14);
+	}else if(g_c2c_base == C2C_SYS_CFG_72){
+		//配置AP SYS MBI_TX 0x1005_0000
+		if(pcie->dev->max_lanes == 16){
+			writel(0x60000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
+		}else if(pcie->dev->max_lanes == 8){
+			writel(0x70000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+		}else{
+			printf("msi config error !!!\n");
+		}
+
+		writel(0xb9, mbitx_ap_base + 0x14);
+	}else if(g_c2c_base == C2C_SYS_CFG_73){
+		//配置AP SYS MBI_TX 0x1005_0000
+		if(pcie->dev->max_lanes == 16){
+			writel(0xe0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
+		}else if(pcie->dev->max_lanes == 8){
+			writel(0xf0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+		}else{
+			printf("msi config error !!!\n");
+		}
+
+		writel(0xb9, mbitx_ap_base + 0x14);
+	}
 	writel(0x7fffffff, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
 	writel(0x0, mbitx_ap_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
 
@@ -867,16 +910,52 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 #else
 	// writeq((0 << 4), apb_base + 0x70);    //4:8  产生msi对应中断 bit0=1
 
-	//配置AP SYS MBI_TX 0x1005_0000
-	if(pcie->dev->max_lanes == 16){
-		writel(0xc0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
-	}else if(pcie->dev->max_lanes == 8){
-		writel(0xd0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
-	}else{
-		printf("msi config error !!!\n");
+	if(g_c2c_base == C2C_SYS_CFG_02){
+		//配置AP SYS MBI_TX 0x1005_0000
+		if(pcie->dev->max_lanes == 16){
+			writel(0x40000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
+		}else if(pcie->dev->max_lanes == 8){
+			writel(0x50000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+		}else{
+			printf("msi config error !!!\n");
+		}
+
+		writel(0x81, mbitx_ap_base + 0x14);
+	}else if(g_c2c_base == C2C_SYS_CFG_03){
+		//配置AP SYS MBI_TX 0x1005_0000
+		if(pcie->dev->max_lanes == 16){
+			writel(0xc0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
+		}else if(pcie->dev->max_lanes == 8){
+			writel(0xd0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+		}else{
+			printf("msi config error !!!\n");
+		}
+
+		writel(0x81, mbitx_ap_base + 0x14);
+	}else if(g_c2c_base == C2C_SYS_CFG_72){
+		//配置AP SYS MBI_TX 0x1005_0000
+		if(pcie->dev->max_lanes == 16){
+			writel(0x40000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
+		}else if(pcie->dev->max_lanes == 8){
+			writel(0x50000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+		}else{
+			printf("msi config error !!!\n");
+		}
+
+		writel(0xb9, mbitx_ap_base + 0x14);
+	}else if(g_c2c_base == C2C_SYS_CFG_73){
+		//配置AP SYS MBI_TX 0x1005_0000
+		if(pcie->dev->max_lanes == 16){
+			writel(0xc0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
+		}else if(pcie->dev->max_lanes == 8){
+			writel(0xd0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+		}else{
+			printf("msi config error !!!\n");
+		}
+
+		writel(0xb9, mbitx_ap_base + 0x14);
 	}
 
-	writel(0x81, mbitx_ap_base + 0x14);
 	writel(0x7fffffff, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
 	writel(0x0, mbitx_ap_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
 #endif //SEEHI_TILE14_PCIE_TEST
@@ -960,6 +1039,8 @@ int main()
 
 #elif SEEHI_PLD_PCIE_TEST
 	mc_init(TCM_04_CFG_BASE, 4);
+
+	g_c2c_base = get_pcie_base(3);
 
 #if SEEHI_TILE14_PCIE_TEST
 	mc_init(TCM_14_CFG_BASE, 4);
