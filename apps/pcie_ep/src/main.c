@@ -6,6 +6,21 @@
 #include "common.h"
 #include "dw_apb_gpio.h"
 
+/*                                   This is BAR Define
+┌────┬─────┬────────────────┬────┬───────────────────┬────────────────┬───────────────┬───────────┐
+│BARn│ Size│is Prefetchable?│bits│       name        │   assignment   │initial inbound│use inbound│
+├────┼─────┼────────────────┼────┼───────────────────┼────────────────┼───────────────┼───────────┤
+│BAR0│ 16MB│non-prefetchable│ 32 │    NPU_S2_BAR     │     NPU S2     │0x114_3000_0000│     0     │
+├────┼─────┼────────────────┼────┼───────────────────┼────────────────┼───────────────┼───────────┤
+│BAR1│  1MB│non-prefetchable│ 32 │   PCIE_DBI_BAR    │    PCIe DBI    │hardware assign│do not care│
+├────┼─────┼────────────────┼────┼───────────────────┼────────────────┼───────────────┼───────────┤
+│BAR2│ 16MB│non-prefetchable│ 32 │TILE_OR_TCM_CFG_BAR│tile cfg/tcm cfg│0x114_2000_0000│     1     │
+├────┼─────┼────────────────┼────┼───────────────────┼────────────────┼───────────────┼───────────┤
+│BAR3│ 64KB│non-prefetchable│ 32 │    HDMA_LL_BAR    │ HDMA Link List │0x004_57ff_0000│     2     │
+├────┼─────┼────────────────┼────┼───────────────────┼────────────────┼───────────────┼───────────┤
+│BAR4│512MB│  prefetchable  │ 64 │    TCM_MEM_BAR    │    TCM MEM     │0x004_4000_0000│     3     │
+└────┴─────┴────────────────┴────┴───────────────────┴────────────────┴───────────────┴───────────┘
+*/
 
 #define SEEHI_PLD_PCIE_TEST			1
 #define SEEHI_FPGA_PCIE_TEST		0
@@ -103,19 +118,10 @@ struct PCIE_IDB_CFG {
 // #define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x00440000000           //AP SYS DRAM
 // #define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00540000000   //Vtile 0 5
 
-#if SEEHI_TILE14_PCIE_TEST
-#define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x18a30000000  //tile 14 cfg
-#define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x01400000000   //tile 14 dram
-#define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00500000000   //tile 0 5
-#elif SEEHI_4TILE_PCIE_TEST
-#define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x180b0000000  //tile 14 cfg
-#define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x01000000000   //tile 14 dram
-#define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00500000000   //tile 0 5
-#else
-#define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x10410000000  //AP SYS UART    bit40 来做C&N 区分
-#define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x00440000000           //AP SYS DRAM
-#define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00500000000   //tile 0 5
-#endif
+#define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x11430000000   //tile 14 npu.s2
+#define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x11420000000   //tile 14 tile cfg
+#define BOOT_USING_PCIE_EP_BAR3_CPU_ADDRESS 0x00457ff0000   //HDMA Link List
+#define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00440000000   //tile 04 tcm mem
 
 #define AP_SYS_C2C0_CPU_ADDRESS		C2C_SYS_CFG_03
 #define DWC_PCIE_CTL_X16_DBI		(AP_SYS_C2C0_CPU_ADDRESS + 0x0)
@@ -480,24 +486,16 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 
 	BSP_PCIE_EP_Init(pcie);    //时钟同步，链路稳定，状态机进入polling，ltssm可以继续
 
+	/* BAR Config Start */
 	bar = 0;
 	resbar_base = dbi_base + 0x10000;
-#if SEEHI_4TILE_PCIE_TEST
 	writeq(0x00ffffff, resbar_base + 0x10 + bar * 0x4);   //16M
-#elif SEEHI_TILE14_PCIE_TEST
-	writeq(0x01ffffff, resbar_base + 0x10 + bar * 0x4);   //32M
-#elif SEEHI_C2C_PCIE_TEST
-	writeq(0x007fffff, resbar_base + 0x10 + bar * 0x4);   //8M
-#else
-	writeq(0x00ffffff, resbar_base + 0x10 + bar * 0x4);   //16M
-#endif
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
 
 	bar = 1;
 	writeq(0x000fffff, resbar_base + 0x10 + bar * 0x4);   //1M
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
 
-#if SEEHI_AP_PCIE_TEST
 	bar = 2;
 	writeq(0x00ffffff, resbar_base + 0x10 + bar * 0x4);   //16M
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
@@ -505,36 +503,12 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	bar = 3;
 	writeq(0x0000ffff, resbar_base + 0x10 + bar * 0x4);   //64K
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
-#else
-	bar = 2;
-#if SEEHI_4TILE_PCIE_TEST
-	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
-	writeq(0x00000007, resbar_base + 0x10 + bar * 0x4 + 0x4);   //32G
-#elif SEEHI_TILE14_PCIE_TEST
-	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
-	writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //4G
-#elif SEEHI_C2C_PCIE_TEST
-	writeq(0x3fffffff, resbar_base + 0x10 + bar * 0x4);   //
-	writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //1G
-#endif
-	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);   //64 有预取
-#endif
 
 	bar = 4;
-#if SEEHI_4TILE_PCIE_TEST
-	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
-	writeq(0x0000000f, resbar_base + 0x10 + bar * 0x4 + 0x4);   //64G
-#elif SEEHI_TILE14_PCIE_TEST
-	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
-	writeq(0x0000000f, resbar_base + 0x10 + bar * 0x4 + 0x4);   //64G
-#elif SEEHI_C2C_PCIE_TEST
-	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
-	writeq(0x00000001, resbar_base + 0x10 + bar * 0x4 + 0x4);   //8G
-#else
 	writeq(0x1fffffff, resbar_base + 0x10 + bar * 0x4);   //
 	writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //512M
-#endif
-	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);   //64 有预取
+	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);
+	/* BAR Config End */
 
 	vid = 0x5348;    //SH
 	did = 0xa510;    //a510
@@ -642,7 +616,8 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 #if  SEEHI_PLD_PCIE_TEST
 	HAL_PCIE_InboundConfig(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
 	HAL_PCIE_InboundConfig(pcie, 1, 2, BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS);
-	HAL_PCIE_InboundConfig(pcie, 2, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);
+	HAL_PCIE_InboundConfig(pcie, 2, 3, BOOT_USING_PCIE_EP_BAR3_CPU_ADDRESS);
+	HAL_PCIE_InboundConfig(pcie, 3, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);
 
 #elif SEEHI_FPGA_PCIE_TEST
 	dw_pcie_prog_inbound_atu(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
@@ -1062,6 +1037,14 @@ int main()
 
 #if SEEHI_FPGA_PCIE_TEST
 	printf("PCIe_EP_Init start !!!\n");
+#endif
+
+#if SEEHI_4TILE_PCIE_TEST
+	/* when print start, please power on x86 pc */
+	printf("t14:0x%08x\n", REG32(0x1440000000 + 536870912 + 0xc0));
+	printf("t15:0x%08x\n", REG32(0x1540000000 + 536870912 + 0xc0));
+	printf("t24:0x%08x\n", REG32(0x2440000000 + 536870912 + 0xc0));
+	printf("t25:0x%08x\n", REG32(0x2540000000 + 536870912 + 0xc0));
 #endif
 
 	PCIe_EP_Init(pcie);
