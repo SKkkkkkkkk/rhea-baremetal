@@ -1,0 +1,485 @@
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stddef.h>
+
+#include "d2d_sync.h"
+#include "d2d_ring_buf.h"
+#include "list.h"
+#include "delay.h"
+#include "crc.h"
+
+#define RHEA_AP_TILE_ID         0x04
+
+struct d2d_sync_header {
+    uint32_t cmd_head;
+    uint32_t cmd_tail;
+    uint32_t data_head;
+    uint32_t data_tail;
+};
+
+struct d2d_sync_cmd {
+    uint32_t cmd_idx;
+    union {
+        struct {
+            uint32_t data_head;
+            uint32_t data_size;
+            uint32_t data_crc;
+        };
+        struct {
+            uint32_t reg_addr;
+            uint32_t reg_val;
+            /**
+             * 1: owned by the executor
+             * 0: owned by the initiator
+             */
+            uint32_t reg_own;
+        };
+    };
+    uint32_t cmd_crc;
+};
+
+struct d2d_sync_list {
+    struct d2d_sync_cmd cmd;
+    void *data;
+    uint32_t size;
+    DECLARE_LIST_NODE;
+};
+
+struct d2d_sync_priv {
+    list_t(struct d2d_sync_list) cmd_list;
+    struct d2d_sync_header *header;
+    struct d2d_ring_buf rcmd;
+    struct d2d_ring_buf rcmd_data;
+    struct d2d_ring_buf lcmd;
+    struct d2d_ring_buf lcmd_data;
+} *sync_priv;
+
+static int d2d_cmd_get_lock(uint8_t die_idx)
+{
+    return rhea_d2d_get_lock(die_idx, D2D_LOCK_CMD);
+}
+
+static void d2d_cmd_clear_lock(uint8_t die_idx)
+{
+    rhea_d2d_release_lock(die_idx, D2D_LOCK_CMD);
+}
+
+static int d2d_cmd_data_get_lock(uint8_t die_idx)
+{
+    return rhea_d2d_get_lock(die_idx, D2D_LOCK_CMD_DATA);
+}
+
+static void d2d_cmd_data_clear_lock(uint8_t die_idx)
+{
+    rhea_d2d_release_lock(die_idx, D2D_LOCK_CMD_DATA);
+}
+
+int d2d_sync_wait_reg(struct d2d_sync_put_cmd *put_cmd,
+                        uint32_t pos)
+{
+    struct d2d_sync_cmd *cmd;
+    uint32_t timeout = 500; // ms
+
+    if ((put_cmd->cmd_id == D2D_SYNC_WRITEL) ||
+        (put_cmd->cmd_id == D2D_SYNC_READL)  ||
+        (put_cmd->cmd_id == D2D_SYNC_WRITEW) ||
+        (put_cmd->cmd_id == D2D_SYNC_READW)  ||
+        (put_cmd->cmd_id == D2D_SYNC_WRITEB) ||
+        (put_cmd->cmd_id == D2D_SYNC_READB)) {
+        cmd = (struct d2d_sync_cmd *) 
+                (sync_priv->lcmd.remote_addr + pos);
+        if (put_cmd->reg_addr != cmd->reg_addr) {
+            printf("The register address 0x%x obtained at "
+                "address 0x%lx does not match the expected 0x%x\n",
+                cmd->reg_addr, (uintptr_t) cmd, put_cmd->reg_addr);
+            return -EFAULT;
+        }
+
+        printf("Waiting for the command %d at address 0x%lx to complete\n",
+                cmd->cmd_idx, (uintptr_t) cmd);
+        // Waiting for the executor to release
+        while (cmd->reg_own) {
+            if (!timeout--) {
+                return -ETIMEDOUT;
+            }
+            mdelay(1);
+        }
+
+        if ((cmd->cmd_idx == D2D_SYNC_READL) ||
+            (cmd->cmd_idx == D2D_SYNC_READW) ||
+            (cmd->cmd_idx == D2D_SYNC_READB)) {
+            put_cmd->reg_val = cmd->reg_val;
+            printf("0x%08x has been read from address 0x%08x\n",
+                    cmd->reg_val, cmd->reg_addr);
+        } else {
+            printf("0x%08x has been written to address 0x%08x\n",
+                    cmd->reg_val, cmd->reg_addr);
+        }
+    }
+    return 0;
+}
+
+int d2d_sync_remote(struct d2d_sync_put_cmd *put_cmd)
+{
+    int ret;
+    struct d2d_sync_cmd *cmd;
+    const size_t cmd_len = sizeof(struct d2d_sync_cmd);
+    uint32_t cur_head = 0;
+
+    if (put_cmd->die_idx >= RHEA_DIE_MAX) 
+        return -EINVAL;
+
+    printf("Write 0x%x bytes data with command %d to die%d\n",
+                put_cmd->data_size, put_cmd->cmd_id, put_cmd->die_idx);
+
+    ret = rhea_d2d_select_tile(put_cmd->die_idx, 
+                    RHEA_AP_TILE_ID, 0);
+    if (ret) {
+        printf("Failed to select AP tile in die%d\n", 
+                    put_cmd->die_idx);
+        return ret;
+    }
+    sync_priv->rcmd.die_idx = put_cmd->die_idx;
+    sync_priv->rcmd_data.die_idx = put_cmd->die_idx;
+    printf("The AP tile in die%d is selected for synchronization\n",
+                put_cmd->die_idx);
+
+    cmd = (struct d2d_sync_cmd *) malloc(cmd_len);
+    if (!cmd) {
+        ret = -ENOMEM;
+        goto release_tile;
+    }
+    memset(cmd, 0, cmd_len);
+    cmd->cmd_idx = put_cmd->cmd_id;
+    switch (cmd->cmd_idx) {
+        case D2D_SYNC_DATA:
+            if (!put_cmd->data_addr || !put_cmd->data_size) {
+                ret = -EINVAL;
+                goto free_cmd;
+            }
+
+            cmd->data_head = *sync_priv->rcmd_data.tail;
+            cmd->data_size = put_cmd->data_size;
+            cmd->data_crc = crc16_ccitt(0, put_cmd->data_addr, put_cmd->data_size);
+            ret = d2d_ring_put_data_remote(&sync_priv->rcmd_data, 
+                                    put_cmd->data_addr, put_cmd->data_size);
+            if (ret)
+                goto free_cmd;
+            break;
+        case D2D_SYNC_WRITEL:
+        case D2D_SYNC_READL:
+        case D2D_SYNC_WRITEW:
+        case D2D_SYNC_READW:
+        case D2D_SYNC_WRITEB:
+        case D2D_SYNC_READB:
+            cur_head = *sync_priv->rcmd.tail;
+            cmd->reg_addr = put_cmd->reg_addr;
+            cmd->reg_val = put_cmd->reg_val;
+            cmd->reg_own = 1;    // owned by the executor
+            break;
+        default:
+            printf("Invalid command %d\n", cmd->cmd_idx);
+            ret = -EINVAL;
+            goto free_cmd;
+    }
+    cmd->cmd_crc = crc16_ccitt(0, (uint8_t *) cmd, 
+                                    cmd_len - sizeof(uint32_t));
+    ret = d2d_ring_put_data_remote(&sync_priv->rcmd, cmd, cmd_len);
+    if (ret)
+        goto free_cmd;
+
+    printf("Put command to die%d (%08x %08x %08x %08x %08x)\n",
+                put_cmd->die_idx, cmd->cmd_idx, cmd->data_head, 
+                cmd->data_size, cmd->data_crc, cmd->cmd_crc);
+
+    // ret = d2d_sync_wait_reg(put_cmd, cur_head);  // TODO
+    ret = cur_head;
+
+free_cmd:
+    free(cmd);
+release_tile:
+    rhea_d2d_release_tile();
+    return ret;
+}
+
+int d2d_sync_query_cmd(enum d2d_sync_cmd_id cmd_id,
+                                uint32_t *size_addr)
+{
+    struct d2d_sync_list *cmd_list;
+    struct d2d_sync_cmd *cmd;
+
+    if (cmd_id >= D2D_SYNC_CMD_MAX)
+        return -EINVAL;
+
+    printf("Try to query command %d\n", cmd_id);
+    list_for_each(cmd_list, sync_priv->cmd_list) {
+        cmd = &cmd_list->cmd;
+        if (cmd->cmd_idx == cmd_id) {
+            *size_addr = cmd->data_size;
+            printf("Query command (%08x %08x %08x %08x %08x)\n",
+                        cmd->cmd_idx, cmd->data_head, cmd->data_size, 
+                        cmd->data_crc, cmd->cmd_crc);
+            return cmd->cmd_idx;
+        }
+    }
+    return 0;
+}
+
+int d2d_sync_get_data(enum d2d_sync_cmd_id cmd_id,
+                                void *data_addr)
+{
+    struct d2d_sync_list *cmd_list, *tmp;
+    struct d2d_sync_cmd *cmd;
+    struct list_head *pos, *next;
+
+    if (cmd_id >= D2D_SYNC_CMD_MAX)
+        return -EINVAL;
+
+    printf("Try to get data carried by command %d\n", cmd_id);
+    list_for_each_safe(cmd_list, sync_priv->cmd_list, tmp) {
+        cmd = &cmd_list->cmd;
+        if (cmd->cmd_idx == cmd_id) {
+            if (!cmd_list->data)
+                return -EFAULT;
+
+            memcpy(data_addr, cmd_list->data, cmd->data_size);
+            printf("Get the 0x%x bytes data carried by command %d\n",
+                        cmd->data_size, cmd->cmd_idx);
+            list_del(cmd_list);
+            free(cmd_list->data);
+            free(cmd_list);
+            return cmd_id;
+        }
+    }
+    return 0;
+}
+
+static int d2d_sync_obtain_data(struct d2d_sync_cmd *cmd)
+{
+    struct d2d_sync_list *cmd_list;
+    uint32_t crc_val;
+    uint8_t *data;
+    int ret;
+
+    if (!cmd->data_size)
+        return -EFAULT;
+
+    data = (uint8_t *) malloc(cmd->data_size);
+    if (!data) {
+        printf("Failed to allocate memory for cmd data\n");
+        return -ENOMEM;
+    }
+
+    ret = d2d_ring_pop_data(&sync_priv->lcmd_data, 
+                            data, cmd->data_size);
+    if (ret)
+        goto free_data;
+
+    crc_val = crc16_ccitt(0, data, cmd->data_size);
+    if (cmd->data_crc != crc_val) {
+        printf("Data verification of command %d failed "
+                "and %d bytes discarded\n",
+                cmd->cmd_idx, cmd->data_size);
+        goto free_data;
+    }
+    
+    cmd_list = (struct d2d_sync_list *) 
+                malloc(sizeof(struct d2d_sync_list));
+    if (!cmd_list) {
+        printf("Failed to allocate memory for cmd_list\n");
+        ret = -ENOMEM;
+        goto free_data;
+    }
+    memcpy(&cmd_list->cmd, cmd, sizeof(struct d2d_sync_cmd));
+    cmd_list->data = data;
+    cmd_list->size = cmd->data_size;
+    list_add_tail(cmd_list, sync_priv->cmd_list);
+    printf("Got 0x%x bytes of data in command %d\n",
+            cmd_list->size, cmd_list->cmd.cmd_idx);
+
+    return 0;
+
+free_data:
+    free(data);
+    return ret;
+}
+
+static int d2d_sync_operation_reg(struct d2d_sync_cmd *cmd)
+{
+    int ret;
+
+    if (!cmd->reg_own) {
+        printf("Command %d not owned", cmd->cmd_idx);
+        return -EFAULT;
+    }
+
+    switch(cmd->cmd_idx) {
+        case D2D_SYNC_WRITEL:
+            writel(cmd->reg_val, (void *) ((uintptr_t) cmd->reg_addr));
+            break;
+        case D2D_SYNC_READL:
+            cmd->reg_val = readl((void *) ((uintptr_t) cmd->reg_addr));
+            break;
+        case D2D_SYNC_WRITEW:
+            writew((uint16_t) cmd->reg_val, (void *) ((uintptr_t) cmd->reg_addr));
+            break;
+        case D2D_SYNC_READW:
+            cmd->reg_val = readw((void *) ((uintptr_t) cmd->reg_addr));
+            break;
+        case D2D_SYNC_WRITEB:
+            writeb((uint8_t) cmd->reg_val, (void *) ((uintptr_t) cmd->reg_addr));
+            break;
+        case D2D_SYNC_READB:
+            cmd->reg_val = readb((void *) ((uintptr_t) cmd->reg_addr));
+            break;
+        default:
+            printf("Invalid command %d\n", cmd->cmd_idx);
+            return -EINVAL;
+    }
+    cmd->reg_own = 0;   // owned by the initiator
+    printf("Command %d done (addr: 0x%08x, val: 0x%08x)\n",
+            cmd->cmd_idx, cmd->reg_addr, cmd->reg_val);
+    return 0;
+}
+
+int d2d_sync_obtain_cmd(void)
+{
+    int ret;
+    uint32_t used_len, crc_val, cmd_cnt = 0;
+    struct d2d_sync_list *cmd_list;
+    struct d2d_sync_cmd *cmd;
+    const size_t cmd_len = sizeof(struct d2d_sync_cmd);
+
+    used_len = d2d_ring_get_used_len(&sync_priv->lcmd);
+    printf("Got 0x%x bytes in cmd buffer\n", used_len);
+    while (used_len >= cmd_len) {
+        cmd = (struct d2d_sync_cmd *) 
+                ((uintptr_t) sync_priv->lcmd.local_addr + *sync_priv->lcmd.head);
+        printf("Got command (%08x %08x %08x %08x %08x), buffer length 0x%x\n",
+                    cmd->cmd_idx, cmd->data_head, cmd->data_size, 
+                    cmd->data_crc, cmd->cmd_crc, used_len);
+
+        crc_val = crc16_ccitt(0, (uint8_t *) cmd, cmd_len - sizeof(uint32_t));
+        if (crc_val != cmd->cmd_crc) {
+            printf("Command verification failed\n");
+            return -EIO;
+        }
+
+        switch (cmd->cmd_idx) {
+            case D2D_SYNC_DATA:
+                ret = d2d_sync_obtain_data(cmd);
+                if (ret)
+                    return ret;
+                break;
+            case D2D_SYNC_WRITEL:
+            case D2D_SYNC_READL:
+            case D2D_SYNC_WRITEW:
+            case D2D_SYNC_READW:
+            case D2D_SYNC_WRITEB:
+            case D2D_SYNC_READB:
+                ret = d2d_sync_operation_reg(cmd);
+                if (ret)
+                    return ret;
+                break;
+            default:
+                printf("Invalid command %d\n",
+                        cmd->cmd_idx);
+                return -EFAULT;
+        }
+        d2d_ring_move_head(&sync_priv->lcmd, cmd_len);
+        used_len -= cmd_len;
+        cmd_cnt++;
+    }
+    if (used_len) {
+        d2d_ring_move_head(&sync_priv->lcmd, used_len);
+        printf("The remaining %d bytes in the command queue are discarded",
+                used_len);
+    }
+    printf("A total of %d commands ware obtained\n", cmd_cnt);
+
+    return cmd_cnt;
+}
+
+int rhea_d2d_sync_init(void)
+{
+	int ret;
+    void *ioaddr;
+    struct d2d_sync_header *header;
+
+    ret = rhea_d2d_init();
+    if (ret)
+        return ret;
+
+    sync_priv = malloc(sizeof(struct d2d_sync_priv));
+    if (!sync_priv) {
+        printf("Failed to allocate memory for device data\n");
+        return -ENOMEM;
+    }
+
+    list_init(sync_priv->cmd_list);
+
+    ioaddr = rhea_d2d_get_ioaddr();
+    if (ioaddr == NULL) {
+	    free(sync_priv);
+        return -EFAULT;
+    }
+
+    if (CONFIG_RHEA_D2D_SYNC_CMD_SIZE % sizeof(struct d2d_sync_cmd)) {
+        printf("The command buffer must be a multiple of %ld\n",
+                sizeof(struct d2d_sync_cmd));
+	    free(sync_priv);
+        return -EINVAL;
+    }
+
+    header = (struct d2d_sync_header *) (ioaddr +
+                    CONFIG_RHEA_D2D_SYNC_HEADER_ADDR);
+    sync_priv->rcmd.head = &header->cmd_head;
+    sync_priv->rcmd.tail = &header->cmd_tail;
+    sync_priv->rcmd.remote_addr = CONFIG_RHEA_D2D_SYNC_CMD_ADDR;
+    sync_priv->rcmd.size = CONFIG_RHEA_D2D_SYNC_CMD_SIZE;
+    sync_priv->rcmd.get_lock = d2d_cmd_get_lock;
+    sync_priv->rcmd.clear_lock = d2d_cmd_clear_lock;
+    sync_priv->rcmd_data.head = &header->data_head;
+    sync_priv->rcmd_data.tail = &header->data_tail;
+    sync_priv->rcmd_data.remote_addr = CONFIG_RHEA_D2D_SYNC_DATA_ADDR;
+    sync_priv->rcmd_data.size = CONFIG_RHEA_D2D_SYNC_DATA_SIZE;
+    sync_priv->rcmd_data.get_lock = d2d_cmd_data_get_lock;
+    sync_priv->rcmd_data.clear_lock = d2d_cmd_data_clear_lock;
+
+    header = (struct d2d_sync_header *) CONFIG_RHEA_D2D_SYNC_HEADER_ADDR;
+    memset(header, 0, sizeof(struct d2d_sync_header));
+    sync_priv->header = header;
+    sync_priv->lcmd.head = &header->cmd_head;
+    sync_priv->lcmd.tail = &header->cmd_tail;
+    sync_priv->lcmd.local_addr = (void *) CONFIG_RHEA_D2D_SYNC_CMD_ADDR;
+    sync_priv->lcmd.size = CONFIG_RHEA_D2D_SYNC_CMD_SIZE;
+    sync_priv->lcmd.get_lock = d2d_cmd_get_lock;
+    sync_priv->lcmd.clear_lock = d2d_cmd_clear_lock;
+    sync_priv->lcmd_data.head = &header->data_head;
+    sync_priv->lcmd_data.tail = &header->data_tail;
+    sync_priv->lcmd_data.local_addr = (void *) CONFIG_RHEA_D2D_SYNC_DATA_ADDR;
+    sync_priv->lcmd_data.size = CONFIG_RHEA_D2D_SYNC_DATA_SIZE;
+    sync_priv->lcmd_data.get_lock = d2d_cmd_data_get_lock;
+    sync_priv->lcmd_data.clear_lock = d2d_cmd_data_clear_lock;
+
+	return 0;
+}
+
+void rhea_d2d_sync_exit(void)
+{
+    struct d2d_sync_list *cmd_list, *tmp;
+
+    list_for_each_safe(cmd_list, sync_priv->cmd_list, tmp)
+    {
+        if (cmd_list->data)
+            free(cmd_list->data);
+
+        list_del(cmd_list); 
+        free(cmd_list); 
+    }
+
+	if (sync_priv)
+		free(sync_priv);
+}
