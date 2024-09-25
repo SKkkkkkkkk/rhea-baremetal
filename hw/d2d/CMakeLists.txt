@@ -19,10 +19,10 @@ target_link_libraries(${TARGET_NAME}
 		crc
 )
 
-add_definitions(-DCONFIG_RHEA_DUAL_DIE)
-add_definitions(-DCONFIG_RHEA_D2D_WORK_MODE=1)
-add_definitions(-DCONFIG_RHEA_D2D_SYNC_HEADER_ADDR=0x48000000)
-add_definitions(-DCONFIG_RHEA_D2D_SYNC_CMD_ADDR=0x48000010)
-add_definitions(-DCONFIG_RHEA_D2D_SYNC_CMD_SIZE=0x7D0)
-add_definitions(-DCONFIG_RHEA_D2D_SYNC_DATA_ADDR=0x480007E0)
-add_definitions(-DCONFIG_RHEA_D2D_SYNC_DATA_SIZE=0xFF820)
+target_compile_definitions(d2d PRIVATE CONFIG_RHEA_DUAL_DIE)
+target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_WORK_MODE=1)
+target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_HEADER_ADDR=0x48000000)
+target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_CMD_ADDR=0x48000010)
+target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_CMD_SIZE=0x7D0)
+target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_DATA_ADDR=0x480007E0)
+target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_DATA_SIZE=0xFF820)
