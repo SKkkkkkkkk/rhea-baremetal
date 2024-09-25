@@ -2,6 +2,14 @@
 #define __D2D_API_H__
 
 #include <stdint.h>
+#include <stdio.h>
+
+#if defined(DEBUG)
+#define pr_dbg(fmt, ...)    printf(fmt, __VA_ARGS__)
+#else
+#define pr_dbg(fmt, ...)    do {} while (0)
+#endif
+
 
 #define rhea_tile_id_hex(row, col)  (((row & 0xf) << 4) | (col & 0xf))
 #define rhea_tile_id_col(hex)       (hex & 0xf)

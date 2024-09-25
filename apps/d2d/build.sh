@@ -3,5 +3,5 @@ CC=aarch64-none-elf-gcc cmake -S ../.. -B build -G Ninja \
 -DPROJECT_NAME=d2d \
 -DPROJECT_PATH=. \
 -DMEM_SCHEME=ROM \
--DCMAKE_BUILD_TYPE=Debug
+-DCMAKE_BUILD_TYPE=Release
 cmake --build build

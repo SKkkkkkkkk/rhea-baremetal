@@ -97,7 +97,7 @@ int d2d_sync_wait_reg(struct d2d_sync_put_cmd *put_cmd,
             return -EFAULT;
         }
 
-        printf("Waiting for the command %d at address 0x%lx to complete\n",
+        pr_dbg("Waiting for the command %d at address 0x%lx to complete\n",
                 cmd->cmd_idx, (uintptr_t) cmd);
         // Waiting for the executor to release
         while (cmd->reg_own) {
@@ -111,10 +111,10 @@ int d2d_sync_wait_reg(struct d2d_sync_put_cmd *put_cmd,
             (cmd->cmd_idx == D2D_SYNC_READW) ||
             (cmd->cmd_idx == D2D_SYNC_READB)) {
             put_cmd->reg_val = cmd->reg_val;
-            printf("0x%08x has been read from address 0x%08x\n",
+            pr_dbg("0x%08x has been read from address 0x%08x\n",
                     cmd->reg_val, cmd->reg_addr);
         } else {
-            printf("0x%08x has been written to address 0x%08x\n",
+            pr_dbg("0x%08x has been written to address 0x%08x\n",
                     cmd->reg_val, cmd->reg_addr);
         }
     }
@@ -131,7 +131,7 @@ int d2d_sync_remote(struct d2d_sync_put_cmd *put_cmd)
     if (put_cmd->die_idx >= RHEA_DIE_MAX) 
         return -EINVAL;
 
-    printf("Write 0x%x bytes data with command %d to die%d\n",
+    pr_dbg("Write 0x%x bytes data with command %d to die%d\n",
                 put_cmd->data_size, put_cmd->cmd_id, put_cmd->die_idx);
 
     ret = rhea_d2d_select_tile(put_cmd->die_idx, 
@@ -143,7 +143,7 @@ int d2d_sync_remote(struct d2d_sync_put_cmd *put_cmd)
     }
     sync_priv->rcmd.die_idx = put_cmd->die_idx;
     sync_priv->rcmd_data.die_idx = put_cmd->die_idx;
-    printf("The AP tile in die%d is selected for synchronization\n",
+    pr_dbg("The AP tile in die%d is selected for synchronization\n",
                 put_cmd->die_idx);
 
     cmd = (struct d2d_sync_cmd *) malloc(cmd_len);
@@ -190,7 +190,7 @@ int d2d_sync_remote(struct d2d_sync_put_cmd *put_cmd)
     if (ret)
         goto free_cmd;
 
-    printf("Put command to die%d (%08x %08x %08x %08x %08x)\n",
+    pr_dbg("Put command to die%d (%08x %08x %08x %08x %08x)\n",
                 put_cmd->die_idx, cmd->cmd_idx, cmd->data_head, 
                 cmd->data_size, cmd->data_crc, cmd->cmd_crc);
 
@@ -213,12 +213,12 @@ int d2d_sync_query_cmd(enum d2d_sync_cmd_id cmd_id,
     if (cmd_id >= D2D_SYNC_CMD_MAX)
         return -EINVAL;
 
-    printf("Try to query command %d\n", cmd_id);
+    pr_dbg("Try to query command %d\n", cmd_id);
     list_for_each(cmd_list, sync_priv->cmd_list) {
         cmd = &cmd_list->cmd;
         if (cmd->cmd_idx == cmd_id) {
             *size_addr = cmd->data_size;
-            printf("Query command (%08x %08x %08x %08x %08x)\n",
+            pr_dbg("Query command (%08x %08x %08x %08x %08x)\n",
                         cmd->cmd_idx, cmd->data_head, cmd->data_size, 
                         cmd->data_crc, cmd->cmd_crc);
             return cmd->cmd_idx;
@@ -237,7 +237,7 @@ int d2d_sync_get_data(enum d2d_sync_cmd_id cmd_id,
     if (cmd_id >= D2D_SYNC_CMD_MAX)
         return -EINVAL;
 
-    printf("Try to get data carried by command %d\n", cmd_id);
+    pr_dbg("Try to get data carried by command %d\n", cmd_id);
     list_for_each_safe(cmd_list, sync_priv->cmd_list, tmp) {
         cmd = &cmd_list->cmd;
         if (cmd->cmd_idx == cmd_id) {
@@ -245,7 +245,7 @@ int d2d_sync_get_data(enum d2d_sync_cmd_id cmd_id,
                 return -EFAULT;
 
             memcpy(data_addr, cmd_list->data, cmd->data_size);
-            printf("Get the 0x%x bytes data carried by command %d\n",
+            pr_dbg("Get the 0x%x bytes data carried by command %d\n",
                         cmd->data_size, cmd->cmd_idx);
             list_del(cmd_list);
             free(cmd_list->data);
@@ -296,7 +296,7 @@ static int d2d_sync_obtain_data(struct d2d_sync_cmd *cmd)
     cmd_list->data = data;
     cmd_list->size = cmd->data_size;
     list_add_tail(cmd_list, sync_priv->cmd_list);
-    printf("Got 0x%x bytes of data in command %d\n",
+    pr_dbg("Got 0x%x bytes of data in command %d\n",
             cmd_list->size, cmd_list->cmd.cmd_idx);
 
     return 0;
@@ -339,7 +339,7 @@ static int d2d_sync_operation_reg(struct d2d_sync_cmd *cmd)
             return -EINVAL;
     }
     cmd->reg_own = 0;   // owned by the initiator
-    printf("Command %d done (addr: 0x%08x, val: 0x%08x)\n",
+    pr_dbg("Command %d done (addr: 0x%08x, val: 0x%08x)\n",
             cmd->cmd_idx, cmd->reg_addr, cmd->reg_val);
     return 0;
 }
@@ -353,11 +353,11 @@ int d2d_sync_obtain_cmd(void)
     const size_t cmd_len = sizeof(struct d2d_sync_cmd);
 
     used_len = d2d_ring_get_used_len(&sync_priv->lcmd);
-    printf("Got 0x%x bytes in cmd buffer\n", used_len);
+    pr_dbg("Got 0x%x bytes in cmd buffer\n", used_len);
     while (used_len >= cmd_len) {
         cmd = (struct d2d_sync_cmd *) 
                 ((uintptr_t) sync_priv->lcmd.local_addr + *sync_priv->lcmd.head);
-        printf("Got command (%08x %08x %08x %08x %08x), buffer length 0x%x\n",
+        pr_dbg("Got command (%08x %08x %08x %08x %08x), buffer length 0x%x\n",
                     cmd->cmd_idx, cmd->data_head, cmd->data_size, 
                     cmd->data_crc, cmd->cmd_crc, used_len);
 
@@ -397,7 +397,7 @@ int d2d_sync_obtain_cmd(void)
         printf("The remaining %d bytes in the command queue are discarded",
                 used_len);
     }
-    printf("A total of %d commands ware obtained\n", cmd_cnt);
+    pr_dbg("A total of %d commands ware obtained\n", cmd_cnt);
 
     return cmd_cnt;
 }

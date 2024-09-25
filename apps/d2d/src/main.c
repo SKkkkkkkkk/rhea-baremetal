@@ -282,7 +282,7 @@ static int d2d_sync_reg_test(void)
             put_cmd.reg_val = 0;
             mask = 0x0;
         }
-        printf("\n=== Command %d test (val: 0x%x)\n", cmd_id, val);
+        printf("=== Command %d test (val: 0x%x)\n", cmd_id, val);
         ret = d2d_sync_reg(&put_cmd);
         if (ret)
             return ret;
@@ -316,7 +316,10 @@ static int d2d_sync_reg_test(void)
 #define UART_THRE_TIMEOUT   (100)
 static int d2d_sync_uart_test(void)
 {
+    static uint8_t i = 0;
     uint32_t val, timeout_ms = 0;
+
+    printf("=== %s\n", __func__);
 
     /* IOMUX config */
     d2d_sync_readl(&val, IOMUX_UART2_RX);
@@ -342,49 +345,69 @@ static int d2d_sync_uart_test(void)
     val = UART_MCR_OUT2 | UART_MCR_RTS | UART_MCR_DTR;
     d2d_sync_writel(val, UART2_REG(UART_MCR));
 
+    // Send
     do {
         mdelay(1);
         if (timeout_ms++ > UART_THRE_TIMEOUT)
             return -EBUSY;
         d2d_sync_readl(&val, UART2_REG(UART_LSR));
     } while (!(val & UART_LSR_THRE));
+    d2d_sync_writel(++i, UART2_REG(UART_TX));
 
-    d2d_sync_writel('A', UART2_REG(UART_TX));
-    mdelay(1);
-    d2d_sync_writel('\n', UART2_REG(UART_TX));
-    mdelay(1);
+    // Receive
+    do {
+        mdelay(1);
+        if (timeout_ms++ > UART_THRE_TIMEOUT)
+            return -EBUSY;
+        d2d_sync_readl(&val, UART2_REG(UART_LSR));
+    } while (!(val & UART_LSR_DR));
+    d2d_sync_readl(&val, UART2_REG(UART_RX));
+
+    printf("=== %s Received: 0x%02x, ", __func__, val);
+    if (val == i) {
+        printf("verification successful\n");
+    } else {
+        printf("expected 0x%02x, verification failed\n", i);
+        return -EIO;
+    }
     return 0;
 }
 
-int main()
+int main(void)
 {
     int ret = 0;
-    unsigned long i;
+    unsigned int i;
     uint64_t start = 0;
     uint64_t elapsed = 0;
     systimer_id_t timer;
 
-    printf("\n=== Start die-to-die test ...\n\n");
+    printf("\n=== Start die-to-die test ...\n");
 
     ret = rhea_d2d_sync_init();
     if (ret)
         goto err;
-
-    // ret = d2d_basic_func_test();
-    // if (ret)
-    //     goto err;
     
-    // ret = d2d_sync_data_test();
-    // if (ret)
-    //     goto err;
+    for (i = 0; i < 30; i++) {
+        printf("\n=======================\n");
+        printf("=== Test count: %03d ===\n", i);
+        printf("=======================\n\n");
 
-    // ret = d2d_sync_reg_test();
-    // if (ret)
-    //     goto err;
+        ret = d2d_basic_func_test();
+        if (ret)
+            goto err;
+        
+        ret = d2d_sync_data_test();
+        if (ret)
+            goto err;
 
-    ret = d2d_sync_uart_test();
-    if (ret)
-        goto err;
+        ret = d2d_sync_reg_test();
+        if (ret)
+            goto err;
+
+        ret = d2d_sync_uart_test();
+        if (ret)
+            goto err;
+    }
 
     printf("\n=== die-to-die test done\n\n");
 
