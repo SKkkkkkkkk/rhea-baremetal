@@ -88,6 +88,8 @@
 #define FIFOTH_RWMARK(x) (((x) & 0x1ff) << 16)
 #define FIFOTH_RWMARK_SHIFT (16)
 #define FIFOTH_RWMARK_MASK (0xfff << FIFOTH_RWMARK_SHIFT)
+#define FIFOTH_DMA_BURST_SHIFT (28)
+#define FIFOTH_DMA_BURST_MASK (0x7 << FIFOTH_DMA_BURST_SHIFT)
 #define FIFOTH_DMA_BURST_SIZE(x) (((x) & 0x7) << 28)
 
 #define DWMMC_DEBNCE (0x64)
@@ -340,6 +342,15 @@ static int dw_set_ios(unsigned int clk, unsigned int width)
 	return 0;
 }
 
+void dw_set_dma_burst_size(unsigned char burst_size)
+{
+	unsigned int data;
+	data = readl(dw_params.reg_base + DWMMC_FIFOTH);
+	data &= ~FIFOTH_DMA_BURST_MASK;
+	data |= FIFOTH_DMA_BURST_SIZE(burst_size & 0x7);
+	writel(dw_params.reg_base + DWMMC_FIFOTH, data);
+}
+
 static void dw_init(void)
 {
 	unsigned int data;
@@ -380,6 +391,7 @@ static void dw_init(void)
 	writel(base + DWMMC_BYTCNT, 256 * 1024);
 	writel(base + DWMMC_DEBNCE, 0x00ffffff);
 	writel(base + DWMMC_BMOD, BMOD_SWRESET);
+	dw_set_dma_burst_size(0);
 	do {
 		data = readl(base + DWMMC_BMOD);
 	} while (data & BMOD_SWRESET);
