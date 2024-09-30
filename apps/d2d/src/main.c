@@ -56,6 +56,7 @@ void dump_mem(const void *mem, size_t length) {
 
 #define TEST_DATA_BUFL  (0x40000000)
 #define TEST_DATA_BUFR  (0x40100000)
+#define TEST_NPU_ADDR   (0x0800020000)
 #define TEST_DATA_LEN   (0x200)
 #define TEST_ARRL(i)  *((unsigned char *) ((uintptr_t) (TEST_DATA_BUFL + (i))))
 #define TEST_ARRR(i)  *((unsigned char *) ((uintptr_t) (TEST_DATA_BUFR + (i))))
@@ -250,7 +251,7 @@ static int d2d_sync_readb(uint8_t *val, uint32_t addr)
     return ret;
 }
 
-static int d2d_sync_reg_test(void)
+static int d2d_sync_reg_test(uint64_t addr)
 {
     int ret;
     struct d2d_sync_put_cmd put_cmd;
@@ -259,13 +260,13 @@ static int d2d_sync_reg_test(void)
     uint32_t mask = 0;
     uint32_t val = 0, read_back;
 
-    printf("=== %s\n", __func__);
+    printf("=== %s with address 0x%10lx\n", __func__, addr);
 
     for (cmd_id = D2D_SYNC_WRITEL; 
             cmd_id < D2D_SYNC_CMD_MAX; cmd_id++, i++) {
         put_cmd.die_idx = 1;
         put_cmd.cmd_id = cmd_id;
-        put_cmd.reg_addr = TEST_DATA_BUFL;
+        put_cmd.reg_addr = addr;
         if (cmd_id == D2D_SYNC_WRITEL) {
             val = (i << 24) | (i << 16) | (i << 8) | i;
             put_cmd.reg_val = val;
@@ -294,7 +295,7 @@ static int d2d_sync_reg_test(void)
                 return -EIO;
             }
         } else {
-            read_back = *((uint32_t *) TEST_DATA_BUFL) & mask;
+            read_back = *((uint32_t *) addr) & mask;
             if (read_back != val) {
                 printf("=== Write command %d verification failed, got 0x%x, expected 0x%x\n",
                         put_cmd.cmd_id, read_back, val);
@@ -400,7 +401,11 @@ int main(void)
         if (ret)
             goto err;
 
-        ret = d2d_sync_reg_test();
+        ret = d2d_sync_reg_test(TEST_DATA_BUFL);
+        if (ret)
+            goto err;
+
+        ret = d2d_sync_reg_test(TEST_NPU_ADDR);
         if (ret)
             goto err;
 

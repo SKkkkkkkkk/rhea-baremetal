@@ -20,15 +20,14 @@ struct d2d_sync_header {
 };
 
 struct d2d_sync_cmd {
-    uint32_t cmd_idx;
     union {
         struct {
-            uint32_t data_head;
+            uint64_t data_head;
             uint32_t data_size;
             uint32_t data_crc;
         };
         struct {
-            uint32_t reg_addr;
+            uint64_t reg_addr;
             uint32_t reg_val;
             /**
              * 1: owned by the executor
@@ -37,6 +36,7 @@ struct d2d_sync_cmd {
             uint32_t reg_own;
         };
     };
+    uint32_t cmd_idx;
     uint32_t cmd_crc;
 };
 
@@ -91,8 +91,8 @@ int d2d_sync_wait_reg(struct d2d_sync_put_cmd *put_cmd,
         cmd = (struct d2d_sync_cmd *) 
                 (sync_priv->lcmd.remote_addr + pos);
         if (put_cmd->reg_addr != cmd->reg_addr) {
-            printf("The register address 0x%x obtained at "
-                "address 0x%lx does not match the expected 0x%x\n",
+            printf("The register address 0x%lx obtained at "
+                "address 0x%lx does not match the expected 0x%lx\n",
                 cmd->reg_addr, (uintptr_t) cmd, put_cmd->reg_addr);
             return -EFAULT;
         }
@@ -111,10 +111,10 @@ int d2d_sync_wait_reg(struct d2d_sync_put_cmd *put_cmd,
             (cmd->cmd_idx == D2D_SYNC_READW) ||
             (cmd->cmd_idx == D2D_SYNC_READB)) {
             put_cmd->reg_val = cmd->reg_val;
-            pr_dbg("0x%08x has been read from address 0x%08x\n",
+            pr_dbg("0x%08x has been read from address 0x%010lx\n",
                     cmd->reg_val, cmd->reg_addr);
         } else {
-            pr_dbg("0x%08x has been written to address 0x%08x\n",
+            pr_dbg("0x%08x has been written to address 0x%010lx\n",
                     cmd->reg_val, cmd->reg_addr);
         }
     }
@@ -190,7 +190,7 @@ int d2d_sync_remote(struct d2d_sync_put_cmd *put_cmd)
     if (ret)
         goto free_cmd;
 
-    pr_dbg("Put command to die%d (%08x %08x %08x %08x %08x)\n",
+    pr_dbg("Put command to die%d (%08x %010lx %08x %08x %08x)\n",
                 put_cmd->die_idx, cmd->cmd_idx, cmd->data_head, 
                 cmd->data_size, cmd->data_crc, cmd->cmd_crc);
 
@@ -218,7 +218,7 @@ int d2d_sync_query_cmd(enum d2d_sync_cmd_id cmd_id,
         cmd = &cmd_list->cmd;
         if (cmd->cmd_idx == cmd_id) {
             *size_addr = cmd->data_size;
-            pr_dbg("Query command (%08x %08x %08x %08x %08x)\n",
+            pr_dbg("Query command (%08x %010lx %08x %08x %08x)\n",
                         cmd->cmd_idx, cmd->data_head, cmd->data_size, 
                         cmd->data_crc, cmd->cmd_crc);
             return cmd->cmd_idx;
@@ -339,7 +339,7 @@ static int d2d_sync_operation_reg(struct d2d_sync_cmd *cmd)
             return -EINVAL;
     }
     cmd->reg_own = 0;   // owned by the initiator
-    pr_dbg("Command %d done (addr: 0x%08x, val: 0x%08x)\n",
+    pr_dbg("Command %d done (addr: 0x%010lx, val: 0x%08x)\n",
             cmd->cmd_idx, cmd->reg_addr, cmd->reg_val);
     return 0;
 }
@@ -357,7 +357,7 @@ int d2d_sync_obtain_cmd(void)
     while (used_len >= cmd_len) {
         cmd = (struct d2d_sync_cmd *) 
                 ((uintptr_t) sync_priv->lcmd.local_addr + *sync_priv->lcmd.head);
-        pr_dbg("Got command (%08x %08x %08x %08x %08x), buffer length 0x%x\n",
+        pr_dbg("Got command (%08x %010lx %08x %08x %08x), buffer length 0x%x\n",
                     cmd->cmd_idx, cmd->data_head, cmd->data_size, 
                     cmd->data_crc, cmd->cmd_crc, used_len);
 

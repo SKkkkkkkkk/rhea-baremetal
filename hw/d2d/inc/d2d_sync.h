@@ -24,7 +24,7 @@ struct d2d_sync_put_cmd {
             unsigned int data_size;
         };
         struct {
-            unsigned int reg_addr;
+            unsigned long reg_addr;
             unsigned int reg_val;
         };
     };
