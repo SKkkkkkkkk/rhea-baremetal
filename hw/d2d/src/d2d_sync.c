@@ -51,9 +51,9 @@ struct d2d_sync_priv {
     list_t(struct d2d_sync_list) cmd_list;
     struct d2d_sync_header *header;
     struct d2d_ring_buf rcmd;
-    struct d2d_ring_buf rcmd_data;
+    struct d2d_ring_buf rdata;
     struct d2d_ring_buf lcmd;
-    struct d2d_ring_buf lcmd_data;
+    struct d2d_ring_buf ldata;
 } *sync_priv;
 
 int d2d_sync_wait_reg(struct d2d_sync_put_cmd *put_cmd,
@@ -138,10 +138,10 @@ int d2d_sync_remote(struct d2d_sync_put_cmd *put_cmd)
                 goto free_cmd;
             }
 
-            cmd->data_head = *sync_priv->rcmd_data.tail;
+            cmd->data_head = *sync_priv->rdata.tail;
             cmd->data_size = put_cmd->data_size;
             cmd->data_crc = crc16_ccitt(0, put_cmd->data_addr, put_cmd->data_size);
-            ret = d2d_ring_put_data_remote(&sync_priv->rcmd_data, 
+            ret = d2d_ring_put_data_remote(&sync_priv->rdata, 
                                     put_cmd->data_addr, put_cmd->data_size);
             if (ret)
                 goto free_cmd;
@@ -250,7 +250,7 @@ static int d2d_sync_obtain_data(struct d2d_sync_cmd *cmd)
         return -ENOMEM;
     }
 
-    ret = d2d_ring_pop_data(&sync_priv->lcmd_data, 
+    ret = d2d_ring_pop_data(&sync_priv->ldata, 
                             data, cmd->data_size);
     if (ret)
         goto free_data;
@@ -417,10 +417,10 @@ int rhea_d2d_sync_init(void)
     sync_priv->rcmd.tail = &header->cmd_tail;
     sync_priv->rcmd.remote_addr = CONFIG_RHEA_D2D_SYNC_CMD_ADDR;
     sync_priv->rcmd.size = CONFIG_RHEA_D2D_SYNC_CMD_SIZE;
-    sync_priv->rcmd_data.head = &header->data_head;
-    sync_priv->rcmd_data.tail = &header->data_tail;
-    sync_priv->rcmd_data.remote_addr = CONFIG_RHEA_D2D_SYNC_DATA_ADDR;
-    sync_priv->rcmd_data.size = CONFIG_RHEA_D2D_SYNC_DATA_SIZE;
+    sync_priv->rdata.head = &header->data_head;
+    sync_priv->rdata.tail = &header->data_tail;
+    sync_priv->rdata.remote_addr = CONFIG_RHEA_D2D_SYNC_DATA_ADDR;
+    sync_priv->rdata.size = CONFIG_RHEA_D2D_SYNC_DATA_SIZE;
 
     header = (struct d2d_sync_header *) CONFIG_RHEA_D2D_SYNC_HEADER_ADDR;
     memset(header, 0, sizeof(struct d2d_sync_header));
@@ -429,10 +429,10 @@ int rhea_d2d_sync_init(void)
     sync_priv->lcmd.tail = &header->cmd_tail;
     sync_priv->lcmd.local_addr = (void *) CONFIG_RHEA_D2D_SYNC_CMD_ADDR;
     sync_priv->lcmd.size = CONFIG_RHEA_D2D_SYNC_CMD_SIZE;
-    sync_priv->lcmd_data.head = &header->data_head;
-    sync_priv->lcmd_data.tail = &header->data_tail;
-    sync_priv->lcmd_data.local_addr = (void *) CONFIG_RHEA_D2D_SYNC_DATA_ADDR;
-    sync_priv->lcmd_data.size = CONFIG_RHEA_D2D_SYNC_DATA_SIZE;
+    sync_priv->ldata.head = &header->data_head;
+    sync_priv->ldata.tail = &header->data_tail;
+    sync_priv->ldata.local_addr = (void *) CONFIG_RHEA_D2D_SYNC_DATA_ADDR;
+    sync_priv->ldata.size = CONFIG_RHEA_D2D_SYNC_DATA_SIZE;
 
 	return 0;
 }

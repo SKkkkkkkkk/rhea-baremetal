@@ -260,7 +260,7 @@ static int d2d_sync_reg_test(uint64_t addr)
     uint32_t mask = 0;
     uint32_t val = 0, read_back;
 
-    printf("=== %s with address 0x%10lx\n", __func__, addr);
+    printf("=== %s with address 0x%010lx\n", __func__, addr);
 
     for (cmd_id = D2D_SYNC_WRITEL; 
             cmd_id < D2D_SYNC_CMD_MAX; cmd_id++, i++) {
