@@ -11,10 +11,6 @@ struct d2d_ring_buf {
     uint32_t size;
     uint32_t *head;
     uint32_t *tail;
-    uint8_t die_idx;
-
-    int (*get_lock)(uint8_t die_idx);
-    void (*clear_lock)(uint8_t die_idx);
 };
 
 uint32_t d2d_ring_get_avail_len(struct d2d_ring_buf *ring_buf);

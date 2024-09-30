@@ -28,23 +28,21 @@ inline uint32_t d2d_ring_calc_pos(uint32_t pos, uint32_t size, uint32_t offset)
 int d2d_ring_move_head(struct d2d_ring_buf *ring_buf,
                                 uint32_t offset)
 {
-    if (!ring_buf || !ring_buf->get_lock || !ring_buf->clear_lock)
+    if (!ring_buf)
         return -EFAULT;
 
     if (d2d_ring_get_used_len(ring_buf) < offset)
         return -ENOMEM;
 
-    while (!ring_buf->get_lock(0));
     *ring_buf->head = 
             d2d_ring_calc_pos(*ring_buf->head, ring_buf->size, offset);
-    ring_buf->clear_lock(0);
     return 0;
 }
 
 int d2d_ring_move_tail_remote(struct d2d_ring_buf *ring_buf,
                                 uint32_t offset)
 {
-    if (!ring_buf || !ring_buf->get_lock || !ring_buf->clear_lock)
+    if (!ring_buf)
         return -EFAULT;
 
     /**
@@ -55,10 +53,8 @@ int d2d_ring_move_tail_remote(struct d2d_ring_buf *ring_buf,
     if (d2d_ring_get_avail_len(ring_buf) <= offset)
         return -ENOMEM;
 
-    while (!ring_buf->get_lock(ring_buf->die_idx));
     *ring_buf->tail = 
             d2d_ring_calc_pos(*ring_buf->tail, ring_buf->size, offset);
-    ring_buf->clear_lock(ring_buf->die_idx);
     return 0;
 }
 

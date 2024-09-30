@@ -56,26 +56,6 @@ struct d2d_sync_priv {
     struct d2d_ring_buf lcmd_data;
 } *sync_priv;
 
-static int d2d_cmd_get_lock(uint8_t die_idx)
-{
-    return rhea_d2d_get_lock(die_idx, D2D_LOCK_CMD);
-}
-
-static void d2d_cmd_clear_lock(uint8_t die_idx)
-{
-    rhea_d2d_release_lock(die_idx, D2D_LOCK_CMD);
-}
-
-static int d2d_cmd_data_get_lock(uint8_t die_idx)
-{
-    return rhea_d2d_get_lock(die_idx, D2D_LOCK_CMD_DATA);
-}
-
-static void d2d_cmd_data_clear_lock(uint8_t die_idx)
-{
-    rhea_d2d_release_lock(die_idx, D2D_LOCK_CMD_DATA);
-}
-
 int d2d_sync_wait_reg(struct d2d_sync_put_cmd *put_cmd,
                         uint32_t pos)
 {
@@ -141,8 +121,6 @@ int d2d_sync_remote(struct d2d_sync_put_cmd *put_cmd)
                     put_cmd->die_idx);
         return ret;
     }
-    sync_priv->rcmd.die_idx = put_cmd->die_idx;
-    sync_priv->rcmd_data.die_idx = put_cmd->die_idx;
     pr_dbg("The AP tile in die%d is selected for synchronization\n",
                 put_cmd->die_idx);
 
@@ -439,14 +417,10 @@ int rhea_d2d_sync_init(void)
     sync_priv->rcmd.tail = &header->cmd_tail;
     sync_priv->rcmd.remote_addr = CONFIG_RHEA_D2D_SYNC_CMD_ADDR;
     sync_priv->rcmd.size = CONFIG_RHEA_D2D_SYNC_CMD_SIZE;
-    sync_priv->rcmd.get_lock = d2d_cmd_get_lock;
-    sync_priv->rcmd.clear_lock = d2d_cmd_clear_lock;
     sync_priv->rcmd_data.head = &header->data_head;
     sync_priv->rcmd_data.tail = &header->data_tail;
     sync_priv->rcmd_data.remote_addr = CONFIG_RHEA_D2D_SYNC_DATA_ADDR;
     sync_priv->rcmd_data.size = CONFIG_RHEA_D2D_SYNC_DATA_SIZE;
-    sync_priv->rcmd_data.get_lock = d2d_cmd_data_get_lock;
-    sync_priv->rcmd_data.clear_lock = d2d_cmd_data_clear_lock;
 
     header = (struct d2d_sync_header *) CONFIG_RHEA_D2D_SYNC_HEADER_ADDR;
     memset(header, 0, sizeof(struct d2d_sync_header));
@@ -455,14 +429,10 @@ int rhea_d2d_sync_init(void)
     sync_priv->lcmd.tail = &header->cmd_tail;
     sync_priv->lcmd.local_addr = (void *) CONFIG_RHEA_D2D_SYNC_CMD_ADDR;
     sync_priv->lcmd.size = CONFIG_RHEA_D2D_SYNC_CMD_SIZE;
-    sync_priv->lcmd.get_lock = d2d_cmd_get_lock;
-    sync_priv->lcmd.clear_lock = d2d_cmd_clear_lock;
     sync_priv->lcmd_data.head = &header->data_head;
     sync_priv->lcmd_data.tail = &header->data_tail;
     sync_priv->lcmd_data.local_addr = (void *) CONFIG_RHEA_D2D_SYNC_DATA_ADDR;
     sync_priv->lcmd_data.size = CONFIG_RHEA_D2D_SYNC_DATA_SIZE;
-    sync_priv->lcmd_data.get_lock = d2d_cmd_data_get_lock;
-    sync_priv->lcmd_data.clear_lock = d2d_cmd_data_clear_lock;
 
 	return 0;
 }

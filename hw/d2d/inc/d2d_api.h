@@ -30,8 +30,8 @@ enum rhea_die {
 
 enum rhea_d2d_lock {
     D2D_LOCK_TILE_SEL = 0,
-    D2D_LOCK_CMD,
-    D2D_LOCK_CMD_DATA,
+    D2D_LOCK1,
+    D2D_LOCK2,
     D2D_LOCK3,
     D2D_LOCK4,
     D2D_LOCK5,
