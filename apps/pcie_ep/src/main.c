@@ -261,8 +261,8 @@ void mc_init(uint64_t addr, uint8_t layer) {
 	// global
 	if (layer == 4) {
 		REG32(addr+0x00013054) = 0x00000000;
-		REG32(addr+0x00013004) = 0x00000000;
-		REG32(addr+0x00013004) = 0x80000000;
+		REG32(addr+0x00013004) = 0x00001000; /* 2GB: 0x00001000, 512MB: 0x00000000 */
+		REG32(addr+0x00013004) = 0x80001000; /* 2GB: 0x80001000, 512MB: 0x80000000 */
 	} else {
 		REG32(addr+0x00013054) = 0x00000000;
 		REG32(addr+0x00013004) = 0x00000010;
