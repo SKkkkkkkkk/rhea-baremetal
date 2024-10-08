@@ -98,7 +98,8 @@ struct HAL_PCIE_DEV {
 	uint8_t lanes;
 	uint8_t gen;
 	uint8_t firstBusNo;
-	uint32_t legacyIrqNum;
+	uint32_t ltrIrqNum;
+	uint32_t vdmIrqNum;
 	void *phy;
 };
 

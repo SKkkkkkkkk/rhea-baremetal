@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "gicv3.h"
 #include "pcie.h"
 #include "systimer.h"
 #include "common.h"
 #include "dw_apb_gpio.h"
+#include "utils_def.h"
 
 /*                                   This is BAR Define
 ┌────┬─────┬────────────────┬────┬───────────────────┬────────────────┬───────────────┬───────────┐
@@ -43,6 +45,7 @@
 #define C2C_SYS_CFG_72       0xB900000000ULL
 
 static uint64_t g_c2c_base;
+struct HAL_PCIE_HANDLE s_pcie;
 
 struct PCIE_IDB_CFG {
 	volatile uint32_t magic;
@@ -142,6 +145,57 @@ struct PCIE_IDB_CFG {
 #define DNIU						(AP_SYS_C2C0_CPU_ADDRESS + 0x583000)
 #define CNIU						(AP_SYS_C2C0_CPU_ADDRESS + 0x584000)
 #define MBI_TX						(AP_SYS_C2C0_CPU_ADDRESS + 0x585000)
+
+#define A510_APB_PCIE_EN_INT0				0xa0
+#define A510_APB_PCIE_CLR_INT0				0xa4
+#define A510_APB_PCIE_STAT_INT0				0xa8
+#define A510_APB_PCIE_CFG_LINK_EQ_REQ_INT	BIT(0)
+#define A510_APB_PCIE_CFG_BW_MGT_MSI		BIT(1)
+#define A510_APB_PCIE_CFG_LINK_AUTO_BW_MSI	BIT(2)
+#define A510_APB_PCIE_CFG_BW_MGT_INT		BIT(3)
+#define A510_APB_PCIE_CFG_LINK_AUTO_BW_INT	BIT(4)
+#define A510_APB_PCIE_RADM_MSG_UNLOCK_INT	BIT(5)
+#define A510_APB_PCIE_RADM_MSG_LTR_INT		BIT(6)
+#define A510_APB_PCIE_RADM_MSG_VDM_INT		BIT(7)
+#define A510_APB_PCIE_RADM_MSG_SLOT_PWR_INT	BIT(8)
+
+//apb vdm
+#define A510_APB_PCIE_MSG_VDM_REG0			0x300
+#define A510_APB_PCIE_MSG_VDM_REG1			0x304
+#define A510_APB_PCIE_MSG_VDM_REG2			0x308
+#define A510_APB_PCIE_MSG_VDM_REG3			0x30c
+#define A510_APB_PCIE_MSG_VDM_REG4			0x310
+#define A510_APB_PCIE_MSG_VDM				0x314
+#define A510_APB_PCIE_MSG_VDM_CLR			BIT(0)
+#define A510_APB_PCIE_MSG_VDM_VLD_MASK		GENMASK(8, 1)
+#define A510_APB_PCIE_MSG_VDM_WPTR_MASK		GENMASK(10, 9)
+#define A510_APB_PCIE_MSG_VDM_RPTR_MASK		GENMASK(12, 11)
+#define A510_APB_PCIE_MSG_VDM_RVLD_MASK		GENMASK(17, 16)
+#define A510_APB_PCIE_MSG_VDM_RX_MODE		0x318
+#define A510_APB_PCIE_MSG_VDM_LATCH			0x31c
+
+//apb ltr
+#define A510_APB_PCIE_MSG_LTR_REG0			0x320
+#define A510_APB_PCIE_MSG_LTR_REG1			0x324
+#define A510_APB_PCIE_MSG_LTR_REG2			0x328
+#define A510_APB_PCIE_MSG_LTR_REG3			0x32c
+#define A510_APB_PCIE_MSG_LTR_REG4			0x330
+#define A510_APB_PCIE_MSG_LTR				0x334
+#define A510_APB_PCIE_MSG_LTR_CLR			BIT(0)
+#define A510_APB_PCIE_MSG_LTR_VLD_MASK		GENMASK(4, 1)
+#define A510_APB_PCIE_RADM_MSG_LTR			BIT(3)
+#define A510_APB_PCIE_RADM_MSG_UNLOCK		BIT(4)
+#define A510_APB_PCIE_MSG_LTR_RADM			0x338
+#define A510_APB_PCIE_MSG_LTR_RADM_EN		BIT(0)
+#define A510_APB_PCIE_MSG_UNLOCK_RADM_EN	BIT(1)
+#define A510_APB_PCIE_MSG_LTR_LATCH			0x33c
+#define A510_APB_PCIE_APP_LTR_LATENCY		0x128
+
+//apb slot power message
+#define A510_APB_PCIE_MSG_SLOT_PWR_PAYLOAD	0x340
+#define A510_APB_PCIE_MSG_SLOT_PWR			0x344
+#define A510_APB_PCIE_MSG_SLOT_PWR_CLR		BIT(0)
+#define A510_APB_PCIE_MSG_SLOT_PWR_VLD		BIT(1)
 
 /********************* Private Structure Definition **************************/
 
@@ -282,6 +336,246 @@ static inline uint32_t readq(uint64_t address)
 
 	// printf("readq addr 0x%lx value 0x%x\n", addr, value);
 	return value;
+}
+
+static inline void pcie_writel_apb(struct HAL_PCIE_HANDLE *pcie, uint32_t value, uint64_t address)
+{
+	uint64_t apb_base = pcie->dev->apbBase;
+	uintptr_t addr = (uintptr_t)(apb_base + address);
+
+	// printf("writeq addr 0x%lx value 0x%x\n", addr, value);
+	*((volatile uint32_t *)(addr)) = value;
+}
+
+static inline uint32_t pcie_readl_apb(struct HAL_PCIE_HANDLE *pcie, uint64_t address)
+{
+	uint64_t apb_base = pcie->dev->apbBase;
+	uintptr_t addr = (uintptr_t)(apb_base + address);
+	uint32_t value = *((volatile uint32_t *)(addr));
+
+	// printf("readq addr 0x%lx value 0x%x\n", addr, value);
+	return value;
+}
+
+void BSP_PCIE_EP_VDM(const struct HAL_PCIE_HANDLE *pcie , int cnt, uint32_t l, uint32_t h)
+{
+	uint64_t apb_base = pcie->dev->apbBase;
+	vdm_msg_typedef *vdm = (vdm_msg_typedef *)(apb_base + 0x130);
+
+	cnt %= 1024;
+
+	while(vdm->cfg_ven_msg_4.sts_ven_msg_busy == 1);
+
+	vdm->cfg_ven_msg_0.cfg_ven_msg_fmt = 0x1;
+	vdm->cfg_ven_msg_0.cfg_ven_msg_type = 0x10;
+	vdm->cfg_ven_msg_0.cfg_ven_msg_tc = 0x0;
+	vdm->cfg_ven_msg_0.cfg_ven_msg_td = 0x0;
+	vdm->cfg_ven_msg_0.cfg_ven_msg_ep = 0x0;
+	vdm->cfg_ven_msg_0.cfg_ven_msg_attr = 0x0;
+	vdm->cfg_ven_msg_0.cfg_ven_msg_len = 0x0;
+	vdm->cfg_ven_msg_0.cfg_ven_msg_func_num = 0x0;
+
+	vdm->cfg_ven_msg_4.cfg_ven_msg_tag = cnt;
+	vdm->cfg_ven_msg_4.cfg_ven_msg_code = 0x7e;
+
+	vdm->cfg_ven_msg_data_l = l;
+	vdm->cfg_ven_msg_data_h = h;
+
+	// printf("0x130 0x%x 0x134 0x%x 8byte 0x%x 12byte 0x%x\n", readq(apb_base + 0x130), readq(apb_base + 0x134), l, h);
+	vdm->cfg_ven_msg_0.cfg_ven_msg_req = 0x1;
+}
+
+void BSP_PCIE_EP_LTR(const struct HAL_PCIE_HANDLE *pcie, int cnt)
+{
+	uint64_t apb_base = pcie->dev->apbBase;
+	ltr_msg_typedef *ltr = (ltr_msg_typedef *)(apb_base + 0x120);
+
+	cnt %= 8;
+
+	if(ltr->cfg_ltr_msg_0.cfg_ltr_m_en){
+
+		while(ltr->cfg_ltr_msg_0.app_ltr_msg_req_stat == 1);
+
+		ltr->cfg_ltr_msg_0.app_ltr_msg_func_num = cnt;
+		ltr->app_ltr_msg_latency = 0xff00ff + cnt;
+
+		printf("ltr->app_ltr_msg_latency 0x%x\n", ltr->app_ltr_msg_latency);
+		ltr->cfg_ltr_msg_0.app_ltr_msg_req = 0x1;
+	}
+
+}
+
+static void a510_radm_msg_payload_parse(struct HAL_PCIE_HANDLE *pcie, uint32_t *req, uint32_t *byte8, uint32_t * byte12)
+{
+	uint32_t val, i = 0, cnt = 0;
+	uint32_t temp0, temp1;
+	uint32_t lanes = pcie->dev->max_lanes;
+
+	pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_LATCH);
+	val = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_RX_MODE);
+	if(val){
+		if(lanes == 8){
+			val = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM);
+			// printf("A510_APB_PCIE_MSG_VDM 0x%x\n", val);
+			while((val & A510_APB_PCIE_MSG_VDM_VLD_MASK) != 0){
+
+				if((val & A510_APB_PCIE_MSG_VDM_RVLD_MASK) >> 16 == 1){
+
+					*req = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG4);
+					*(byte8 + i) = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG0);
+					*(byte12 + i) = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG1);
+
+					temp0 = *(byte8 + i);
+					temp1 = *(byte12 + i);
+					printf("seehi--> %s line: %d bayte8 0x%x byte12 0x%x\n", __func__, __LINE__, temp0, temp1);
+					BSP_PCIE_EP_VDM(pcie, cnt++, temp0, temp1);
+				}
+
+				if((val & A510_APB_PCIE_MSG_VDM_RVLD_MASK) >> 16 == 2){
+
+					*req = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG4);
+					*(byte8 + i) = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG2);
+					*(byte12 + i) = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG3);
+				}
+
+				if((val & A510_APB_PCIE_MSG_VDM_RVLD_MASK) >> 16 == 3){
+
+					*req = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG4);
+					*(byte8 + i) = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG2);
+					*(byte12 + i) = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG3);
+					*(byte8 + i + 1) = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG0);
+					*(byte12 + i + 1) = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG1);
+				}
+
+				i++;
+				if(i >= 10){
+					printf("fifo full break!!!\n");
+					break;
+				}
+
+				pcie_writel_apb(pcie, A510_APB_PCIE_MSG_VDM_CLR, A510_APB_PCIE_MSG_VDM);
+				pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_LATCH);
+				val = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM);
+			}
+		}else{
+			val = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM);
+			while((val & A510_APB_PCIE_MSG_VDM_VLD_MASK) != 0){
+
+				*req = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG4);
+				*(byte8 + i) = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG0);
+				*(byte12 + i) = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG1);
+
+				i++;
+				if(i >= 10){
+					printf("fifo full break!!!\n");
+					break;
+				}
+
+				pcie_writel_apb(pcie, A510_APB_PCIE_MSG_VDM_CLR, A510_APB_PCIE_MSG_VDM);
+				pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_LATCH);
+				val = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM);
+			}
+		}
+	}else{
+		if(lanes == 8){
+			val = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM);
+			// printf("A510_APB_PCIE_MSG_VDM 0x%x\n", val);
+			if((val & A510_APB_PCIE_MSG_VDM_VLD_MASK) >> 1 == 1){
+
+				*req = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG4);
+				*byte8 = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG0);
+				*byte12 = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG1);
+
+				temp0 = *byte8;
+				temp1 = *byte12;
+				printf("seehi--> %s line: %d bayte8 0x%x byte12 0x%x\n", __func__, __LINE__, temp0, temp1);
+			}
+
+			if((val & A510_APB_PCIE_MSG_VDM_VLD_MASK) >> 1 == 2){
+
+				*req = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG4);
+				*byte8 = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG2);
+				*byte12 = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG3);
+			}
+
+			if((val & A510_APB_PCIE_MSG_VDM_VLD_MASK) >> 1 == 3){
+
+				*req = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG4);
+				*byte8 = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG2);
+				*byte12 = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG3);
+				*(byte8 + 1) = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG0);
+				*(byte12 + 1) = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG1);
+			}
+
+			pcie_writel_apb(pcie, A510_APB_PCIE_MSG_VDM_CLR, A510_APB_PCIE_MSG_VDM);
+		}else{
+			val = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM);
+			if((val & A510_APB_PCIE_MSG_VDM_VLD_MASK) >> 1 == 1){
+
+				*req = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG4);
+				*byte8 = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG0);
+				*byte12 = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG1);
+			}
+
+			pcie_writel_apb(pcie, A510_APB_PCIE_MSG_VDM_CLR, A510_APB_PCIE_MSG_VDM);
+		}
+	}
+
+
+}
+
+void pcie_irq_handler(void)
+{
+	struct HAL_PCIE_HANDLE *pcie = &s_pcie;
+	uint32_t reg, val, req, byte8[10], byte12[10];
+
+	reg = pcie_readl_apb(pcie, A510_APB_PCIE_STAT_INT0);
+
+	// printf("seehi--> %s line: %d ********** reg = 0x%x **********\n", __func__, __LINE__, reg);
+	if (reg & A510_APB_PCIE_CFG_LINK_EQ_REQ_INT)
+		printf("A510_APB_PCIE_CFG_LINK_EQ_REQ_INT\n");
+
+	if (reg & A510_APB_PCIE_CFG_BW_MGT_MSI)
+		printf("A510_APB_PCIE_CFG_BW_MGT_MSI\n");
+
+	if (reg & A510_APB_PCIE_CFG_LINK_AUTO_BW_MSI)
+		printf("A510_APB_PCIE_CFG_LINK_AUTO_BW_MSI\n");
+
+	if (reg & A510_APB_PCIE_CFG_BW_MGT_INT)
+		printf("A510_APB_PCIE_CFG_BW_MGT_INT\n");
+
+	if (reg & A510_APB_PCIE_CFG_LINK_AUTO_BW_INT)
+		printf("A510_APB_PCIE_CFG_LINK_AUTO_BW_INT\n");
+
+	if (reg & A510_APB_PCIE_RADM_MSG_UNLOCK_INT)
+		printf("A510_APB_PCIE_RADM_MSG_UNLOCK_INT\n");
+
+	if (reg & A510_APB_PCIE_RADM_MSG_LTR_INT){
+		printf("A510_APB_PCIE_RADM_MSG_LTR_INT\n");
+		pcie_writel_apb(pcie, 0x1, A510_APB_PCIE_MSG_LTR_LATCH);
+		val = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_LTR);
+		if(val & A510_APB_PCIE_RADM_MSG_LTR){
+
+			req = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_LTR_REG4);
+			byte8[0] = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_LTR_REG1);
+			byte12[0] = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_LTR_REG0);
+
+			pcie_writel_apb(pcie, A510_APB_PCIE_MSG_LTR_CLR, A510_APB_PCIE_MSG_LTR);
+			printf("seehi--> %s line: %d req 0x%x bayte8 0x%x byte12 0x%x\n", __func__, __LINE__, req, byte8[0], byte12[0]);
+		}
+	}
+
+	if (reg & A510_APB_PCIE_RADM_MSG_VDM_INT){
+		printf("A510_APB_PCIE_RADM_MSG_VDM_INT\n");
+		a510_radm_msg_payload_parse(pcie, &req, byte8, byte12);
+	}
+
+	if (reg & A510_APB_PCIE_RADM_MSG_SLOT_PWR_INT)
+		printf("A510_APB_PCIE_RADM_MSG_SLOT_PWR_INT\n");
+
+	pcie_writel_apb(pcie, reg, A510_APB_PCIE_CLR_INT0);
+
+	return;
 }
 
 static int seehi_pcie_ep_set_bar_flag(uint64_t dbi_base, uint32_t barno, int flags)
@@ -484,54 +778,6 @@ static int dw_pcie_ep_msi_32_data(uint64_t dbi_base)
 
 /********************* Public Function Definition ****************************/
 
-void BSP_PCIE_EP_VDM(const struct HAL_PCIE_HANDLE *pcie , int cnt)
-{
-	uint64_t apb_base = pcie->dev->apbBase;
-	vdm_msg_typedef *vdm = (vdm_msg_typedef *)(apb_base + 0x130);
-
-	cnt %= 1024;
-
-	while(vdm->cfg_ven_msg_4.sts_ven_msg_busy == 1);
-
-	vdm->cfg_ven_msg_0.cfg_ven_msg_fmt = 0x1;
-	vdm->cfg_ven_msg_0.cfg_ven_msg_type = 0x10;
-	vdm->cfg_ven_msg_0.cfg_ven_msg_tc = 0x0;
-	vdm->cfg_ven_msg_0.cfg_ven_msg_td = 0x0;
-	vdm->cfg_ven_msg_0.cfg_ven_msg_ep = 0x0;
-	vdm->cfg_ven_msg_0.cfg_ven_msg_attr = 0x0;
-	vdm->cfg_ven_msg_0.cfg_ven_msg_len = 0x0;
-	vdm->cfg_ven_msg_0.cfg_ven_msg_func_num = 0x0;
-
-	vdm->cfg_ven_msg_4.cfg_ven_msg_tag = cnt;
-	vdm->cfg_ven_msg_4.cfg_ven_msg_code = 0x7e;
-
-	vdm->cfg_ven_msg_data_l = 0x80000000 + cnt;
-	vdm->cfg_ven_msg_data_h = 0xc0000000 + cnt;
-
-	printf("0x130 0x%x 0x134 0x%x 8byte 0x%x\n", readq(apb_base + 0x130), readq(apb_base + 0x134), 0x80000000 + cnt);
-	vdm->cfg_ven_msg_0.cfg_ven_msg_req = 0x1;
-}
-
-void BSP_PCIE_EP_LTR(const struct HAL_PCIE_HANDLE *pcie, int cnt)
-{
-	uint64_t apb_base = pcie->dev->apbBase;
-	ltr_msg_typedef *ltr = (ltr_msg_typedef *)(apb_base + 0x120);
-
-	cnt %= 8;
-
-	if(ltr->cfg_ltr_msg_0.cfg_ltr_m_en){
-
-		while(ltr->cfg_ltr_msg_0.app_ltr_msg_req_stat == 1);
-
-		ltr->cfg_ltr_msg_0.app_ltr_msg_func_num = cnt;
-		ltr->app_ltr_msg_latency = 0x1111 + cnt;
-
-		printf("ltr->app_ltr_msg_latency 0x%x\n", ltr->app_ltr_msg_latency);
-		ltr->cfg_ltr_msg_0.app_ltr_msg_req = 0x1;
-	}
-
-}
-
 void BSP_PCIE_EP_Init(const struct HAL_PCIE_HANDLE *pcie)
 {
 	uint64_t phy_base = pcie->dev->phyBase;
@@ -653,9 +899,18 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	val &= ~(3 << 10);
 	writeq(val, dbi_base + 0x7c);
 
+	val = readq(dbi_base + 0x98);   //DEVICE_CONTROL2_DEVICE_STATUS2_REG  PCIE_CAP_LTR_EN
+	val |= 1 << 10;
+	writeq(val, dbi_base + 0x98);
+	printf("PCIE_CAP_LTR_EN  !!!\n");
+
 	val = readq(dbi_base + 0x80c);   //GEN2_CTRL_OFF
 	val |= 1 << 17;
 	writeq(val, dbi_base + 0x80c);
+
+	val = readq(dbi_base + 0x720);   //FILTER_MASK_2_OFF
+	val |= 0x3;
+	writeq(val, dbi_base + 0x720);
 
 	switch (pcie->dev->gen) {  //gen speed
 	case 1:
@@ -902,7 +1157,7 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	}else{
 			printf("msi config error !!!\n");
 	}
-	writel(0x7fffffff, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
+	writel(0xffffffff, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
 	writel(0x0, mbitx_ap_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
 
 	// writeq(0x0, dbi_base + 0x948);              //0:10 vector
@@ -1068,13 +1323,16 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 			printf("msi config error !!!\n");
 	}
 
-	writel(0x7fffffff, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
+	writel(0xffffffff, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
 	writel(0x0, mbitx_ap_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
 #endif //SEEHI_TILE14_PCIE_TEST
 
 #endif //SEEHI_MSIX_ENABLE
 	/////////////////////////////////////END//////////////////////////////////////////////////////
 	dw_pcie_dbi_ro_wr_dis(dbi_base);
+
+	pcie_writel_apb(pcie, 0x1ff, A510_APB_PCIE_EN_INT0);
+	pcie_writel_apb(pcie, 0x1, A510_APB_PCIE_MSG_VDM_RX_MODE);
 
 	return HAL_OK;
 }
@@ -1095,7 +1353,8 @@ struct HAL_PCIE_DEV g_pcieDevX16 =
 	.lanes = 16,
 	.gen = 5,
 	.firstBusNo = 0x0,
-	.legacyIrqNum = 0,
+	.ltrIrqNum = 172,
+	.vdmIrqNum = 173,
 };
 
 struct HAL_PCIE_DEV g_pcieDevX16toX8 =
@@ -1114,7 +1373,8 @@ struct HAL_PCIE_DEV g_pcieDevX16toX8 =
 	.lanes = 8,
 	.gen = 3,
 	.firstBusNo = 0x0,
-	.legacyIrqNum = 0,
+	.ltrIrqNum = 172,
+	.vdmIrqNum = 173,
 };
 
 struct HAL_PCIE_DEV g_pcieDevX8 =
@@ -1133,10 +1393,10 @@ struct HAL_PCIE_DEV g_pcieDevX8 =
 	.lanes = 4,
 	.gen = 1,
 	.firstBusNo = 0x20,
-	.legacyIrqNum = 0,
+	.ltrIrqNum = 204,
+	.vdmIrqNum = 205,
 };
 
-struct HAL_PCIE_HANDLE s_pcie;
 
 int main()
 {
@@ -1174,6 +1434,10 @@ int main()
 
 	GIC_Init();
 
+    IRQ_SetHandler(pcie->dev->vdmIrqNum, pcie_irq_handler);
+    GIC_SetPriority(pcie->dev->vdmIrqNum, 0 << 3);
+	GIC_EnableIRQ(pcie->dev->vdmIrqNum);
+
 #if SEEHI_FPGA_PCIE_TEST
 	printf("PCIe_EP_Init start !!!\n");
 #endif
@@ -1193,14 +1457,15 @@ int main()
 #endif
 
 #if SEEHI_C2C_PCIE_TEST
-	printf("BSP_PCIE_EP_VDM !!!\n");
+	// printf("BSP_PCIE_EP_VDM !!!\n");
 	systimer_delay(10, IN_S);
-	while(cnt < 4){
-		BSP_PCIE_EP_VDM(pcie , cnt);
-		BSP_PCIE_EP_LTR(pcie, cnt);
+	while(cnt < 10){
+		// BSP_PCIE_EP_VDM(pcie , cnt);
+		// BSP_PCIE_EP_LTR(pcie, cnt);
+		// printf("BSP_PCIE_EP_LTR !!!\n");
 		cnt++;
+		systimer_delay(10, IN_S);
 	}
-	printf("BSP_PCIE_EP_LTR !!!\n");
 #endif
 
 #if	SEEHI_PLD_PCIE_TEST
