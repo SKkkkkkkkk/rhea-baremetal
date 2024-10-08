@@ -21,7 +21,7 @@ ENTRY(entrypoint)
 	#define __SRAM_SIZE 512K
 
 	#define __DDR_BASE AP_DRAM_BASE
-	#define __DDR_SIZE 0xC0000000 //3G
+	#define __DDR_SIZE 384M
 #endif
 
 #if (MEM_SCHEME == MEM_SCHEME_ROM)
