@@ -645,7 +645,8 @@ struct HAL_PCIE_DEV g_pcieDevX16 =
 	.lanes = 16,
 	.gen = 3,
 	.firstBusNo = 0x0,
-	.legacyIrqNum = 0,
+	.ltrIrqNum = 172,
+	.vdmIrqNum = 173,
 };
 
 struct HAL_PCIE_DEV g_pcieDevX16toX8 =
@@ -664,7 +665,8 @@ struct HAL_PCIE_DEV g_pcieDevX16toX8 =
 	.lanes = 8,
 	.gen = 3,
 	.firstBusNo = 0x0,
-	.legacyIrqNum = 0,
+	.ltrIrqNum = 172,
+	.vdmIrqNum = 173,
 };
 
 struct HAL_PCIE_DEV g_pcieDevX8 =
@@ -683,7 +685,8 @@ struct HAL_PCIE_DEV g_pcieDevX8 =
 	.lanes = 4,
 	.gen = 1,
 	.firstBusNo = 0x20,
-	.legacyIrqNum = 0,
+	.ltrIrqNum = 204,
+	.vdmIrqNum = 205,
 };
 
 struct HAL_PCIE_HANDLE s_pcie;
