@@ -103,8 +103,12 @@ rtl_init_start:
 	movi    v29.2d,  #0
 	movi    v30.2d,  #0
 	movi    v31.2d,  #0
+#endif
+rtl_init_end:
 
 	//! This code may cause synchronization issues if all cores are not released at the same time.
+	//! But if we dont do this, after a soft reset, the sram will still have the old data. And the
+	//! secondary maybe directly woken up by the old data.
 	bl  get_core_id
 	ldr x1, =secondary_cores_entry
 	mov x2, x0
@@ -112,8 +116,6 @@ rtl_init_start:
 	str xzr, [x1, x2]
 	add x2, x2, 8
 	str xzr, [x1, x2]
-#endif
-rtl_init_end:
 
 	msr spsel, 1
 	bl get_core_id
