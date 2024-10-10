@@ -90,11 +90,11 @@ void config_mmu(void)
 #ifndef QEMU
 	for(uint64_t addr = 0x0540000000; addr < 0x8000000000; addr += 0x40000000) // [0x540000000, 0x8000000000) // NORMAL_WBWA, OUTER_SHARED, RW
 		tt_l1_1[addr/0x40000000] = TT_S1_NORMAL_WBWA | TT_S1_OUTER_SHARED | addr;
-	
+
 	for(uint64_t addr = 0x8000000000; addr < 0xC000000000; addr += 0x40000000) // [0x8000000000, 0xC000000000) // NORMAL_WBWA, OUTER_SHARED, RW
-		tt_l1_2[addr/0x40000000 - 512] = TT_S1_NORMAL_WBWA | TT_S1_OUTER_SHARED | addr;
-	for(uint64_t addr = 0xC000000000; addr < 0x10000000000; addr += 0x40000000) // [0xC000000000, 0x10000000000) // DEVICE_nGnRnE
 		tt_l1_2[addr/0x40000000 - 512] = TT_S1_DEVICE_nGnRnE | addr;
+	for(uint64_t addr = 0xC000000000; addr < 0x10000000000; addr += 0x40000000) // [0xC000000000, 0x10000000000) // DEVICE_nGnRnE
+		tt_l1_2[addr/0x40000000 - 512] = TT_S1_NORMAL_WBWA | TT_S1_OUTER_SHARED | addr;
 #endif
 
 #ifndef QEMU
