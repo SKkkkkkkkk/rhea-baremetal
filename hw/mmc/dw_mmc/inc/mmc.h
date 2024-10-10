@@ -58,6 +58,8 @@
 #define MMC_FIX_RCA			6
 #define RCA_SHIFT_OFFSET		16
 
+#define CMD_EXTCSD_BOOT_STATUS		174
+#define CMD_EXTCSD_BOOT_WP			173
 #define CMD_EXTCSD_PARTITION_CONFIG	179
 #define CMD_EXTCSD_BUS_WIDTH		183
 #define CMD_EXTCSD_HS_TIMING		185
@@ -75,6 +77,14 @@
 	PART_CFG_BOOT_PART_EN_SHIFT)
 
 /* Values in EXT CSD register */
+#define BOOT_PWR_WP_EN			(U(1) << 0)
+#define BOOT_PWR_WP_SEC_SEL		(U(1) << 1)
+#define BOOT_PERM_WP_EN			(U(1) << 2)
+#define BOOT_PERM_WP_SEC_SEL	(U(1) << 3)
+#define BOOT_PERM_WP_DIS		(U(1) << 4)
+#define BOOT_PWR_WP_DIS			(U(1) << 6)
+#define BOOT_SEC_WP_SEL			(U(1) << 7)
+
 #define MMC_BUS_WIDTH_1			U(0)
 #define MMC_BUS_WIDTH_4			U(1)
 #define MMC_BUS_WIDTH_8			U(2)
@@ -251,6 +261,12 @@ enum mmc_device_type {
 	MMC_IS_SD_HC,
 };
 
+enum mmc_boot_area {
+	MMC_BOOT_AREA1,
+	MMC_BOOT_AREA2,
+	MMC_BOOT_AREA_BOTH,
+};
+
 struct mmc_device_info {
 	unsigned long long	device_size;	/* Size of device in bytes */
 	unsigned int		block_size;	/* Block size in bytes */
@@ -269,5 +285,7 @@ size_t mmc_boot_part_read_blocks(int lba, uintptr_t buf, size_t size);
 int mmc_init(const struct mmc_ops *ops_ptr, unsigned int clk,
 	     unsigned int width, unsigned int flags,
 	     struct mmc_device_info *device_info);
+int mmc_boot_pwr_wp(enum mmc_boot_area area);
+unsigned char mmc_get_wp_status(void);
 
 #endif /* MMC_H */

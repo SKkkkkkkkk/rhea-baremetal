@@ -18,6 +18,7 @@
 
 #define DWMMC_CTRL (0x00)
 #define CTRL_IDMAC_EN (1 << 25)
+#define CTRL_EN_OD_PULLUP (1 << 24)
 #define CTRL_DMA_EN (1 << 5)
 #define CTRL_INT_EN (1 << 4)
 #define CTRL_DMA_RESET (1 << 2)
@@ -43,7 +44,9 @@
 #define INT_HLE (1 << 12)
 #define INT_FRUN (1 << 11)
 #define INT_DRT (1 << 9)
+#define INT_BDS (1 << 9)
 #define INT_RTO (1 << 8)
+#define INT_BAR (1 << 8)
 #define INT_DCRC (1 << 7)
 #define INT_RCRC (1 << 6)
 #define INT_RXDR (1 << 5)
@@ -56,6 +59,10 @@
 #define DWMMC_CMD (0x2c)
 #define CMD_START (U(1) << 31)
 #define CMD_USE_HOLD_REG (1 << 29) /* 0 if SDR50/100 */
+#define CMD_BOOT_MODE		(1 << 27)
+#define CMD_DISABLE_BOOT	(1 << 26)
+#define CMD_EXPECT_BOOT_ACK	(1 << 25)
+#define CMD_ENABLE_BOOT		(1 << 24)
 #define CMD_UPDATE_CLK_ONLY (1 << 21)
 #define CMD_SEND_INIT (1 << 15)
 #define CMD_STOP_ABORT_CMD (1 << 14)
@@ -76,9 +83,14 @@
 #define STATUS_DATA_BUSY (1 << 9)
 
 #define DWMMC_FIFOTH (0x4c)
-#define FIFOTH_TWMARK(x) (x & 0xfff)
-#define FIFOTH_RWMARK(x) ((x & 0x1ff) << 16)
-#define FIFOTH_DMA_BURST_SIZE(x) ((x & 0x7) << 28)
+#define MSIZE(x)		((x) << 28)
+#define FIFOTH_TWMARK(x) ((x) & 0xfff)
+#define FIFOTH_RWMARK(x) (((x) & 0x1ff) << 16)
+#define FIFOTH_RWMARK_SHIFT (16)
+#define FIFOTH_RWMARK_MASK (0xfff << FIFOTH_RWMARK_SHIFT)
+#define FIFOTH_DMA_BURST_SHIFT (28)
+#define FIFOTH_DMA_BURST_MASK (0x7 << FIFOTH_DMA_BURST_SHIFT)
+#define FIFOTH_DMA_BURST_SIZE(x) (((x) & 0x7) << 28)
 
 #define DWMMC_DEBNCE (0x64)
 #define DWMMC_BMOD (0x80)
@@ -142,7 +154,7 @@ typedef struct dw_mmc_params {
 } dw_mmc_params_t;
 
 static dw_mmc_params_t dw_params = {0};
-static unsigned long int dma_desc[32 * 2] __aligned(64) = { 0 };
+static struct dw_idmac_desc dma_desc[64] __aligned(64) = { 0 };
 
 static inline void writel(uint32_t address, uint32_t value)
 {
@@ -330,6 +342,15 @@ static int dw_set_ios(unsigned int clk, unsigned int width)
 	return 0;
 }
 
+void dw_set_dma_burst_size(unsigned char burst_size)
+{
+	unsigned int data;
+	data = readl(dw_params.reg_base + DWMMC_FIFOTH);
+	data &= ~FIFOTH_DMA_BURST_MASK;
+	data |= FIFOTH_DMA_BURST_SIZE(burst_size & 0x7);
+	writel(dw_params.reg_base + DWMMC_FIFOTH, data);
+}
+
 static void dw_init(void)
 {
 	unsigned int data;
@@ -370,6 +391,7 @@ static void dw_init(void)
 	writel(base + DWMMC_BYTCNT, 256 * 1024);
 	writel(base + DWMMC_DEBNCE, 0x00ffffff);
 	writel(base + DWMMC_BMOD, BMOD_SWRESET);
+	dw_set_dma_burst_size(0);
 	do {
 		data = readl(base + DWMMC_BMOD);
 	} while (data & BMOD_SWRESET);
@@ -552,4 +574,200 @@ int dw_mmc_init(void)
 
 	printf("Init mmc/sd failed!\n");
 	return -1;
+}
+
+/* Card Extended CSD register */
+#define BOOT_MODE               U(0x01) // 177[4:3]
+#define BOOT_BUS_WIDTH          U(0x02) // 177[1:0]
+#define BOOT_ACK                U(0x01) // 179[6]
+#define BOOT_PARTITION_ENABLE   U(0x01) // 179[5:3]
+#define BOOT_SIZE_MULT          U(0x20) // 226
+#define BOOT_INFO               U(0x07) // 228
+
+static void dw_boot_init(void)
+{
+	uintptr_t base;
+	unsigned int data;
+	unsigned int fifo_depth;
+
+	assert((dw_params.reg_base & MMC_BLOCK_MASK) == 0);
+	base = dw_params.reg_base;
+
+	/* card reset*/
+	data = readl(base + DWMMC_RST_N);
+	writel(base + DWMMC_RST_N, data & 0xfffffffe);
+	udelay(400);
+	data = readl(base + DWMMC_RST_N);
+	writel(base + DWMMC_RST_N, data | 0x1);
+
+	/* CTRL reset */
+	writel(base + DWMMC_CTRL, CTRL_RESET_ALL);
+	do {
+		data = readl(base + DWMMC_CTRL);
+	} while (data);
+	
+	/* CTRL configure */
+	data = CTRL_INT_EN | CTRL_DMA_EN | 
+            CTRL_IDMAC_EN | CTRL_EN_OD_PULLUP;
+	writel(base + DWMMC_CTRL, data);
+
+    /* interrupt configure */
+	writel(base + DWMMC_INTMASK, 0);
+	writel(base + DWMMC_RINTSTS, ~0);
+	writel(base + DWMMC_IDSTS, ~0);
+	writel(base + DWMMC_IDINTEN, ~0);
+
+	/* FIFO configure */
+	fifo_depth = readl(base + DWMMC_FIFOTH);
+	fifo_depth = ((fifo_depth & FIFOTH_RWMARK_MASK) >> FIFOTH_RWMARK_SHIFT) + 1;
+	data = MSIZE(0x2) | FIFOTH_RWMARK(fifo_depth / 2 - 1) |
+				FIFOTH_TWMARK(fifo_depth / 2);
+	writel(base + DWMMC_FIFOTH, data);
+
+	writel(base + DWMMC_BLKSIZ, MMC_BLOCK_SIZE);
+	writel(base + DWMMC_BYTCNT, 128 * 1024 * BOOT_SIZE_MULT);
+
+	writel(base + DWMMC_TMOUT, ~0);
+	writel(base + DWMMC_DEBNCE, 0x00ffffff);
+	writel(base + DWMMC_BMOD, BMOD_SWRESET);
+	do {
+		data = readl(base + DWMMC_BMOD);
+	} while (data & BMOD_SWRESET);
+
+	/* enable DMA in BMOD */
+	data |= BMOD_ENABLE | BMOD_FB;
+	writel(base + DWMMC_BMOD, data);
+
+	dw_set_ios(MMC_BOOT_CLK_RATE, dw_params.bus_width);
+}
+
+int dw_boot_start(uintptr_t buf, size_t size)
+{
+	unsigned int err_mask;
+	unsigned int data;
+	uintptr_t base;
+	int timeout;
+	struct mmc_cmd cmd;
+
+	pinmux_select(PORTA, 0, 0); // clk
+	pinmux_select(PORTA, 1, 0); // cmd
+	pinmux_select(PORTA, 2, 0); // d0
+	pinmux_select(PORTA, 3, 0); // d1
+	pinmux_select(PORTA, 4, 0); // d2
+	pinmux_select(PORTA, 5, 0); // d3
+	pinmux_select(PORTA, 6, 0); // d4
+	pinmux_select(PORTA, 7, 0); // d5
+	pinmux_select(PORTA, 8, 0); // d6
+	pinmux_select(PORTA, 9, 0); // d7
+	pinmux_select(PORTA, 26, 0); // pwen
+	pinmux_select(PORTA, 25, 0); // rstn
+
+	memset(&dw_params, 0, sizeof(dw_mmc_params_t));
+	dw_params.reg_base = EMMC_BASE;
+	dw_params.desc_base = (unsigned long int)dma_desc;
+	dw_params.desc_size = sizeof(dma_desc);
+	dw_params.clk_rate = get_clk(CLK_EMMC_2X);
+	dw_params.flags = 0;
+	dw_params.max_clk = 40000000;
+	dw_params.bus_width = BOOT_BUS_WIDTH;
+	dw_params.mmc_dev_type = MMC_IS_EMMC;
+
+	base = dw_params.reg_base;
+	dw_boot_init();
+	dw_prepare(0, buf, size);
+
+	timeout = 1000 * 1000; // 1s
+	do {
+		data = readl(base + DWMMC_STATUS);
+		if (--timeout <= 0) {
+			printf("%s: Card data is busy\n", __func__);
+			return -ETIMEDOUT;
+		}
+		if (data & STATUS_DATA_BUSY)
+			udelay(1);
+	} while (data & STATUS_DATA_BUSY);
+
+	memset(&cmd, 0x0, sizeof(struct mmc_cmd));
+	cmd.cmd_idx = MMC_CMD(0);
+	cmd.cmd_arg = 0xF0F0F0F0;	// Go pre-idle state
+	if (dw_send_cmd(&cmd)) {
+		printf("%s: Failed to enter pre-idle state\n",
+				__func__);
+		return -EIO;
+	}
+
+	data = CMD_START | CMD_ENABLE_BOOT | CMD_DATA_TRANS_EXPECT;
+#if BOOT_ACK == 1
+	data |= CMD_EXPECT_BOOT_ACK;
+#endif /* BOOT_ACK */
+	writel(base + DWMMC_CMD, data);
+
+	/* waiting for boot ACK received */
+	timeout = 50 * 1000; // 50ms
+	do {
+		udelay(1);
+		data = readl(base + DWMMC_RINTSTS);
+
+		if (--timeout == 0) {
+			printf("%s: Timeout waiting for receiving boot ACK (0x%x)\n", 
+					__func__, data);
+			goto timeout;
+		}
+	} while (!(data & INT_BAR));
+	printf("%s: Boot ACK received\n", __func__);
+
+	/* waiting for boot data start */
+	timeout = 950 * 1000; // 950ms
+	do {
+		udelay(1);
+		data = readl(base + DWMMC_RINTSTS);
+
+		if (--timeout == 0) {
+			printf("%s: Timeout waiting for boot data start (0x%x)\n", 
+					__func__, data);
+			goto timeout;
+		}
+	} while (!(data & INT_BDS));
+
+	printf("%s: Start receiving boot data ...\n", __func__);
+
+	/* waiting for boot data reception completed */
+	timeout = 5000 * 1000; // 5s
+	do {
+		udelay(1);
+		data = readl(base + DWMMC_RINTSTS);
+
+		if (--timeout == 0) {
+			printf("%s: Timeout waiting for boot data reception completed (0x%x)\n", 
+					__func__, data);
+			goto timeout;
+		}
+	} while (!(data & INT_DTO));
+	inv_dcache_range(buf, size);
+	printf("%s: Boot data reception completed\n", __func__);
+
+	return 0;
+
+timeout:
+	err_mask = INT_EBE | INT_HLE | INT_RTO | INT_RCRC |
+				INT_RE | INT_DCRC | INT_DRT | INT_SBE;
+	data = CMD_START | CMD_DISABLE_BOOT;
+	writel(base + DWMMC_CMD, data);
+	timeout = 5000 * 1000; // 5s
+	do {
+		udelay(1);
+		data = readl(base + DWMMC_RINTSTS);
+
+		if (data & err_mask) {
+			printf("%s: Failed to disable boot (0x%x)\n", 
+					__func__, data);
+			return -EIO;
+		}
+		if (--timeout == 0) {
+			printf("%s: Timeout waiting for disable boot (0x%x)\n",
+					__func__, data);
+			return -ETIMEDOUT;
+		}
+	} while (!(data & INT_CMD_DONE));
+	return -ETIMEDOUT;
 }

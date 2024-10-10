@@ -1,8 +1,8 @@
-set(TARTGET_NAME aarch64_startup)
+set(TARGET_NAME aarch64_startup)
 
-add_library(${TARTGET_NAME} OBJECT)
+add_library(${TARGET_NAME} OBJECT)
 
-target_sources(${TARTGET_NAME} 
+target_sources(${TARGET_NAME} 
 	PRIVATE
 		startup/entrypoint.S
 		startup/exceptions.S
@@ -14,7 +14,7 @@ target_sources(${TARTGET_NAME}
 )
 
 if(NOT $CACHE{BOARD} STREQUAL "QEMU")
-target_link_libraries(${TARTGET_NAME}
+target_link_libraries(${TARGET_NAME}
 	PRIVATE
 		system_counter
 )

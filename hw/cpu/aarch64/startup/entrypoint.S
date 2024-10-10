@@ -24,10 +24,11 @@ func entrypoint
 	mrs     x1, CurrentEL
 	cmp     x1, #(MODE_EL3 << MODE_EL_SHIFT)
 	b.ne    rtl_init_start
-	mrs x0, scr_el3
-	mov x0, #0x53e                 	// #568
+	mov x0, #0x53e
 	msr scr_el3, x0
 
+	msr 	cptr_el3, xzr
+	isb
 rtl_init_start:
 #if defined(RTL)
 	// Initialise the register bank
@@ -102,8 +103,12 @@ rtl_init_start:
 	movi    v29.2d,  #0
 	movi    v30.2d,  #0
 	movi    v31.2d,  #0
+#endif
+rtl_init_end:
 
 	//! This code may cause synchronization issues if all cores are not released at the same time.
+	//! But if we dont do this, after a soft reset, the sram will still have the old data. And the
+	//! secondary maybe directly woken up by the old data.
 	bl  get_core_id
 	ldr x1, =secondary_cores_entry
 	mov x2, x0
@@ -111,8 +116,6 @@ rtl_init_start:
 	str xzr, [x1, x2]
 	add x2, x2, 8
 	str xzr, [x1, x2]
-#endif
-rtl_init_end:
 
 	msr spsel, 1
 	bl get_core_id
@@ -158,9 +161,9 @@ dead:
 	b	dead
 endfunc entrypoint
 
-#define CORE_STACK_SIZE (16*1024/4)
 // x0 - core_id
 func setup_stack
+	.extern _stack_start
 	.extern _stack_top
 	ldr x1, =_stack_top
 	bfi x1, xzr, #0, #4 // clear bit0-3
@@ -170,9 +173,11 @@ func setup_stack
 	** x1 => stack_top
 	** x2 => offset_size 
 	*/
-	ldr x2, =CORE_STACK_SIZE
-	mul x2, x2, x0                  //stack offset for each cpuid
-	sub x1, x1, x2                  //stack top for each cpuid
+	ldr x2, =_stack_start
+	sub x2, x1, x2				// x2 = _stack_top - _stack_start
+	lsr x2, x2, #2				// x2 = x2 / core_num(4)
+	mul x2, x2, x0              // stack offset for each cpuid
+	sub x1, x1, x2              // stack top for each cpuid
 	mov sp, x1
 
 	ret

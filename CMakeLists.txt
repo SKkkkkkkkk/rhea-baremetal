@@ -17,18 +17,19 @@ set(EXTRA_INCS "" CACHE PATH "Extra Directories to include.")
 set(EXTRA_LIBS "" CACHE FILEPATH "Extra Directories to include.")
 
 set(BOARD "RTL" CACHE STRING "QEMU, RTL, FPGA, EVB")
+set_property(CACHE BOARD PROPERTY STRINGS "QEMU" "RTL" "FPGA" "EVB")
 
 set(MEM_SCHEME "ROM" CACHE STRING "ROM, SRAM, DRAM, CUSTOM")
+set_property(CACHE MEM_SCHEME PROPERTY STRINGS "ROM" "SRAM" "DRAM" "CUSTOM")
 if($CACHE{MEM_SCHEME} STREQUAL "CUSTOM")
 	set(CUSTOM_LINKER_SCRIPT "" CACHE FILEPATH "Custom Linker Script file")
 	if("$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
 		message(FATAL_ERROR "CUSTOM_LINKER_SCRIPT must be set, with MEM_SCHEME=CUSTOM")
 	endif()
+else()
+	set(STACK_SIZE "0x4000" CACHE STRING "Stack Size(In Bytes)")
+	set(HEAP_SIZE  "0x4000" CACHE STRING "Heap Size(In Bytes)")
 endif()
-
-set(STACK_SIZE "0x4000" CACHE STRING "Stack Size(In Bytes)")
-
-set(HEAP_SIZE  "0x4000" CACHE STRING "Heap Size(In Bytes)")
 
 set(ENABLE_LTO "OFF" CACHE BOOL "Enable Link Time Optimization")
 if($CACHE{ENABLE_LTO})
@@ -37,7 +38,8 @@ endif()
 
 set(ENABLE_MMU "OFF" CACHE BOOL "Enable MMU")
 
-set(PRIMARY_CORE "0" CACHE STRING "Primary Core")
+set(PRIMARY_CORE "0" CACHE STRING "Primary Core: 0, 1, 2, 3")
+set_property(CACHE PRIMARY_CORE PROPERTY STRINGS  0 1 2 3)
 
 project("${PROJECT_NAME}"
 	VERSION 0.1.0
@@ -118,16 +120,14 @@ endif()
 add_compile_options(${compile_options_arch} ${compile_options_common})
 
 # targets
-include(targets.cmake)
-
-add_subdirectory(verification EXCLUDE_FROM_ALL)
-
-# app targets
 if(NOT $CACHE{PROJECT_PATH} STREQUAL "")
 	include($CACHE{PROJECT_PATH}/app.cmake)
 endif()
 add_executable($CACHE{PROJECT_NAME}.elf)
+include(targets.cmake)
+add_subdirectory(verification EXCLUDE_FROM_ALL)
 
+# app targets
 target_sources($CACHE{PROJECT_NAME}.elf
 	PRIVATE
 		${app_src}
@@ -138,6 +138,11 @@ target_include_directories($CACHE{PROJECT_NAME}.elf
     PRIVATE
         ${app_inc}
 		$CACHE{EXTRA_INCS}
+)
+
+target_compile_options($CACHE{PROJECT_NAME}.elf
+	PRIVATE
+		${app_compile_options}
 )
 
 target_link_options($CACHE{PROJECT_NAME}.elf

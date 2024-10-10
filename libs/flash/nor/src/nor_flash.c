@@ -10,6 +10,10 @@
 #define CPU_READ_BLOCK_SIZE SPI_FIFO_DEPTH
 #define BLOCK_SIZE_DMA 		MIN(DMAC_FIFO_DEPTH, SPI_CTRLR1_MAX_SIZE)
 
+#include <arch_helpers.h>
+#define CLEAN_DCACHE_RANGE(addr, size) clean_dcache_range((uintptr_t)addr, size)
+#define FLUSH_DCACHE_RANGE(addr, size) flush_dcache_range((uintptr_t)addr, size)
+
 static flash_model_t flash_model[BOOTSPI_ID + 1] = {UNKNOWN_FLASH};
 
 bool flash_init(spi_id_t spi_id, uint16_t clk_div, uint8_t spi_mode, flash_model_t _flash_model)
@@ -520,7 +524,7 @@ void flash_read_dma(spi_id_t spi_id, uint32_t addr, uint8_t* const buf, uint32_t
 	assert(buf);
 	if(size==0)
 		return;
-	// DUCache_Maintain((uint32_t)buf, (uint32_t)((uint32_t)buf + size - 1), 2);
+	FLUSH_DCACHE_RANGE(buf, size);
 	if (size <= BLOCK_SIZE_DMA)
 		_flash_read_dma(spi_id, addr, buf, size);
 	else
@@ -633,7 +637,7 @@ static void _flash_page_write_dma(spi_id_t spi_id, uint32_t addr, uint8_t const 
 	cmd[3] = (addr & 0x000000FFUL) >> 0UL;
 	memcpy(cmd+4, buf, size);
 	
-	// DUCache_Maintain((uint32_t)cmd, (uint32_t)cmd+4+size-1, 1);
+	CLEAN_DCACHE_RANGE(cmd, sizeof(cmd));
 
 	if((addr+size-1)<=0xffffffU) //不需要翻页
 	{
@@ -921,7 +925,7 @@ void flash_read_quad_dma(spi_id_t spi_id, uint32_t addr, uint8_t* const buf, uin
 	assert(buf);
 	if(size==0)
 		return;
-	// DUCache_Maintain((uint32_t)buf, (uint32_t)((uint32_t)buf + size - 1), 2);
+	FLUSH_DCACHE_RANGE(buf, size);
 	if (size <= BLOCK_SIZE_DMA)
 		_flash_read_quad_dma(spi_id, addr, buf, size);
 	else

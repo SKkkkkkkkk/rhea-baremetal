@@ -29,40 +29,40 @@
 //case 1: 地址对齐，大小<=page size
 #define CASE1_ADDR (0+OFF_RW_ADDR)
 #define CASE1_SIZE (2048*2+1)
-static uint8_t case1_r_buf[CASE1_SIZE] /*__attribute__((section(".noncache_mem.case1_r_buf")))*/ = {0};
+static uint8_t case1_r_buf[CASE1_SIZE] __attribute__((aligned(64))) /*__attribute__((section(".noncache_mem.case1_r_buf")))*/ = {0};
 static uint8_t case1_w_buf[CASE1_SIZE] /*__attribute__((section(".noncache_mem.case1_w_buf")))*/ = {0};
 
 //case 2: 地址对齐，大小>page size且不对齐
 #define CASE2_ADDR (0+OFF_RW_ADDR)
 #define CASE2_SIZE (256*2+1)
-static uint8_t case2_r_buf[CASE2_SIZE] /*__attribute__((section(".noncache_mem.case2_r_buf")))*/ = {0};
+static uint8_t case2_r_buf[CASE2_SIZE] __attribute__((aligned(64))) /*__attribute__((section(".noncache_mem.case2_r_buf")))*/ = {0};
 static uint8_t case2_w_buf[CASE2_SIZE] /*__attribute__((section(".noncache_mem.case2_w_buf")))*/ = {0};
 
 //case 3: 地址不对齐，大小不对齐
 #define CASE3_ADDR (1+OFF_RW_ADDR)
 #define CASE3_SIZE (256*2+1)
-static uint8_t case3_r_buf[CASE2_SIZE] /*__attribute__((section(".noncache_mem.case3_r_buf")))*/ = {0};
+static uint8_t case3_r_buf[CASE2_SIZE] __attribute__((aligned(64))) /*__attribute__((section(".noncache_mem.case3_r_buf")))*/ = {0};
 static uint8_t case3_w_buf[CASE2_SIZE] /*__attribute__((section(".noncache_mem.case3_w_buf")))*/ = {0};
 
 //case 4: 地址不对齐，大小对齐
 #define CASE4_ADDR (1+OFF_RW_ADDR)
 #define CASE4_SIZE (2048*2)
-static uint8_t case4_r_buf[CASE4_SIZE] /*__attribute__((section(".noncache_mem.case4_r_buf")))*/ = {0};
+static uint8_t case4_r_buf[CASE4_SIZE] __attribute__((aligned(64))) /*__attribute__((section(".noncache_mem.case4_r_buf")))*/ = {0};
 static uint8_t case4_w_buf[CASE4_SIZE] /*__attribute__((section(".noncache_mem.case4_w_buf")))*/ = {0};
 
 #define CASE6_ADDR (0x1000000)
 #define CASE6_SIZE (2048*2)
-static uint8_t case6_r_buf[CASE6_SIZE] /*__attribute__((section(".noncache_mem.case6_r_buf")))*/ = {0};
+static uint8_t case6_r_buf[CASE6_SIZE] __attribute__((aligned(64))) /*__attribute__((section(".noncache_mem.case6_r_buf")))*/ = {0};
 static uint8_t case6_w_buf[CASE6_SIZE] /*__attribute__((section(".noncache_mem.case6_w_buf")))*/ = {0};
 
 #define CASE7_ADDR (0x1000000-1)
 #define CASE7_SIZE (2048*2)
-static uint8_t case7_r_buf[CASE6_SIZE] /*__attribute__((section(".noncache_mem.case7_r_buf")))*/ = {0};
+static uint8_t case7_r_buf[CASE6_SIZE] __attribute__((aligned(64))) /*__attribute__((section(".noncache_mem.case7_r_buf")))*/ = {0};
 static uint8_t case7_w_buf[CASE6_SIZE] /*__attribute__((section(".noncache_mem.case7_r_buf")))*/ = {0};
 
 #define P25Q40UJ_ADDR (0x00)
 #define P25Q40UJ_SIZE (512*1024)
-static uint8_t p25q40uj_r_buf[P25Q40UJ_SIZE] = {0};
+static uint8_t p25q40uj_r_buf[P25Q40UJ_SIZE] __attribute__((aligned(64))) = {0};
 static uint8_t p25q40uj_w_buf[P25Q40UJ_SIZE] = {0};
 
 void nor_flash_test(spi_id_t spi_id, flash_model_t flash_model, uint16_t clk_div)
@@ -283,9 +283,9 @@ void flash_fastest_read_test(spi_id_t spi_id, flash_model_t flash_model, uint16_
 
 	for(uint32_t i = 0;i<CASE5_SIZE;i++)
 		case5_w_buf[i] = i%256;
-	// for(uint32_t i = 0;i<(CASE5_SIZE/4096+2);i++)
-	// 	flash_sector_erase(spi_id, (CASE5_ADDR&0xfffff000)+4096*i);
-	// FLASH_WRITE(spi_id, CASE5_ADDR, case5_w_buf, CASE5_SIZE);
+	for(uint32_t i = 0;i<(CASE5_SIZE/4096+2);i++)
+		flash_sector_erase(spi_id, (CASE5_ADDR&0xfffff000)+4096*i);
+	FLASH_WRITE(spi_id, CASE5_ADDR, case5_w_buf, CASE5_SIZE);
 	
 	//1. cpu方式 + 标准spi模式
 	memset(case5_r_buf, 0xa5, CASE5_SIZE);

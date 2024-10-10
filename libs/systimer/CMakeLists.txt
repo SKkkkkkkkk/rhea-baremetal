@@ -1,18 +1,18 @@
-set(TARTGET_NAME systimer)
+set(TARGET_NAME systimer)
 
-add_library( ${TARTGET_NAME} STATIC )
+add_library( ${TARGET_NAME} STATIC )
 
-target_sources( ${TARTGET_NAME} 
+target_sources( ${TARGET_NAME} 
 	PRIVATE
 		src/systimer.c
 )
 
-target_include_directories( ${TARTGET_NAME}
+target_include_directories( ${TARGET_NAME}
 	PUBLIC
 		inc
 )
 
-target_link_libraries(${TARTGET_NAME}
+target_link_libraries(${TARGET_NAME}
 	PRIVATE
 		dw_apb_timers
 		gicv3

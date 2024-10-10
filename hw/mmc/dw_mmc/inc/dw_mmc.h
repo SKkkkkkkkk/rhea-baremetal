@@ -12,5 +12,7 @@
 #define DWMMC_DMA_MAX_BUFFER_SIZE (512 * 8)
 
 int dw_mmc_init(void);
+int dw_boot_start(uintptr_t buf, size_t size);
+void dw_set_dma_burst_size(unsigned char burst_size);
 
 #endif /* DW_MMC_H */

@@ -1,5 +1,5 @@
-#ifndef __PCIE_EP_H__
-#define __PCIE_EP_H__
+#ifndef __PCIE_H__
+#define __PCIE_H__
 
 #include "memmap.h"
 
@@ -98,7 +98,8 @@ struct HAL_PCIE_DEV {
 	uint8_t lanes;
 	uint8_t gen;
 	uint8_t firstBusNo;
-	uint32_t legacyIrqNum;
+	uint32_t ltrIrqNum;
+	uint32_t vdmIrqNum;
 	void *phy;
 };
 
@@ -119,8 +120,9 @@ uint32_t HAL_PCIE_GetLTSSM(struct HAL_PCIE_HANDLE *pcie);
 HAL_Status HAL_PCIE_Init(struct HAL_PCIE_HANDLE *pcie, struct HAL_PCIE_DEV *dev);
 HAL_Status HAL_PCIE_DeInit(struct HAL_PCIE_HANDLE *pcie);
 HAL_Status HAL_PCIE_InboundConfig(struct HAL_PCIE_HANDLE *pcie, int32_t index, int32_t bar, uint64_t cpuAddr);
-HAL_Status HAL_PCIE_OutboundConfig(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint32_t size);
+HAL_Status HAL_PCIE_OutboundConfig(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint64_t size);
 HAL_Status dw_pcie_prog_inbound_atu(struct HAL_PCIE_HANDLE *pcie, int32_t index, int32_t bar, uint64_t cpuAddr);
+HAL_Status dw_pcie_prog_outbound_atu(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint64_t size);
 int32_t HAL_PCIE_OutboundConfigCFG0(struct HAL_PCIE_HANDLE *pcie, HAL_PCI_DevT bdf, uint32_t size);
 
-#endif // __PCIE_EP_H__
+#endif // __PCIE_H__
