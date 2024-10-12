@@ -2,6 +2,14 @@
 #include <stdint.h>
 #include "mailbox.h"
 
+unsigned int get_lock(int atomic_lock)
+{
+    unsigned int lock;
+
+    lock = MAILBOX_LOCK -> atomic_lock[atomic_lock];
+    return lock;
+
+}
 
 void a2b_send(int ch,uint32_t cmd,uint32_t data)
 {
