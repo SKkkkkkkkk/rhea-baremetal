@@ -69,4 +69,7 @@ void b2a_send(int ch, uint32_t cmd, uint32_t data);
 uint32_t b_get_cmd(int ch);
 uint32_t b_get_data(int ch);
 
+
+unsigned int get_lock(int atomic_lock);
+
 #endif // __MAILBOX_H__
