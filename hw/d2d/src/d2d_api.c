@@ -2,9 +2,12 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #include "d2d_api.h"
 #include "delay.h"
+#include "memmap.h"
+#include "gicv3.h"
 
 #define D2D_DNOC_BASE           (0x3800000000)
 #define D2D_CNOC_BASE           (0x9C00000000)
@@ -29,19 +32,35 @@
 #define D2D_REG_CLCI0_CH_UP     (D2D_CLCI0_APB_BASE + 0x000)
 #define D2D_CLCI2_APB_BASE      (0x20080000)
 #define D2D_REG_CLCI2_CH_UP     (D2D_CLCI2_APB_BASE + 0x000)
+/* Mailbox interrupt */
+#define MAILBOX_IRQn            (32 + 27)
+#define MAILBOX_REG_B2A_INTEN   ((uintptr_t) (MAILBOX_BASE + 0x28))
+#define MAILBOX_INT_EN0         (1 << 0)
+#define MAILBOX_INT_EN1         (1 << 1)
+#define MAILBOX_INT_EN2         (1 << 2)
+#define MAILBOX_INT_EN3         (1 << 3)
+#define MAILBOX_REG_B2A_STATUS  ((uintptr_t) (MAILBOX_BASE + 0x2C))
+#define MAILBOX_CLEAR_INT0      (1 << 0)
+#define MAILBOX_CLEAR_INT1      (1 << 1)
+#define MAILBOX_CLEAR_INT2      (1 << 2)
+#define MAILBOX_CLEAR_INT3      (1 << 3)
+#define MAILBOX_REG_B2A_CMD0    ((uintptr_t) (MAILBOX_BASE + 0x30))
+#define MAILBOX_REG_B2A_DAT0    ((uintptr_t) (MAILBOX_BASE + 0x34))
+
+#define AP_SYS_TILE_ID          (0x04)
 
 static void *d2d_dnoc = NULL;
 static void *d2d_cnoc = NULL;
 
-static inline void rhea_d2d_cfg_writel(enum rhea_die die, uint32_t val, uint32_t offset)
+static inline void rhea_d2d_cfg_writel(uint8_t die, uint32_t val, uint32_t offset)
 {
-    void *ioaddr = (die == RHEA_DIE0) ? d2d_cnoc : d2d_dnoc;
+    void *ioaddr = (die == RHEA_DIE_SELF) ? d2d_cnoc : d2d_dnoc;
     writel(val, ioaddr + D2D_DIE_OFFSET(die) + offset);
 }
 
-static inline uint32_t rhea_d2d_cfg_readl(enum rhea_die die, uint32_t offset)
+static inline uint32_t rhea_d2d_cfg_readl(uint8_t die, uint32_t offset)
 {
-    void *ioaddr = (die == RHEA_DIE0) ? d2d_cnoc : d2d_dnoc;
+    void *ioaddr = (die == RHEA_DIE_SELF) ? d2d_cnoc : d2d_dnoc;
     return readl(ioaddr + D2D_DIE_OFFSET(die) + offset);
 }
 
@@ -133,7 +152,29 @@ int rhea_d2d_readl(uint32_t *val, uint64_t addr)
     return 0;
 }
 
-int rhea_d2d_get_lock(enum rhea_die die, enum rhea_d2d_lock idx)
+int rhea_d2d_writeq(uint64_t val, uint64_t addr)
+{
+    if (!(addr & ~D2D_CFG_REG_MASK)) {
+        printf("The address 0x%lx written is invalid\n", 
+                addr);
+        return -EFAULT;
+    }
+    writeq(val, d2d_dnoc + addr);
+    return 0;
+}
+
+int rhea_d2d_readq(uint64_t *val, uint64_t addr)
+{
+    if (!(addr & ~D2D_CFG_REG_MASK)) {
+        printf("The address 0x%lx read is invalid\n", 
+                addr);
+        return -EFAULT;
+    }
+    *val = readq(d2d_dnoc + addr);
+    return 0;
+}
+
+int rhea_d2d_get_lock(uint8_t die, enum rhea_d2d_lock idx)
 {
     if (idx >= D2D_LOCK_MAX) {
         printf("The selected lock%d does not exist\n", idx);
@@ -142,7 +183,7 @@ int rhea_d2d_get_lock(enum rhea_die die, enum rhea_d2d_lock idx)
     return rhea_d2d_cfg_readl(die, D2D_REG_LOCK(idx));
 }
 
-void rhea_d2d_release_lock(enum rhea_die die, enum rhea_d2d_lock idx)
+void rhea_d2d_release_lock(uint8_t die, enum rhea_d2d_lock idx)
 {
     if (idx >= D2D_LOCK_MAX) {
         printf("The selected lock%d does not exist\n", idx);
@@ -152,11 +193,11 @@ void rhea_d2d_release_lock(enum rhea_die die, enum rhea_d2d_lock idx)
     rhea_d2d_cfg_writel(die, 0x1, D2D_REG_LOCK(idx));
 }
 
-int rhea_d2d_select_tile(enum rhea_die die, uint8_t tile_id, uint32_t wait_ms)
+int rhea_d2d_select_tile(uint8_t die, uint8_t tile_id, uint32_t wait_ms)
 {
     uint8_t i;
 
-    if (die >= RHEA_DIE_MAX) {
+    if (die >= CONFIG_RHEA_DIE_MAX) {
         printf("die%d does not exist\n", die);
         return -EINVAL;
     }
@@ -181,9 +222,9 @@ int rhea_d2d_select_tile(enum rhea_die die, uint8_t tile_id, uint32_t wait_ms)
     return 0;
 }
 
-int rhea_d2d_get_selected_tile(enum rhea_die die, uint8_t *tile_id)
+int rhea_d2d_get_selected_tile(uint8_t die, uint8_t *tile_id)
 {
-    if (die >= RHEA_DIE_MAX) {
+    if (die >= CONFIG_RHEA_DIE_MAX) {
         printf("die%d does not exist\n", die);
         return -EINVAL;
     }
@@ -195,34 +236,73 @@ int rhea_d2d_get_selected_tile(enum rhea_die die, uint8_t *tile_id)
 void rhea_d2d_release_tile(void)
 {
     uint8_t i;
-    for (i = 0; i < RHEA_DIE_MAX; i++) {
+    for (i = 0; i < CONFIG_RHEA_DIE_MAX; i++) {
         rhea_d2d_cfg_writel(i, 0, D2D_REG_CFG_TILE_ID);
         rhea_d2d_release_lock(i, D2D_LOCK_TILE_SEL);
     }
 }
 
-void *rhea_d2d_get_ioaddr(void)
+static void (*d2d_irqhandler)(uint32_t cmd, uint32_t data);
+static void __d2d_irqhandler(void)
+{
+    d2d_irqhandler(readl((void *) MAILBOX_REG_B2A_CMD0),
+                    readl((void *) MAILBOX_REG_B2A_DAT0));
+    writel(MAILBOX_CLEAR_INT0, (void *) MAILBOX_REG_B2A_STATUS);
+}
+
+void rhea_d2d_irq_recv_enable(void (*handler)(uint32_t cmd, uint32_t data))
+{
+    assert(handler != NULL);
+
+    d2d_irqhandler = handler;
+	GIC_SetRouting(MAILBOX_IRQn, getAffinity(), 0);
+	IRQ_SetHandler(MAILBOX_IRQn, __d2d_irqhandler);
+	GIC_SetPriority(MAILBOX_IRQn, 2 << 3);
+	GIC_EnableIRQ(MAILBOX_IRQn);
+}
+
+int rhea_d2d_send_interrupt(uint8_t die, uint32_t timeout_ms,
+                                uint32_t cmd, uint32_t data)
+{
+    int ret;
+    pr_dbg("Send interrupt to die%d with cmd(0x%x) and data(0x%x)\n", 
+            RHEA_DIE_IDX2ID(die), cmd, data);
+
+    ret = rhea_d2d_select_tile(die, AP_SYS_TILE_ID, timeout_ms);
+    if (ret) return ret;
+    rhea_d2d_writel(MAILBOX_INT_EN0, MAILBOX_REG_B2A_INTEN);
+    rhea_d2d_writel(cmd, MAILBOX_REG_B2A_CMD0);
+    rhea_d2d_writel(data, MAILBOX_REG_B2A_DAT0);
+    rhea_d2d_release_tile();
+    return ret;
+}
+
+void *rhea_d2d_get_dnoc_addr(void)
 {
     return d2d_dnoc;
 }
 
+void *rhea_d2d_get_cnoc_addr(void)
+{
+    return d2d_cnoc;
+}
+
 int rhea_d2d_init(void)
 {
-    uint8_t mode = CONFIG_RHEA_D2D_WORK_MODE;
-
     d2d_dnoc = (void *) D2D_DNOC_BASE;
     d2d_cnoc = (void *) D2D_CNOC_BASE;
-    if (mode & ~D2D_WORK_MODE_MASK) {
-        printf("Unsupported mode %d\n", mode);
+    if (CONFIG_RHEA_D2D_WORK_MODE & ~D2D_WORK_MODE_MASK) {
+        printf("Unsupported mode %d\n", CONFIG_RHEA_D2D_WORK_MODE);
         return -EINVAL;
     }
-    rhea_d2d_cfg_writel(RHEA_DIE0, mode, D2D_REG_WORK_MODE);
+    rhea_d2d_cfg_writel(RHEA_DIE_SELF, 
+                CONFIG_RHEA_D2D_WORK_MODE, D2D_REG_WORK_MODE);
 
-    if (!rhea_d2d_cfg_readl(RHEA_DIE0, D2D_REG_CLCI0_CH_UP) ||
-        !rhea_d2d_cfg_readl(RHEA_DIE0, D2D_REG_CLCI2_CH_UP))
+    if (!rhea_d2d_cfg_readl(RHEA_DIE_SELF, D2D_REG_CLCI0_CH_UP) ||
+        !rhea_d2d_cfg_readl(RHEA_DIE_SELF, D2D_REG_CLCI2_CH_UP))
         return -EFAULT;
 
-    printf("Working in mode %d\n", mode);
+    printf("Working in mode %d\n", CONFIG_RHEA_D2D_WORK_MODE);
 
     return 0;
 }

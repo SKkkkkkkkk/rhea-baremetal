@@ -59,8 +59,12 @@ struct d2d_sync_priv {
 int d2d_sync_wait_reg(struct d2d_sync_put_cmd *put_cmd,
                         uint32_t pos)
 {
-    struct d2d_sync_cmd *cmd;
-    uint32_t timeout = 500; // ms
+    uintptr_t cmd;
+    uint64_t reg_addr;
+    uint32_t cmd_idx;
+    uint32_t reg_own;
+    uint32_t reg_val;
+    uint32_t timeout;
 
     if ((put_cmd->cmd_id == D2D_SYNC_WRITEL) ||
         (put_cmd->cmd_id == D2D_SYNC_READL)  ||
@@ -68,34 +72,36 @@ int d2d_sync_wait_reg(struct d2d_sync_put_cmd *put_cmd,
         (put_cmd->cmd_id == D2D_SYNC_READW)  ||
         (put_cmd->cmd_id == D2D_SYNC_WRITEB) ||
         (put_cmd->cmd_id == D2D_SYNC_READB)) {
-        cmd = (struct d2d_sync_cmd *) 
-                (sync_priv->lcmd.remote_addr + pos);
-        if (put_cmd->reg_addr != cmd->reg_addr) {
+        cmd = sync_priv->lcmd.remote_addr + pos;
+        rhea_d2d_readq(&reg_addr, cmd + offsetof(struct d2d_sync_cmd, reg_addr));
+        if (put_cmd->reg_addr != reg_addr) {
             printf("The register address 0x%lx obtained at "
                 "address 0x%lx does not match the expected 0x%lx\n",
-                cmd->reg_addr, (uintptr_t) cmd, put_cmd->reg_addr);
+                reg_addr, cmd, put_cmd->reg_addr);
             return -EFAULT;
         }
 
+        rhea_d2d_readl(&cmd_idx, cmd + offsetof(struct d2d_sync_cmd, cmd_idx));
         pr_dbg("Waiting for the command %d at address 0x%lx to complete\n",
-                cmd->cmd_idx, (uintptr_t) cmd);
+                cmd_idx, cmd);
         // Waiting for the executor to release
-        while (cmd->reg_own) {
-            if (!timeout--) {
-                return -ETIMEDOUT;
-            }
+        for (timeout = 500; timeout > 0; timeout--) {
+            rhea_d2d_readl(&reg_own, cmd + offsetof(struct d2d_sync_cmd, reg_own));
+            if (!reg_own) break;
             mdelay(1);
         }
+        if (!timeout) return -ETIMEDOUT;
 
-        if ((cmd->cmd_idx == D2D_SYNC_READL) ||
-            (cmd->cmd_idx == D2D_SYNC_READW) ||
-            (cmd->cmd_idx == D2D_SYNC_READB)) {
-            put_cmd->reg_val = cmd->reg_val;
+        rhea_d2d_readl(&reg_val, cmd + offsetof(struct d2d_sync_cmd, reg_val));
+        if ((cmd_idx == D2D_SYNC_READL) ||
+            (cmd_idx == D2D_SYNC_READW) ||
+            (cmd_idx == D2D_SYNC_READB)) {
+            put_cmd->reg_val = reg_val;
             pr_dbg("0x%08x has been read from address 0x%010lx\n",
-                    cmd->reg_val, cmd->reg_addr);
+                    reg_val, reg_addr);
         } else {
             pr_dbg("0x%08x has been written to address 0x%010lx\n",
-                    cmd->reg_val, cmd->reg_addr);
+                    reg_val, reg_addr);
         }
     }
     return 0;
@@ -108,7 +114,7 @@ int d2d_sync_remote(struct d2d_sync_put_cmd *put_cmd)
     const size_t cmd_len = sizeof(struct d2d_sync_cmd);
     uint32_t cur_head = 0;
 
-    if (put_cmd->die_idx >= RHEA_DIE_MAX) 
+    if (put_cmd->die_idx >= CONFIG_RHEA_DIE_MAX) 
         return -EINVAL;
 
     pr_dbg("Write 0x%x bytes data with command %d to die%d\n",
@@ -398,7 +404,7 @@ int rhea_d2d_sync_init(void)
 
     list_init(sync_priv->cmd_list);
 
-    ioaddr = rhea_d2d_get_ioaddr();
+    ioaddr = rhea_d2d_get_dnoc_addr();
     if (ioaddr == NULL) {
 	    free(sync_priv);
         return -EFAULT;
