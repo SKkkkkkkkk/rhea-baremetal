@@ -56,6 +56,8 @@ enum rhea_d2d_lock {
     D2D_LOCK_MAX,
 };
 
+typedef void (*d2d_irq_handler_t)(uint8_t int_idx, uint32_t cmd, uint32_t data);
+
 static inline void writeb(uint8_t value, void *address)
 {
 	uintptr_t addr = (uintptr_t)address;
@@ -131,9 +133,11 @@ void rhea_d2d_release_tile(void);
  * Before enabling interrupt reception, make sure GIC_Init()
  * has been called to complete GIC initialization.
  */
-void rhea_d2d_irq_recv_enable(void (*handler)(uint32_t cmd, uint32_t data));
-int rhea_d2d_send_interrupt(uint8_t die, uint32_t timeout_ms,
-                                uint32_t cmd, uint32_t data);
+void rhea_d2d_irq_recv_enable(d2d_irq_handler_t handler);
+int rhea_d2d_send_int2ap(uint8_t die, uint32_t timeout_ms,
+                        uint8_t int_idx, uint32_t cmd, uint32_t data);
+int rhea_d2d_send_int2pcie(uint32_t timeout_ms, uint32_t cmd, 
+                            uint8_t int_idx, uint32_t data);
 void *rhea_d2d_get_dnoc_addr(void);
 void *rhea_d2d_get_cnoc_addr(void);
 int rhea_d2d_init(void);

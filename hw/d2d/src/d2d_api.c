@@ -34,18 +34,17 @@
 #define D2D_REG_CLCI2_CH_UP     (D2D_CLCI2_APB_BASE + 0x000)
 /* Mailbox interrupt */
 #define MAILBOX_IRQn            (32 + 27)
+#define MAILBOX_REG_A2B_INTEN   ((uintptr_t) (MAILBOX_BASE + 0x00))
+#define MAILBOX_REG_A2B_STATUS  ((uintptr_t) (MAILBOX_BASE + 0x04))
+#define MAILBOX_REG_A2B_CMD(x)  ((uintptr_t) (MAILBOX_BASE + 0x08 + ((x) * 0x8)))
+#define MAILBOX_REG_A2B_DAT(x)  ((uintptr_t) (MAILBOX_BASE + 0x0C + ((x) * 0x8)))
 #define MAILBOX_REG_B2A_INTEN   ((uintptr_t) (MAILBOX_BASE + 0x28))
-#define MAILBOX_INT_EN0         (1 << 0)
-#define MAILBOX_INT_EN1         (1 << 1)
-#define MAILBOX_INT_EN2         (1 << 2)
-#define MAILBOX_INT_EN3         (1 << 3)
 #define MAILBOX_REG_B2A_STATUS  ((uintptr_t) (MAILBOX_BASE + 0x2C))
-#define MAILBOX_CLEAR_INT0      (1 << 0)
-#define MAILBOX_CLEAR_INT1      (1 << 1)
-#define MAILBOX_CLEAR_INT2      (1 << 2)
-#define MAILBOX_CLEAR_INT3      (1 << 3)
-#define MAILBOX_REG_B2A_CMD0    ((uintptr_t) (MAILBOX_BASE + 0x30))
-#define MAILBOX_REG_B2A_DAT0    ((uintptr_t) (MAILBOX_BASE + 0x34))
+#define MAILBOX_REG_B2A_CMD(x)  ((uintptr_t) (MAILBOX_BASE + 0x30 + ((x) * 0x8)))
+#define MAILBOX_REG_B2A_DAT(x)  ((uintptr_t) (MAILBOX_BASE + 0x34 + ((x) * 0x8)))
+#define MAILBOX_INT_EN(x)       (1 << (x))
+#define MAILBOX_CLEAR_INT(x)    (1 << (x))
+#define MAILBOX_INT_IDX_MAX     (4)
 
 #define AP_SYS_TILE_ID          (0x04)
 
@@ -242,37 +241,72 @@ void rhea_d2d_release_tile(void)
     }
 }
 
-static void (*d2d_irqhandler)(uint32_t cmd, uint32_t data);
-static void __d2d_irqhandler(void)
+static inline int find_bit(uint8_t val)
 {
-    d2d_irqhandler(readl((void *) MAILBOX_REG_B2A_CMD0),
-                    readl((void *) MAILBOX_REG_B2A_DAT0));
-    writel(MAILBOX_CLEAR_INT0, (void *) MAILBOX_REG_B2A_STATUS);
+    for (uint8_t i = 0; i < MAILBOX_INT_IDX_MAX; i++) {
+        if (val & (1 << i)) {
+            return i;
+        }
+    }
+    return -1;
 }
 
-void rhea_d2d_irq_recv_enable(void (*handler)(uint32_t cmd, uint32_t data))
+static d2d_irq_handler_t d2d_irq_handler;
+static void __d2d_irqhandler(void)
+{
+    int8_t int_idx;
+    
+    int_idx = readl((void *) MAILBOX_REG_B2A_STATUS);
+    int_idx = find_bit(int_idx);
+    assert(int_idx >= 0);
+    d2d_irq_handler(int_idx, readl((void *) MAILBOX_REG_B2A_CMD(int_idx)),
+                    readl((void *) MAILBOX_REG_B2A_DAT(int_idx)));
+    writel(MAILBOX_CLEAR_INT(int_idx), (void *) MAILBOX_REG_B2A_STATUS);
+}
+
+void rhea_d2d_irq_recv_enable(d2d_irq_handler_t handler)
 {
     assert(handler != NULL);
 
-    d2d_irqhandler = handler;
+    d2d_irq_handler = handler;
 	GIC_SetRouting(MAILBOX_IRQn, getAffinity(), 0);
 	IRQ_SetHandler(MAILBOX_IRQn, __d2d_irqhandler);
 	GIC_SetPriority(MAILBOX_IRQn, 2 << 3);
 	GIC_EnableIRQ(MAILBOX_IRQn);
 }
 
-int rhea_d2d_send_interrupt(uint8_t die, uint32_t timeout_ms,
-                                uint32_t cmd, uint32_t data)
+int rhea_d2d_send_int2ap(uint8_t die, uint32_t timeout_ms,
+                        uint8_t int_idx, uint32_t cmd, uint32_t data)
 {
     int ret;
-    pr_dbg("Send interrupt to die%d with cmd(0x%x) and data(0x%x)\n", 
-            RHEA_DIE_IDX2ID(die), cmd, data);
+
+    assert(int_idx < MAILBOX_INT_IDX_MAX);
+    pr_dbg("Send int%d to AP in die%d with cmd(0x%x) and data(0x%x)\n", 
+            int_idx, RHEA_DIE_IDX2ID(die), cmd, data);
 
     ret = rhea_d2d_select_tile(die, AP_SYS_TILE_ID, timeout_ms);
     if (ret) return ret;
-    rhea_d2d_writel(MAILBOX_INT_EN0, MAILBOX_REG_B2A_INTEN);
-    rhea_d2d_writel(cmd, MAILBOX_REG_B2A_CMD0);
-    rhea_d2d_writel(data, MAILBOX_REG_B2A_DAT0);
+    rhea_d2d_writel(MAILBOX_INT_EN(int_idx), MAILBOX_REG_B2A_INTEN);
+    rhea_d2d_writel(cmd, MAILBOX_REG_B2A_CMD(int_idx));
+    rhea_d2d_writel(data, MAILBOX_REG_B2A_DAT(int_idx));
+    rhea_d2d_release_tile();
+    return ret;
+}
+
+int rhea_d2d_send_int2pcie(uint32_t timeout_ms, uint32_t cmd, 
+                            uint8_t int_idx, uint32_t data)
+{
+    int ret;
+
+    assert(int_idx < MAILBOX_INT_IDX_MAX);
+    pr_dbg("Send int%d to PCIE with cmd(0x%x) and data(0x%x)\n", 
+            int_idx, cmd, data);
+
+    ret = rhea_d2d_select_tile(RHEA_DIE0_IDX, AP_SYS_TILE_ID, timeout_ms);
+    if (ret) return ret;
+    rhea_d2d_writel(MAILBOX_INT_EN(int_idx), MAILBOX_REG_A2B_INTEN);
+    rhea_d2d_writel(cmd, MAILBOX_REG_A2B_CMD(int_idx));
+    rhea_d2d_writel(data, MAILBOX_REG_A2B_DAT(int_idx));
     rhea_d2d_release_tile();
     return ret;
 }

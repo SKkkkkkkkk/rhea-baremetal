@@ -468,10 +468,10 @@ static int d2d_sync_uart_test(void)
     return 0;
 }
 
-static void d2d_irq_handler(uint32_t cmd, uint32_t data)
+static void d2d_irq_handler(uint8_t int_idx, uint32_t cmd, uint32_t data)
 {
-    printf("%s (cmd=0x%x, data=0x%x)\n",
-        __func__, cmd, data);
+    printf("%s (int_idx=0x%x, cmd=0x%x, data=0x%x)\n",
+        __func__, int_idx, cmd, data);
 }
 
 #define Timerx6_T1_IRQn (32)
@@ -480,10 +480,11 @@ static volatile uint32_t timer_cmd = 0;
 static volatile uint32_t timer_data = 0;
 void timerx6_t1_irqhandler(void)
 {
+    uint8_t int_idx = timer_cmd % 4;
 	(void)TIMERX6->Timer1EOI;
-    printf("send interrupt(cmd=0x%x, data=0x%x)\n",
-            timer_cmd, timer_data);
-	rhea_d2d_send_interrupt(RHEA_DIE0_IDX, 0, 
+    printf("send interrupt(int_idx=0x%x, cmd=0x%x, data=0x%x)\n",
+            int_idx, timer_cmd, timer_data);
+	rhea_d2d_send_int2ap(RHEA_DIE0_IDX, 0, int_idx, 
                             timer_cmd++, timer_data--);
     if (timer_cmd > 5) timer_disable(Timerx6_T1);
 }
