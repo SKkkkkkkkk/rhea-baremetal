@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <errno.h>
 
 #include "d2d_test.h"
 #include "d2d_api.h"
@@ -12,9 +13,8 @@ static inline void delay(uint32_t value)
 		for(j = 0; j < 1000; j++);
 }
 
-int run_die0_test(void)
+int die0_basic_rw_test(void)
 {
-	int ret;
 	uint32_t val;
 
 	delay(5);	// waiting for die1 ready
@@ -67,9 +67,21 @@ int run_die0_test(void)
 	return 0;
 }
 
-int run_die1_test(void)
+int run_die0_test(void)
 {
-	int ret;
+    int ret;
+
+    ret = die0_basic_rw_test();
+    if (ret) {
+        printf("[%d]%s error %d\n", __LINE__, __func__, ret);
+        return ret;
+    }
+    return 0;
+}
+
+int die1_basic_rw_test(void)
+{
+    int ret = 0, i;
 	uint32_t val;
 
 	writel(0, (void *) (uintptr_t) 0x3800000208);
@@ -84,27 +96,50 @@ int run_die1_test(void)
 	writel(0, (void *) (uintptr_t) 0x3740000000);
 	writel(0, (void *) (uintptr_t) 0x3740000010);
 
-	while (1) {
-		printf("[%d]%s 0x0040000000: 0x%x\n", __LINE__, __func__, 
-				readl((void *) (uintptr_t) 0x0040000000));
-		printf("[%d]%s 0x0040000010: 0x%x\n", __LINE__, __func__, 
-				readl((void *) (uintptr_t) 0x0040000010));
-		printf("[%d]%s 0x2640000000: 0x%x\n", __LINE__, __func__, 
-				readl((void *) (uintptr_t) 0x2640000000));
-		printf("[%d]%s 0x2640000010: 0x%x\n", __LINE__, __func__, 
-				readl((void *) (uintptr_t) 0x2640000010));
-		printf("[%d]%s 0x2740000000: 0x%x\n", __LINE__, __func__, 
-				readl((void *) (uintptr_t) 0x2740000000));
-		printf("[%d]%s 0x2740000010: 0x%x\n", __LINE__, __func__, 
-				readl((void *) (uintptr_t) 0x2740000010));
-		printf("[%d]%s 0x3640000000: 0x%x\n", __LINE__, __func__, 
-				readl((void *) (uintptr_t) 0x3640000000));
-		printf("[%d]%s 0x3640000010: 0x%x\n", __LINE__, __func__, 
-				readl((void *) (uintptr_t) 0x3640000010));
-		printf("[%d]%s 0x3740000000: 0x%x\n", __LINE__, __func__, 
-				readl((void *) (uintptr_t) 0x3740000000));
-		printf("[%d]%s 0x3740000010: 0x%x\n", __LINE__, __func__, 
-				readl((void *) (uintptr_t) 0x3740000010));
+	for (i = 0; i < 5; i++) {
+		val = readl((void *) (uintptr_t) 0x0040000000);
+        if (val == 0xaa55aa55) ret++;
+		printf("[%d]%s 0x0040000000: 0x%x\n", __LINE__, __func__, val);
+		val = readl((void *) (uintptr_t) 0x0040000010);
+        if (val == 0x12345678) ret++;
+		printf("[%d]%s 0x0040000010: 0x%x\n", __LINE__, __func__, val);
+		val = readl((void *) (uintptr_t) 0x2640000000);
+        if (val == 0xaa55aa55) ret++;
+		printf("[%d]%s 0x2640000000: 0x%x\n", __LINE__, __func__, val);
+		val = readl((void *) (uintptr_t) 0x2640000010);
+        if (val == 0x12345678) ret++;
+		printf("[%d]%s 0x2640000010: 0x%x\n", __LINE__, __func__, val);
+		val = readl((void *) (uintptr_t) 0x2740000000);
+        if (val == 0xaa55aa55) ret++;
+		printf("[%d]%s 0x2740000000: 0x%x\n", __LINE__, __func__, val);
+		val = readl((void *) (uintptr_t) 0x2740000010);
+        if (val == 0x12345678) ret++;
+		printf("[%d]%s 0x2740000010: 0x%x\n", __LINE__, __func__, val);
+		val = readl((void *) (uintptr_t) 0x3640000000);
+        if (val == 0xaa55aa55) ret++;
+		printf("[%d]%s 0x3640000000: 0x%x\n", __LINE__, __func__, val);
+		val = readl((void *) (uintptr_t) 0x3640000010);
+        if (val == 0x12345678) ret++;
+		printf("[%d]%s 0x3640000010: 0x%x\n", __LINE__, __func__, val);
+		val = readl((void *) (uintptr_t) 0x3740000000);
+        if (val == 0xaa55aa55) ret++;
+		printf("[%d]%s 0x3740000010: 0x%x\n", __LINE__, __func__, val);
+		val = readl((void *) (uintptr_t) 0x3740000010);
+        if (val == 0x12345678) ret++;
+		printf("[%d]%s 0x3740000000: 0x%x\n", __LINE__, __func__, val);
+        if (ret == 10) return 0;
 	}
-	return 0;
+	return -ETIMEDOUT;
+}
+
+int run_die1_test(void)
+{
+    int ret;
+
+    ret = die1_basic_rw_test();
+    if (ret) {
+        printf("[%d]%s error %d\n", __LINE__, __func__, ret);
+        return ret;
+    }
+    return 0;
 }

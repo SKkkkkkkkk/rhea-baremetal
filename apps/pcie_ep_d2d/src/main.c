@@ -1461,7 +1461,7 @@ int main()
 
 	// tell pld confige done
 	writel(0x4, 0x12000fec);
-	printf("die%d: all npu done\n", CONFIG_RHEA_D2D_SELF_ID);
+	printf("die%d: configuration done\n", CONFIG_RHEA_D2D_SELF_ID);
 
 #if CONFIG_RHEA_D2D_SELF_ID == 0
 	run_die0_test();
