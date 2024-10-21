@@ -8,7 +8,7 @@
 #include "dw_apb_gpio.h"
 #include "utils_def.h"
 #include "d2d_api.h"
-#include "delay.h"
+#include "d2d_test.h"
 
 /*                                   This is BAR Define
 ┌────┬─────┬────────────────┬────┬───────────────────┬────────────────┬───────────────┬───────────┐
@@ -300,6 +300,14 @@ uint64_t get_pcie_base(uint32_t pcie_sel) {
 		printf("pcie_sel error !!!\n");
 		return 0;
 	}
+}
+
+static inline void delay(uint32_t value)
+{
+	volatile uint32_t i, j;
+
+	for(i = 0; i < value; i++)
+		for(j = 0; j < 1000; j++);
 }
 
 static inline void writel(uint32_t value, uint32_t address)
@@ -1439,9 +1447,11 @@ int main()
 	uint32_t cnt = 0;
 	struct HAL_PCIE_HANDLE *pcie = &s_pcie;
 
+	printf("\n\nRunning in die%d\n", CONFIG_RHEA_D2D_SELF_ID);
 	//init r0c3 pcie as ep
 	pcie_r0c3_config_ep();
 
+	mc_init(TCM_04_CFG_BASE, 4);
 	mc_init(TCM_26_CFG_BASE, 4);
 	mc_init(TCM_27_CFG_BASE, 4);
 	mc_init(TCM_36_CFG_BASE, 4);
@@ -1453,6 +1463,11 @@ int main()
 	writel(0x4, 0x12000fec);
 	printf("die%d: all npu done\n", CONFIG_RHEA_D2D_SELF_ID);
 
+#if CONFIG_RHEA_D2D_SELF_ID == 0
+	run_die0_test();
+#else
+	run_die1_test();
+#endif
 	while (1);
 
 #if SEEHI_FPGA_PCIE_TEST
