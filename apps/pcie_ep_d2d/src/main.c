@@ -319,18 +319,18 @@ static inline uint32_t readl(uint32_t address)
 	return value;
 }
 
-static inline void writeq(uint64_t value, uint64_t address)
+static inline void writeq(uint32_t value, uint64_t address)
 {
 	uintptr_t addr = (uintptr_t)address;
 
 	// printf("writeq addr 0x%lx value 0x%x\n", addr, value);
-	*((volatile uint64_t *)(addr)) = value;
+	*((volatile uint32_t *)(addr)) = value;
 }
 
-static inline uint64_t readq(uint64_t address)
+static inline uint32_t readq(uint64_t address)
 {
 	uintptr_t addr = (uintptr_t)address;
-	uint64_t value = *((volatile uint64_t *)(addr));
+	uint32_t value = *((volatile uint32_t *)(addr));
 
 	// printf("readq addr 0x%lx value 0x%x\n", addr, value);
 	return value;
@@ -1395,106 +1395,42 @@ struct HAL_PCIE_DEV g_pcieDevX8 =
 	.vdmIrqNum = 205,
 };
 
-#define reg32(addr) (*(volatile uint32_t *)(uintptr_t)(addr))
-#define D2D_SYS_CFG_38 0x9C00000000ULL
-
 void mc_init(uint64_t addr, uint8_t layer)
 {
     uint32_t i, j, k;
 
 	// global
 	if (layer == 4) {
-		reg32(addr+0x00013054) = 0x00000000;
-		reg32(addr+0x00013004) = 0x00001000;
-		reg32(addr+0x00013004) = 0x80001000;
+		writeq(0x00000000, addr+0x00013054);
+		writeq(0x00001000, addr+0x00013004);
+		writeq(0x80001000, addr+0x00013004);
 	} else {
-		reg32(addr+0x00013054) = 0x00000000;
-		reg32(addr+0x00013004) = 0x00000010;
-		reg32(addr+0x00013004) = 0x80000010;
+		writeq(0x00000000, addr+0x00013054);
+		writeq(0x00000010, addr+0x00013004);
+		writeq(0x80000010, addr+0x00013004);
 	}
 
 	// bank
 	for (i = 0; i < 72; i++) {
 		j = i / 18;
 		k = i + j; // skip hub regs
-		reg32(addr+k*0x400+0x004) = 0x00000005;
-		reg32(addr+k*0x400+0x004) = 0x00000001;
-		reg32(addr+k*0x400+0x004) = 0x80000001;
+		writeq(0x00000005, addr+k*0x400+0x004);
+		writeq(0x00000001, addr+k*0x400+0x004);
+		writeq(0x80000001, addr+k*0x400+0x004);
 	}
 }
 
-void clci_wr_reg(uint32_t addr,uint32_t dat){ //{{{
-  reg32(D2D_SYS_CFG_38+addr) = dat;
-  // printf("write addr:0x%x , write data:0x%x\n",addr,dat);
-} //}}}
-
-void clci_rd_3c_reg(uint32_t addr,uint32_t exp){ //{{{
-  uint32_t temp;
-  uint32_t num;
-  num =1;
-  while(1) {
-    temp = reg32(D2D_SYS_CFG_38+addr);
-    if((temp & exp) == exp) {
-      printf("read addr:0x%x,dat:0x%x,wait done\n",addr,temp);
-      break;
-    }
-    printf("read addr:0x%x,dat:0x%x,wait_for:0x%x -- udelay_num:%0d\n",addr,temp,exp,num);
-    udelay(100);
-    num++;
-    if(num == 10000) {
-      printf("read addr:0x%x for:0x%x timeout, read:0x%x\n",addr,exp,temp);
-    }
-  }
-  printf("read addr:0x%x all done\n",addr);
-	reg32(0x12000fec) = __LINE__;
-} //}}}
-
-void pcie_r0c3_config_ep() { //{{{
-
-  reg32(DWC_PCIE_CTL_X16_DBI        +0x08bc) = 0xbff49;    //ro_wr_en
-  reg32(DWC_PCIE_CTL_X16_DBI        +0x00a0) = 0x1010003;  //LINK_CONTROL2_LINK_STATUS2_REG.TARGET_LINK_SPEED=3
-  reg32(DWC_PCIE_CTL_X16_DBI        +0x0890) = 0x00402200; //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
-  reg32(DWC_PCIE_CTL_X16_DBI        +0x08a8) = 0x4d004071; //GEN3_EQ_CONTROL_OFF
-  reg32(DWC_PCIE_CTL_X16_DBI        +0x0078) = 0x102130;   //PCIE_CAP_MAX_PAYLOAD_SIZE_CS
-  reg32(PCIE_X16_REG+0x0104) = 0 ;//RC or EP
-  reg32(PCIE_X16_REG+0x0110) = 0 ;//close fast link
-  reg32(PCIE_X16_REG+0x0100) = 0x25;       //link enable
-
-} //}}}
-
-#define SYSCTRL_CFG_BASE      0x12000000
-#define SYS_CLCI_PLL_DIV_ADDR          (SYSCTRL_CFG_BASE+0x1d8)
-#define SYS_CLCI_CFG_DIV_ADDR          (SYSCTRL_CFG_BASE+0x1dc)
-#define SYS_CLCI_AXI_DIV_ADDR          (SYSCTRL_CFG_BASE+0x1e0)
-#define SYS_CLCI_SCAN_20_DIV_ADDR      (SYSCTRL_CFG_BASE+0x1e4)
-#define SYS_CLCI_SCAN_80_DIV_ADDR      (SYSCTRL_CFG_BASE+0x1e8)
-#define SYS_PM_DIV_ADDR                (SYSCTRL_CFG_BASE+0x1ec)
-#define SYS_C2C_DFT_DIV_ADDR           (SYSCTRL_CFG_BASE+0x1f0)
-#define SYS_CLCI_MCU_DIV_ADDR          (SYSCTRL_CFG_BASE+0x1f4)
-void d2d_link_config() { //{{{         
-  reg32(SYSCTRL_CFG_BASE+0x104)    = 0xffcc400;     
-  reg32(SYS_CLCI_PLL_DIV_ADDR)     = 1;             
-  reg32(SYS_CLCI_CFG_DIV_ADDR)     = 1;             
-  reg32(SYS_CLCI_AXI_DIV_ADDR)     = 1;             
-  reg32(SYS_CLCI_SCAN_20_DIV_ADDR) = 1;             
-  reg32(SYS_CLCI_SCAN_80_DIV_ADDR) = 1;             
-  reg32(SYS_CLCI_MCU_DIV_ADDR)     = 1;  
-
-  printf("clci clk enable done\n");   
-  for(int k=0;k<4;k++){                  //clci num
-      clci_wr_reg(0x00000300+k*0x100,0); //clci_apb_dbg:clci apb mux 路径选择
-      clci_wr_reg(0x00000304+k*0x100,k); //clci chiplet_id
-      clci_wr_reg(0x00000308+k*0x100,k); //clci i2c_id
-  }
-  printf(" clci wait training_end\n");
-
-  for(int k=0;k<4;k++) {
-    clci_rd_3c_reg(0x20200000+0x30000+k*0x200000+0x0000003c,0x00001c00);
-  }                                                     
-  printf(" clci training_end done \n");
-
-
-} //}}}
+void pcie_r0c3_config_ep()
+{
+	writeq(0xbff49, DWC_PCIE_CTL_X16_DBI+0x08bc); //ro_wr_en
+	writeq(0x1010003, DWC_PCIE_CTL_X16_DBI+0x00a0); //LINK_CONTROL2_LINK_STATUS2_REG.TARGET_LINK_SPEED=3
+	writeq(0x00402200, DWC_PCIE_CTL_X16_DBI+0x0890); //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
+	writeq(0x4d004071, DWC_PCIE_CTL_X16_DBI+0x08a8); //GEN3_EQ_CONTROL_OFF
+	writeq(0x102130, DWC_PCIE_CTL_X16_DBI+0x0078); //PCIE_CAP_MAX_PAYLOAD_SIZE_CS
+	writeq(0, PCIE_X16_REG+0x0104); //RC or EP
+	writeq(0, PCIE_X16_REG+0x0110); //close fast link
+	writeq(0x25, PCIE_X16_REG+0x0100); //link enable
+}
 
 int main()
 {
@@ -1511,23 +1447,13 @@ int main()
 	mc_init(TCM_36_CFG_BASE, 4);
 	mc_init(TCM_37_CFG_BASE, 4);
 
-	d2d_link_config();
+	rhea_d2d_init();
 
-	reg32(0x9c00000200) = 0x00000000;//write mode0
-	reg32(0x9c00000204) = 0x00000001;//write postw_en 0/1 okd
-	reg32(0x9c0000020c) = 0x00000000;//write rx_group0
-	reg32(0x9c00000210) = 0x00000001;//write rx_group1                                 
-	reg32(0x9c00000214) = 0x00000000;//write tx_greop0
-	reg32(0x9c00000218) = 0x00000001;//write tx_group1
-	reg32(0x9c00000704) = 0x00000001;//write dniu use post write
-	// rhea_d2d_init();
+	// tell pld confige done
+	writel(0x4, 0x12000fec);
+	printf("die%d: all npu done\n", CONFIG_RHEA_D2D_SELF_ID);
 
-	// pass; tell pld confige done
-	reg32(0x12000fec) =0x4;
-	while(1) {
-		printf("die%d: all npu done\n", CONFIG_RHEA_D2D_SELF_ID);
-		delay(10);
-	}
+	while (1);
 
 #if SEEHI_FPGA_PCIE_TEST
 	s_pcie.dev = &g_pcieDevX8;

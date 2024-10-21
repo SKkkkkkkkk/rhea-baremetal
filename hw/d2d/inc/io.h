@@ -32,13 +32,11 @@ static inline uint16_t readw(void *address)
 	return *((volatile uint16_t *)(addr));
 }
 
-#define reg32(addr) (*(volatile uint32_t *)(uintptr_t)(addr))
 static inline void writel(uint32_t value, void *address)
 {
 	uintptr_t addr = (uintptr_t)address;
 
 	*((volatile uint32_t *)(addr)) = value;
-    printf("%s 0x%lx 0x%x 0x%x\n", __func__, addr, value, reg32(addr));
 }
 
 static inline uint32_t readl(void *address)

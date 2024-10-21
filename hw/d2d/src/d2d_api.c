@@ -350,7 +350,6 @@ void *rhea_d2d_get_cnoc_addr(void)
     return d2d_cnoc;
 }
 
-#define reg32(addr) (*(volatile uint32_t *)(uintptr_t)(addr))
 int rhea_d2d_init(void)
 {
     enum clci_idx clci_idx;
@@ -368,31 +367,31 @@ int rhea_d2d_init(void)
     writel(1, (void *) SYSCTRL_CLCI_SCAN_20_DIV);
     writel(1, (void *) SYSCTRL_CLCI_SCAN_80_DIV);
     writel(1, (void *) SYSCTRL_CLCI_MCU_DIV);
-  printf("clci clk enable done\n");   
+    printf("CLCI clock enable done\n");
 
     /* CLCI configuration */
     for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
-        rhea_d2d_cfg_writel(RHEA_DIE_SELF, 1, 
+        rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0, 
                             D2D_REG_CLCIx_APB_MUX(clci_idx));
         rhea_d2d_cfg_writel(RHEA_DIE_SELF, clci_idx, 
                             D2D_REG_CLCIx_CHIPLET_ID(clci_idx));
         rhea_d2d_cfg_writel(RHEA_DIE_SELF, clci_idx, 
                             D2D_REG_CLCIx_I2C_ID(clci_idx));
     }
-  printf(" clci wait training_end\n");
+    printf("CLCI configuration done\n");
 
+    printf("CLCI waiting for training_end ");
     for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
         while (1) {
-            printf("[%d]%s timeout %d\n", __LINE__, __func__, timeout);
             tmp_val = rhea_d2d_cfg_readl(RHEA_DIE_SELF, 
                             CLCIx_AHB_BASE(clci_idx) + 0x3003c);
-            printf("[%d]%s tmp_val 0x%x\n", __LINE__, __func__, tmp_val);
+            printf(".");
             if ((tmp_val & 0x00001c00) == 0x00001c00) break;
             if (!timeout--) return -ETIMEDOUT;
-            // udelay(100);
+            udelay(10);
         }
-    }         
-  printf(" clci training_end done \n");
+    }
+    printf(" done\n");
 
     /* D2D configuration */
     rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x0, D2D_REG_CFG_WORK_MODE);
@@ -402,5 +401,6 @@ int rhea_d2d_init(void)
     rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x0, D2D_REG_CFG_TX_SEL_GRP0);
     rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x1, D2D_REG_CFG_TX_SEL_GRP1);
     rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x1, D2D_REG_CFG_DNIU_POSTW);
+    printf("D2D configuration done\n");
     return 0;
 }
