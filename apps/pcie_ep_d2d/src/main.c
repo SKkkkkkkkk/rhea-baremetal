@@ -1446,6 +1446,7 @@ int main()
 	uint32_t result = HAL_ERROR;
 	uint32_t cnt = 0;
 	struct HAL_PCIE_HANDLE *pcie = &s_pcie;
+	int ret;
 
 	printf("\n\nRunning in die%d\n", CONFIG_RHEA_D2D_SELF_ID);
 	//init r0c3 pcie as ep
@@ -1464,10 +1465,11 @@ int main()
 	printf("die%d: configuration done\n", CONFIG_RHEA_D2D_SELF_ID);
 
 #if CONFIG_RHEA_D2D_SELF_ID == 0
-	run_die0_test();
+	ret = run_die0_test();
 #else
-	run_die1_test();
+	ret = run_die1_test();
 #endif
+	printf("die%d test finished (%d)\n", CONFIG_RHEA_D2D_SELF_ID, ret);
 	while (1);
 
 #if SEEHI_FPGA_PCIE_TEST
