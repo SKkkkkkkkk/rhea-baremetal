@@ -8,6 +8,7 @@
 #include "delay.h"
 #include "memmap.h"
 #include "gicv3.h"
+#include "io.h"
 
 #define D2D_DNOC_BASE           (0x3800000000)
 #define D2D_CNOC_BASE           (0x9C00000000)
@@ -16,22 +17,41 @@
 #define D2D_DIE_MAX             (4)
 #define D2D_CFG_REG_MASK        (D2D_DIE_OFFSET(D2D_DIE_MAX) - 1)
 /* CLCI bridge working mode */
-#define D2D_REG_WORK_MODE       (0x0200)
+#define D2D_REG_CFG_WORK_MODE   (0x0200)
 #define D2D_WORK_MODE0          (0x0)   /* 2 die normal mode */
 #define D2D_WORK_MODE1          (0x1)   /* 2 die retention mode */
 #define D2D_WORK_MODE2          (0x2)   /* 4 die normal mode */
 #define D2D_WORK_MODE3          (0x3)   /* 4 die retention mode */
 #define D2D_WORK_MODE_MASK      (0x3)
+#define D2D_REG_CFG_POSTW_EN    (0x0204)
 /* Destination tile ID of the data received by CLCI */
 #define D2D_REG_CFG_TILE_ID     (0x0208)
+#define D2D_REG_CFG_RX_SEL_GRP0 (0x020C)
+#define D2D_REG_CFG_RX_SEL_GRP1 (0x0210)
+#define D2D_REG_CFG_TX_SEL_GRP0 (0x0214)
+#define D2D_REG_CFG_TX_SEL_GRP1 (0x0218)
+#define D2D_REG_CLCIx_APB_MUX(x)    (0x0300 + (x) * 0x0100)
+#define D2D_REG_CLCIx_CHIPLET_ID(x) (0x0304 + (x) * 0x0100)
+#define D2D_REG_CLCIx_I2C_ID(x) (0x0308 + (x) * 0x0100)
+#define D2D_REG_CFG_DNIU_POSTW  (0x0704)
 /* D2D lock */
 #define D2D_REG_LOCK_BASE       (0x0800)
 #define D2D_REG_LOCK(idx)       (D2D_REG_LOCK_BASE + (((idx) & 0xf) << 7))
+/* CLCIx_APB */
+#define CLCIx_APB_BASE(x)       (0x20040000 + (x) * 0x20000)
+#define CLCIx_APB_REG(x, reg)   (CLCIx_APB_BASE(x) + CLCI_REG_##reg)
+/* CLCIx_AHB */
+#define CLCIx_AHB_BASE(x)       (0x20200000 + (x) * 0x200000)
 
-#define D2D_CLCI0_APB_BASE      (0x20040000)
-#define D2D_REG_CLCI0_CH_UP     (D2D_CLCI0_APB_BASE + 0x000)
-#define D2D_CLCI2_APB_BASE      (0x20080000)
-#define D2D_REG_CLCI2_CH_UP     (D2D_CLCI2_APB_BASE + 0x000)
+/* Sysctrl CLCI about */
+#define SYSCTRL_CLCI_CLK_EN1    ((uintptr_t) (SYSCTRL_BASE + 0x104))
+#define SYSCTRL_CLCI_PLL_DIV    ((uintptr_t) (SYSCTRL_BASE + 0x1D8))
+#define SYSCTRL_CLCI_CFG_DIV    ((uintptr_t) (SYSCTRL_BASE + 0x1DC))
+#define SYSCTRL_CLCI_AXI_DIV    ((uintptr_t) (SYSCTRL_BASE + 0x1E0))
+#define SYSCTRL_CLCI_SCAN_20_DIV    ((uintptr_t) (SYSCTRL_BASE + 0x1E4))
+#define SYSCTRL_CLCI_SCAN_80_DIV    ((uintptr_t) (SYSCTRL_BASE + 0x1E8))
+#define SYSCTRL_CLCI_MCU_DIV    ((uintptr_t) (SYSCTRL_BASE + 0x1F4))
+
 /* Mailbox interrupt */
 #define MAILBOX_IRQn            (32 + 27)
 #define MAILBOX_REG_A2B_INTEN   ((uintptr_t) (MAILBOX_BASE + 0x00))
@@ -48,16 +68,25 @@
 
 #define AP_SYS_TILE_ID          (0x04)
 
+enum clci_idx {
+    CLCI0,
+    CLCI1,
+    CLCI2,
+    CLCI3,
+
+    CLCI_MAX,
+};
+
 static void *d2d_dnoc = NULL;
 static void *d2d_cnoc = NULL;
 
-static inline void rhea_d2d_cfg_writel(uint8_t die, uint32_t val, uint32_t offset)
+void rhea_d2d_cfg_writel(uint8_t die, uint32_t val, uint32_t offset)
 {
     void *ioaddr = (die == RHEA_DIE_SELF) ? d2d_cnoc : d2d_dnoc;
     writel(val, ioaddr + D2D_DIE_OFFSET(die) + offset);
 }
 
-static inline uint32_t rhea_d2d_cfg_readl(uint8_t die, uint32_t offset)
+uint32_t rhea_d2d_cfg_readl(uint8_t die, uint32_t offset)
 {
     void *ioaddr = (die == RHEA_DIE_SELF) ? d2d_cnoc : d2d_dnoc;
     return readl(ioaddr + D2D_DIE_OFFSET(die) + offset);
@@ -321,22 +350,57 @@ void *rhea_d2d_get_cnoc_addr(void)
     return d2d_cnoc;
 }
 
+#define reg32(addr) (*(volatile uint32_t *)(uintptr_t)(addr))
 int rhea_d2d_init(void)
 {
+    enum clci_idx clci_idx;
+    uint32_t timeout = 1000;
+    uint32_t tmp_val;
+
     d2d_dnoc = (void *) D2D_DNOC_BASE;
     d2d_cnoc = (void *) D2D_CNOC_BASE;
-    if (CONFIG_RHEA_D2D_WORK_MODE & ~D2D_WORK_MODE_MASK) {
-        printf("Unsupported mode %d\n", CONFIG_RHEA_D2D_WORK_MODE);
-        return -EINVAL;
+
+    /* Sysctrl configuration */
+    writel(0xffcc400, (void *) SYSCTRL_CLCI_CLK_EN1);
+    writel(1, (void *) SYSCTRL_CLCI_PLL_DIV);
+    writel(1, (void *) SYSCTRL_CLCI_CFG_DIV);
+    writel(1, (void *) SYSCTRL_CLCI_AXI_DIV);
+    writel(1, (void *) SYSCTRL_CLCI_SCAN_20_DIV);
+    writel(1, (void *) SYSCTRL_CLCI_SCAN_80_DIV);
+    writel(1, (void *) SYSCTRL_CLCI_MCU_DIV);
+  printf("clci clk enable done\n");   
+
+    /* CLCI configuration */
+    for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
+        rhea_d2d_cfg_writel(RHEA_DIE_SELF, 1, 
+                            D2D_REG_CLCIx_APB_MUX(clci_idx));
+        rhea_d2d_cfg_writel(RHEA_DIE_SELF, clci_idx, 
+                            D2D_REG_CLCIx_CHIPLET_ID(clci_idx));
+        rhea_d2d_cfg_writel(RHEA_DIE_SELF, clci_idx, 
+                            D2D_REG_CLCIx_I2C_ID(clci_idx));
     }
-    rhea_d2d_cfg_writel(RHEA_DIE_SELF, 
-                CONFIG_RHEA_D2D_WORK_MODE, D2D_REG_WORK_MODE);
+  printf(" clci wait training_end\n");
 
-    if (!rhea_d2d_cfg_readl(RHEA_DIE_SELF, D2D_REG_CLCI0_CH_UP) ||
-        !rhea_d2d_cfg_readl(RHEA_DIE_SELF, D2D_REG_CLCI2_CH_UP))
-        return -EFAULT;
+    for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
+        while (1) {
+            printf("[%d]%s timeout %d\n", __LINE__, __func__, timeout);
+            tmp_val = rhea_d2d_cfg_readl(RHEA_DIE_SELF, 
+                            CLCIx_AHB_BASE(clci_idx) + 0x3003c);
+            printf("[%d]%s tmp_val 0x%x\n", __LINE__, __func__, tmp_val);
+            if ((tmp_val & 0x00001c00) == 0x00001c00) break;
+            if (!timeout--) return -ETIMEDOUT;
+            // udelay(100);
+        }
+    }         
+  printf(" clci training_end done \n");
 
-    printf("Working in mode %d\n", CONFIG_RHEA_D2D_WORK_MODE);
-
+    /* D2D configuration */
+    rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x0, D2D_REG_CFG_WORK_MODE);
+    rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x1, D2D_REG_CFG_POSTW_EN);
+    rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x0, D2D_REG_CFG_RX_SEL_GRP0);
+    rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x1, D2D_REG_CFG_RX_SEL_GRP1);
+    rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x0, D2D_REG_CFG_TX_SEL_GRP0);
+    rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x1, D2D_REG_CFG_TX_SEL_GRP1);
+    rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x1, D2D_REG_CFG_DNIU_POSTW);
     return 0;
 }

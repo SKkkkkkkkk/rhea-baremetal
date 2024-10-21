@@ -9,6 +9,7 @@
 #include "list.h"
 #include "delay.h"
 #include "crc.h"
+#include "io.h"
 
 #define RHEA_AP_TILE_ID         0x04
 

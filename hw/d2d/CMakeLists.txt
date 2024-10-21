@@ -20,9 +20,12 @@ target_link_libraries(${TARGET_NAME}
 		gicv3
 )
 
+if(NOT DEFINED SELF_DIE_ID)
+    set(SELF_DIE_ID 0)
+endif()
+
 target_compile_definitions(d2d PUBLIC CONFIG_RHEA_DIE_MAX=2)
-target_compile_definitions(d2d PUBLIC CONFIG_RHEA_D2D_SELF_ID=0)
-target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_WORK_MODE=1)
+target_compile_definitions(d2d PUBLIC CONFIG_RHEA_D2D_SELF_ID=${SELF_DIE_ID})
 target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_HEADER_ADDR=0x48000000)
 target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_CMD_ADDR=0x48000010)
 target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_CMD_SIZE=0x960)

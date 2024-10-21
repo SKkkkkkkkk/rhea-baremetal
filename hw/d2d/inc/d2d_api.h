@@ -10,6 +10,7 @@
 #define pr_dbg(fmt, ...)    do {} while (0)
 #endif
 
+/* Physical ID (the die connected to PCIE is die0) */
 enum rhea_die_id {
     RHEA_DIE0_ID = 0,
 #if CONFIG_RHEA_DIE_MAX > 1
@@ -23,12 +24,15 @@ enum rhea_die_id {
     RHEA_DIE_ID_MAX = CONFIG_RHEA_DIE_MAX,
 };
 
-#define RHEA_DIE_ID2IDX(id)     (((id) + CONFIG_RHEA_D2D_SELF_ID) % CONFIG_RHEA_DIE_MAX)
-#define RHEA_DIE_IDX2ID(idx)    (((idx) + CONFIG_RHEA_D2D_SELF_ID) % CONFIG_RHEA_DIE_MAX)
+#define RHEA_DIE_ID2IDX(id) \
+    (((id) + CONFIG_RHEA_DIE_MAX - CONFIG_RHEA_D2D_SELF_ID) % CONFIG_RHEA_DIE_MAX)
+#define RHEA_DIE_IDX2ID(idx) \
+    (((idx) + CONFIG_RHEA_D2D_SELF_ID) % CONFIG_RHEA_DIE_MAX)
+/* Relative index (used to operate cfg register) */
 #define RHEA_DIE_SELF           0
 #define RHEA_DIE0_IDX           RHEA_DIE_ID2IDX(RHEA_DIE0_ID)
 #if CONFIG_RHEA_DIE_MAX > 1
-#define RHEA_DIE1_IDX               RHEA_DIE_ID2IDX(RHEA_DIE1_ID)
+#define RHEA_DIE1_IDX           RHEA_DIE_ID2IDX(RHEA_DIE1_ID)
 #if CONFIG_RHEA_DIE_MAX > 2
 #define RHEA_DIE2_IDX           RHEA_DIE_ID2IDX(RHEA_DIE2_ID)
 #define RHEA_DIE3_IDX           RHEA_DIE_ID2IDX(RHEA_DIE3_ID)
@@ -58,62 +62,8 @@ enum rhea_d2d_lock {
 
 typedef void (*d2d_irq_handler_t)(uint8_t int_idx, uint32_t cmd, uint32_t data);
 
-static inline void writeb(uint8_t value, void *address)
-{
-	uintptr_t addr = (uintptr_t)address;
-
-	*((volatile uint8_t *)(addr)) = value;
-}
-
-static inline uint8_t readb(void *address)
-{
-	uintptr_t addr = (uintptr_t)address;
-
-	return *((volatile uint8_t *)(addr));
-}
-
-static inline void writew(uint16_t value, void *address)
-{
-	uintptr_t addr = (uintptr_t)address;
-
-	*((volatile uint16_t *)(addr)) = value;
-}
-
-static inline uint16_t readw(void *address)
-{
-	uintptr_t addr = (uintptr_t)address;
-
-	return *((volatile uint16_t *)(addr));
-}
-
-static inline void writel(uint32_t value, void *address)
-{
-	uintptr_t addr = (uintptr_t)address;
-
-	*((volatile uint32_t *)(addr)) = value;
-}
-
-static inline uint32_t readl(void *address)
-{
-	uintptr_t addr = (uintptr_t)address;
-
-	return *((volatile uint32_t *)(addr));
-}
-
-static inline void writeq(uint64_t value, void *address)
-{
-	uintptr_t addr = (uintptr_t)address;
-
-	*((volatile uint64_t *)(addr)) = value;
-}
-
-static inline uint64_t readq(void *address)
-{
-	uintptr_t addr = (uintptr_t)address;
-
-	return *((volatile uint64_t *)(addr));
-}
-
+void rhea_d2d_cfg_writel(uint8_t die, uint32_t val, uint32_t offset);
+uint32_t rhea_d2d_cfg_readl(uint8_t die, uint32_t offset);
 int rhea_d2d_write_data(const void *src, uint64_t addr, uint32_t count);
 int rhea_d2d_read_data(void *dest, uint64_t addr, uint32_t count);
 int rhea_d2d_writeb(uint8_t val, uint64_t addr);
