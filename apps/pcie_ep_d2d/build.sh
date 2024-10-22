@@ -2,6 +2,7 @@ ARCH=arm64 CC=/sw/tools/arm-gnu-toolchain-13.2.Rel1-x86_64-aarch64-none-elf/bin/
 cmake -S ../.. -B build -G Ninja \
 --graphviz=build/graph/dep.dot \
 -DPROJECT_NAME=pcie_ep_d2d \
+-DCMAKE_BUILD_TYPE=Release \
 -DPROJECT_PATH=. \
 -DSELF_DIE_ID=0
 cmake --build build -t hex && \
@@ -12,6 +13,7 @@ ARCH=arm64 CC=/sw/tools/arm-gnu-toolchain-13.2.Rel1-x86_64-aarch64-none-elf/bin/
 cmake -S ../.. -B build -G Ninja \
 --graphviz=build/graph/dep.dot \
 -DPROJECT_NAME=pcie_ep_d2d \
+-DCMAKE_BUILD_TYPE=Release \
 -DPROJECT_PATH=. \
 -DSELF_DIE_ID=1
 cmake --build build -t hex && \

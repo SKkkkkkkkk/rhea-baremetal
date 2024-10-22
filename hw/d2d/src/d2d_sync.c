@@ -89,7 +89,7 @@ int d2d_sync_wait_reg(struct d2d_sync_put_cmd *put_cmd,
         for (timeout = 500; timeout > 0; timeout--) {
             rhea_d2d_readl(&reg_own, cmd + offsetof(struct d2d_sync_cmd, reg_own));
             if (!reg_own) break;
-            mdelay(1);
+            // mdelay(1); // TODO: PLD will be blocked here
         }
         if (!timeout) return -ETIMEDOUT;
 
@@ -179,8 +179,11 @@ int d2d_sync_remote(struct d2d_sync_put_cmd *put_cmd)
                 put_cmd->die_idx, cmd->cmd_idx, cmd->data_head, 
                 cmd->data_size, cmd->data_crc, cmd->cmd_crc);
 
-    // ret = d2d_sync_wait_reg(put_cmd, cur_head);  // TODO
+#if defined(CONFIG_RHEA_D2D_LOOKBACK)
     ret = cur_head;
+#else
+    ret = d2d_sync_wait_reg(put_cmd, cur_head);
+#endif
 
 free_cmd:
     free(cmd);
@@ -393,9 +396,10 @@ int rhea_d2d_sync_init(void)
     void *ioaddr;
     struct d2d_sync_header *header;
 
-    ret = rhea_d2d_init();
-    if (ret)
-        return ret;
+    ioaddr = rhea_d2d_get_dnoc_addr();
+    if (ioaddr == NULL) {
+        return -EFAULT;
+    }
 
     sync_priv = malloc(sizeof(struct d2d_sync_priv));
     if (!sync_priv) {
@@ -404,12 +408,6 @@ int rhea_d2d_sync_init(void)
     }
 
     list_init(sync_priv->cmd_list);
-
-    ioaddr = rhea_d2d_get_dnoc_addr();
-    if (ioaddr == NULL) {
-	    free(sync_priv);
-        return -EFAULT;
-    }
 
     if (CONFIG_RHEA_D2D_SYNC_CMD_SIZE % sizeof(struct d2d_sync_cmd)) {
         printf("The command buffer must be a multiple of %ld\n",

@@ -523,6 +523,10 @@ int main(void)
     printf("\n=== Self die id: %d\n", CONFIG_RHEA_D2D_SELF_ID);
     printf("=== Start die-to-die test ...\n");
 
+    ret = rhea_d2d_init();
+    if (ret)
+        return ret;
+
     ret = rhea_d2d_sync_init();
     if (ret)
         goto err;

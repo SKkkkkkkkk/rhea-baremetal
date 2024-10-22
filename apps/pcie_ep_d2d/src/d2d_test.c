@@ -4,6 +4,8 @@
 
 #include "d2d_test.h"
 #include "d2d_api.h"
+#include "d2d_sync.h"
+#include "serial_reg.h"
 #include "io.h"
 
 static inline void delay(uint32_t value)
@@ -182,6 +184,88 @@ int die0_basic_memcpy_test(void)
     return 0;
 }
 
+static int d2d_sync_writel(uint32_t val, uint32_t addr)
+{
+    int ret;
+    struct d2d_sync_put_cmd put_cmd;
+
+    put_cmd.die_idx = 1;
+    put_cmd.cmd_id = D2D_SYNC_WRITEL;
+    put_cmd.reg_addr = addr;
+    put_cmd.reg_val = val;
+    printf("%s 0x%x to 0x%x\n", __func__, val, addr);
+    return d2d_sync_remote(&put_cmd);
+}
+
+static int d2d_sync_readl(uint32_t *val, uint32_t addr)
+{
+    int ret;
+    struct d2d_sync_put_cmd put_cmd;
+
+    put_cmd.die_idx = 1;
+    put_cmd.cmd_id = D2D_SYNC_READL;
+    put_cmd.reg_addr = addr;
+    put_cmd.reg_val = 0;
+    ret = d2d_sync_remote(&put_cmd);
+    *val = put_cmd.reg_val;
+    printf("%s 0x%x from 0x%x\n", __func__, *val, addr);
+    return ret;
+}
+
+#define UART2_REG(x)        (0x10000000 + (x << 2))
+#define UART_DLL_VAL        (0x06) /* clock: 20000000, baud rate: 115200 */
+#define UART_DLM_VAL        (0x00)
+#define UART_DLF_VAL        (0x08)
+#define DW_UART_DLF	        (0x30) /* Divisor Latch Fraction Register */
+#define UART_THRE_TIMEOUT   (20)
+int die0_sync_reg_test(void)
+{
+    int ret;
+    uint32_t val, timeout_ms = 0;
+
+    printf("[%d]%s\n", __LINE__, __func__);
+	rhea_d2d_select_tile(RHEA_DIE1_IDX, 0x04, 0);
+    ret = wait4flag_d2d(0x40000000, 0); // waiting for die1 ready
+    if (ret) return ret;
+	rhea_d2d_release_tile();
+
+    ret = rhea_d2d_sync_init();
+    if (ret) return ret;
+
+    // /* UART config */
+    // d2d_sync_readl(&val, UART2_REG(UART_LCR));
+    // val |= UART_LCR_DLAB;
+    // d2d_sync_writel(val, UART2_REG(UART_LCR));
+    // d2d_sync_writel(UART_DLL_VAL, UART2_REG(UART_DLL));
+    // d2d_sync_writel(UART_DLM_VAL, UART2_REG(UART_DLM));
+    // d2d_sync_writel(UART_DLF_VAL, UART2_REG(DW_UART_DLF));
+    // d2d_sync_readl(&val, UART2_REG(UART_LCR));
+    // val = (val & ~UART_LCR_DLAB) | UART_LCR_WLEN8;
+    // d2d_sync_writel(val, UART2_REG(UART_LCR));
+    // val = UART_FCR_R_TRIG_11 | UART_FCR_CLEAR_XMIT |
+    //     UART_FCR_CLEAR_RCVR | UART_FCR_ENABLE_FIFO;
+    // d2d_sync_writel(val, UART2_REG(UART_FCR));
+    // val = UART_MCR_OUT2 | UART_MCR_RTS | UART_MCR_DTR;
+    // d2d_sync_writel(val, UART2_REG(UART_MCR));
+
+    // Send
+    do {
+        delay(1);
+        if (timeout_ms++ > UART_THRE_TIMEOUT)
+            return -ETIMEDOUT;
+        d2d_sync_readl(&val, UART2_REG(UART_LSR));
+    } while (!(val & UART_LSR_THRE));
+    d2d_sync_writel('a', UART2_REG(UART_TX));
+    d2d_sync_writel('\n', UART2_REG(UART_TX));
+
+    rhea_d2d_sync_exit();
+
+	rhea_d2d_select_tile(RHEA_DIE1_IDX, 0x04, 0);
+	rhea_d2d_writel(1, 0x40000000);
+	rhea_d2d_release_tile();
+    return 0;
+}
+
 int run_die0_test(void)
 {
     int ret;
@@ -192,6 +276,11 @@ int run_die0_test(void)
         return ret;
     }
     ret = die0_basic_memcpy_test();
+    if (ret) {
+        printf("[%d]%s error %d\n", __LINE__, __func__, ret);
+        return ret;
+    }
+    ret = die0_sync_reg_test();
     if (ret) {
         printf("[%d]%s error %d\n", __LINE__, __func__, ret);
         return ret;
@@ -312,6 +401,27 @@ int die1_basic_memcpy_test(void)
     return 0;
 }
 
+int die1_sync_reg_test(void)
+{
+    int ret;
+
+    printf("[%d]%s\n", __LINE__, __func__);
+	writel(0, (void *) (uintptr_t) 0x0040000000);
+
+    ret = rhea_d2d_sync_init();
+    if (ret) return ret;
+
+    while (1) {
+        ret = d2d_sync_obtain_cmd();
+        if (ret < 0) return ret;
+        else if (readl((void *) 0x0040000000) == 1) break;
+        else if (ret == 0) continue;
+    }
+    
+    rhea_d2d_sync_exit();
+    return 0;
+}
+
 int run_die1_test(void)
 {
     int ret;
@@ -322,6 +432,11 @@ int run_die1_test(void)
         return ret;
     }
     ret = die1_basic_memcpy_test();
+    if (ret) {
+        printf("[%d]%s error %d\n", __LINE__, __func__, ret);
+        return ret;
+    }
+    ret = die1_sync_reg_test();
     if (ret) {
         printf("[%d]%s error %d\n", __LINE__, __func__, ret);
         return ret;
