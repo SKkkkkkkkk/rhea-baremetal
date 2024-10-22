@@ -15,4 +15,5 @@ set(app_dep
 	systimer
 	dw_apb_gpio
 	d2d
+	dw_apb_timers
 )

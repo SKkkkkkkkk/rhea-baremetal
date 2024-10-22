@@ -1,12 +1,15 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <arch_features.h>
 
 #include "d2d_test.h"
 #include "d2d_api.h"
 #include "d2d_sync.h"
 #include "serial_reg.h"
 #include "io.h"
+#include "dw_apb_timers.h"
+#include "gicv3.h"
 
 static inline void delay(uint32_t value)
 {
@@ -266,6 +269,19 @@ int die0_sync_reg_test(void)
     return 0;
 }
 
+static void d2d_irq_handler(uint8_t int_idx, uint32_t cmd, uint32_t data)
+{
+    printf("%s (int_idx=0x%x, cmd=0x%x, data=0x%x)\n",
+        __func__, int_idx, cmd, data);
+}
+
+int die0_interrupt_test(void)
+{
+    GIC_Init();
+    rhea_d2d_irq_recv_enable(d2d_irq_handler);
+    return 0;
+}
+
 int run_die0_test(void)
 {
     int ret;
@@ -281,6 +297,11 @@ int run_die0_test(void)
         return ret;
     }
     ret = die0_sync_reg_test();
+    if (ret) {
+        printf("[%d]%s error %d\n", __LINE__, __func__, ret);
+        return ret;
+    }
+    ret = die0_interrupt_test();
     if (ret) {
         printf("[%d]%s error %d\n", __LINE__, __func__, ret);
         return ret;
@@ -422,6 +443,23 @@ int die1_sync_reg_test(void)
     return 0;
 }
 
+static volatile uint32_t timer_cmd = 0;
+static volatile uint32_t timer_data = 0;
+int die1_interrupt_test(void)
+{
+    uint8_t int_idx = timer_cmd % 4;
+
+    while (1) {
+        printf("send interrupt(int_idx=0x%x, cmd=0x%x, data=0x%x)\n",
+                int_idx, timer_cmd, timer_data);
+        rhea_d2d_send_int2ap(RHEA_DIE0_IDX, 0, int_idx, 
+                                timer_cmd++, timer_data--);
+        delay(1);
+        if (timer_cmd > 4) break;
+    }
+    return 0;
+}
+
 int run_die1_test(void)
 {
     int ret;
@@ -437,6 +475,11 @@ int run_die1_test(void)
         return ret;
     }
     ret = die1_sync_reg_test();
+    if (ret) {
+        printf("[%d]%s error %d\n", __LINE__, __func__, ret);
+        return ret;
+    }
+    ret = die1_interrupt_test();
     if (ret) {
         printf("[%d]%s error %d\n", __LINE__, __func__, ret);
         return ret;
