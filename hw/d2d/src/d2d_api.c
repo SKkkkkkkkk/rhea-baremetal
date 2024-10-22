@@ -390,6 +390,10 @@ int rhea_d2d_init(void)
             if (!timeout--) return -ETIMEDOUT;
             udelay(10);
         }
+        rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0xa0,
+                            CLCIx_AHB_BASE(clci_idx) + 0x3021c);
+        rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0xff0080,
+                            CLCIx_AHB_BASE(clci_idx) + 0x30304);
     }
     printf(" done\n");
 
