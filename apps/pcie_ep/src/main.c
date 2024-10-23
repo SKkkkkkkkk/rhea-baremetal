@@ -1576,6 +1576,7 @@ int main()
 #if SEEHI_FPGA_PCIE_TEST
 	s_pcie.dev = &g_pcieDevX8;
 
+	g_c2c_base = get_pcie_base(3);
 	pcie = &s_pcie_03;
 	s_pcie_03.dev = &g_pcieDevX16_03;
 	// init_g_pcie(pcie, 3, 16, 16, 5);
@@ -1594,6 +1595,7 @@ int main()
 	mc_init(TCM_25_CFG_BASE, 4);
 #endif
 
+	g_c2c_base = get_pcie_base(3);
 	pcie = &s_pcie_03;
 	s_pcie_03.dev = &g_pcieDevX16_03;
 	// init_g_pcie(pcie, 3, 16, 16, 5);
@@ -1622,6 +1624,7 @@ int main()
 #if SEEHI_DUAL_PCIE_TEST
 	PCIe_EP_Init(pcie);
 
+	g_c2c_base = get_pcie_base(2);
 	pcie = &s_pcie_02;
 	s_pcie_02.dev = &g_pcieDevX16_02;
 	// init_g_pcie(pcie, 2, 16, 16, 5);
@@ -1638,6 +1641,7 @@ int main()
 	PCIe_EP_Link(pcie);
 
 #if SEEHI_DUAL_PCIE_TEST
+	g_c2c_base = get_pcie_base(3);
 	pcie = &s_pcie_03;
 	s_pcie_03.dev = &g_pcieDevX16_03;
 	PCIe_EP_Link(pcie);
