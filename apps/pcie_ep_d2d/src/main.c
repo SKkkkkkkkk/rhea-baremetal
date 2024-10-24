@@ -943,8 +943,14 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);
 	/* BAR Config End */
 
+#if CONFIG_RHEA_D2D_SELF_ID == 0
 	vid = 0x5348;    //SH
 	did = 0xa510;    //a510
+#else
+	vid = 0x3333;    //SH
+	did = 0x8888;    //a510
+#endif
+
 	writeq(did << 16 | vid, dbi_base + 0x00);  //vendor id & device id
 
 	writeq(0x12000001, dbi_base + 0x08);  //class processing accelerators
