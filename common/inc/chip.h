@@ -29,6 +29,12 @@ static inline void system_reset(void)
 	UNREACHABLE();
 }
 
+static inline void wait_fpga_ddr_calibration_done(void)
+{
+	if(IS_ASIC) return;
+	while((REG32(SYSCTRL_BASE + 0xFDC) & 0x1) == 0);
+}
+
 #ifdef __cplusplus
 }
 #endif
