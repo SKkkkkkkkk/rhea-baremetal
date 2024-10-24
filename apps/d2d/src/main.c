@@ -8,6 +8,7 @@
 #include "serial_reg.h"
 #include "dw_apb_timers.h"
 #include "gicv3.h"
+#include "io.h"
 
 #define INT_TO_FIXPT(x)         ((x) << 16)
 #define FIXPT_TO_INT(x)         ((x) >> 16)
