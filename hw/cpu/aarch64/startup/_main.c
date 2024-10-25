@@ -6,7 +6,7 @@
 
 void _main()
 {
-#ifndef QEMU
+#ifdef FPGA
 	wait_fpga_ddr_calibration_done(); //! if using ROM for code, DDR for data, this is not enough, we should've done ddr_calib even before _main();
 #endif
 #ifdef ENABLE_MMU
