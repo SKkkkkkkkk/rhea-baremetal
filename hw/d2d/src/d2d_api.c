@@ -360,13 +360,33 @@ int rhea_d2d_init(void)
     d2d_cnoc = (void *) D2D_CNOC_BASE;
 
     /* Sysctrl configuration */
-    writel(0xffcc400, (void *) SYSCTRL_CLCI_CLK_EN1);
-    writel(1, (void *) SYSCTRL_CLCI_PLL_DIV);
-    writel(1, (void *) SYSCTRL_CLCI_CFG_DIV);
-    writel(1, (void *) SYSCTRL_CLCI_AXI_DIV);
-    writel(1, (void *) SYSCTRL_CLCI_SCAN_20_DIV);
-    writel(1, (void *) SYSCTRL_CLCI_SCAN_80_DIV);
-    writel(1, (void *) SYSCTRL_CLCI_MCU_DIV);
+    tmp_val = readl((void *)SYSCTRL_CLCI_CLK_EN1);
+    tmp_val |= 0xffcc400;
+    writel(tmp_val, (void *) SYSCTRL_CLCI_CLK_EN1);
+
+    tmp_val = readl((void *)SYSCTRL_CLCI_PLL_DIV);
+    tmp_val |= 1;
+    writel(tmp_val, (void *) SYSCTRL_CLCI_PLL_DIV);
+
+    tmp_val = readl((void *)SYSCTRL_CLCI_CFG_DIV);
+    tmp_val |= 1;
+    writel(tmp_val, (void *) SYSCTRL_CLCI_CFG_DIV);
+    
+    tmp_val = readl((void *)SYSCTRL_CLCI_AXI_DIV);
+    tmp_val |= 1;
+    writel(tmp_val, (void *) SYSCTRL_CLCI_AXI_DIV);
+
+    tmp_val = readl((void *)SYSCTRL_CLCI_SCAN_20_DIV);
+    tmp_val |= 1;
+    writel(tmp_val, (void *) SYSCTRL_CLCI_SCAN_20_DIV);
+
+    tmp_val = readl((void *)SYSCTRL_CLCI_SCAN_80_DIV);
+    tmp_val |= 1;
+    writel(tmp_val, (void *) SYSCTRL_CLCI_SCAN_80_DIV);
+
+    tmp_val = readl((void *)SYSCTRL_CLCI_MCU_DIV);
+    tmp_val |= 1;
+    writel(tmp_val, (void *) SYSCTRL_CLCI_MCU_DIV);
     printf("CLCI clock enable done\n");
 
     /* CLCI configuration */

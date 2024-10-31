@@ -31,7 +31,8 @@
 #define SEEHI_AP_PCIE_TEST			0
 #define SEEHI_C2C_PCIE_TEST			0
 #define SEEHI_TILE14_PCIE_TEST		0
-#define SEEHI_4TILE_PCIE_TEST		1
+#define SEEHI_4TILE_PCIE_TEST		0
+#define SEEHI_2DIE_4TILE_PCIE_TEST	1
 #define SEEHI_DUAL_PCIE_TEST		0
 
 #define SEEHI_MSIX_ENABLE			0
@@ -1259,6 +1260,8 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 		writeq(0x00140020, ss_base + 0x98);    // int_mbi_message_for_vector_01
 #elif SEEHI_4TILE_PCIE_TEST
 		writeq(0x00240020, ss_base + 0x98);    // int_mbi_message_for_vector_01
+#elif SEEHI_2DIE_4TILE_PCIE_TEST
+		writeq(0x0004001b, ss_base + 0x98);    // int_mbi_message_for_vector_01
 #else
 		writeq(0x40001, ss_base + 0x98);    // int_mbi_message_for_vector_01
 #endif
@@ -1600,6 +1603,11 @@ int main()
 #if SEEHI_TILE14_PCIE_TEST
 	mc_init(TCM_14_CFG_BASE, 4);
 #elif SEEHI_4TILE_PCIE_TEST
+	mc_init(TCM_14_CFG_BASE, 4);
+	mc_init(TCM_15_CFG_BASE, 4);
+	mc_init(TCM_24_CFG_BASE, 4);
+	mc_init(TCM_25_CFG_BASE, 4);
+#elif SEEHI_2DIE_4TILE_PCIE_TEST
 	mc_init(TCM_26_CFG_BASE, 4);
 	mc_init(TCM_27_CFG_BASE, 4);
 	mc_init(TCM_36_CFG_BASE, 4);
@@ -1623,12 +1631,12 @@ int main()
 	printf("PCIe_EP_Init start !!!\n");
 #endif
 
-#if SEEHI_4TILE_PCIE_TEST
+#if SEEHI_2DIE_4TILE_PCIE_TEST
 	/* when print start, please power on x86 pc */
-	printf("t14:0x%08x\n", REG32(0x2640000000 + 536870912 + 0xc0));
-	printf("t15:0x%08x\n", REG32(0x2740000000 + 536870912 + 0xc0));
-	printf("t24:0x%08x\n", REG32(0x3640000000 + 536870912 + 0xc0));
-	printf("t25:0x%08x\n", REG32(0x3740000000 + 536870912 + 0xc0));
+	printf("t26:0x%08x\n", REG32(0x2640000000 + 536870912 + 0xc0));
+	printf("t27:0x%08x\n", REG32(0x2740000000 + 536870912 + 0xc0));
+	printf("t36:0x%08x\n", REG32(0x3640000000 + 536870912 + 0xc0));
+	printf("t37:0x%08x\n", REG32(0x3740000000 + 536870912 + 0xc0));
 #endif
 
 #if SEEHI_DUAL_PCIE_TEST
