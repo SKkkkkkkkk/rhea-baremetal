@@ -282,6 +282,57 @@ int die0_interrupt_test(void)
     return 0;
 }
 
+int die0_d2d_switch_test(void)
+{
+    uint8_t tile_id;
+    uint32_t val;
+    uint64_t addr;
+    printf("[%d]%s\n", __LINE__, __func__);
+
+    for (int i = 0; i < 10; i++) {
+        tile_id = 0x04;
+        addr = 0x10050004;
+        rhea_d2d_select_tile(RHEA_DIE1_IDX, tile_id, 0);
+        rhea_d2d_writel(i, addr);
+        rhea_d2d_readl(&val, addr);
+        printf("[%d] tile %02x 0x%lx: 0x%x\n", i, tile_id, addr, val);
+        rhea_d2d_release_tile();
+
+        tile_id = 0x26;
+        addr = 0x30300150;
+        rhea_d2d_select_tile(RHEA_DIE1_IDX, tile_id, 0);
+        rhea_d2d_writel(i, addr);
+        rhea_d2d_readl(&val, addr);
+        printf("[%d] tile %02x 0x%lx: 0x%x\n", i, tile_id, addr, val);
+        rhea_d2d_release_tile();
+
+        tile_id = 0x27;
+        addr = 0x30300150;
+        rhea_d2d_select_tile(RHEA_DIE1_IDX, tile_id, 0);
+        rhea_d2d_writel(i, addr);
+        rhea_d2d_readl(&val, addr);
+        printf("[%d] tile %02x 0x%lx: 0x%x\n", i, tile_id, addr, val);
+        rhea_d2d_release_tile();
+
+        tile_id = 0x36;
+        addr = 0x30300150;
+        rhea_d2d_select_tile(RHEA_DIE1_IDX, tile_id, 0);
+        rhea_d2d_writel(i, addr);
+        rhea_d2d_readl(&val, addr);
+        printf("[%d] tile %02x 0x%lx: 0x%x\n", i, tile_id, addr, val);
+        rhea_d2d_release_tile();
+
+        tile_id = 0x37;
+        addr = 0x30300150;
+        rhea_d2d_select_tile(RHEA_DIE1_IDX, tile_id, 0);
+        rhea_d2d_writel(i, addr);
+        rhea_d2d_readl(&val, addr);
+        printf("[%d] tile %02x 0x%lx: 0x%x\n", i, tile_id, addr, val);
+        rhea_d2d_release_tile();
+    }
+    return 0;
+}
+
 int run_die0_test(void)
 {
     int ret;

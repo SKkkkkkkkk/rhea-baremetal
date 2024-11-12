@@ -7,6 +7,7 @@ target_sources(${TARGET_NAME}
 		src/d2d_api.c
 		src/d2d_sync.c
 		src/d2d_ring_buf.c
+		src/crc32.c
 )
 
 target_include_directories(${TARGET_NAME}

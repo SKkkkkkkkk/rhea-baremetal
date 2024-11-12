@@ -8,7 +8,7 @@
 #include "d2d_ring_buf.h"
 #include "list.h"
 #include "delay.h"
-#include "crc.h"
+#include "crc32.h"
 #include "io.h"
 
 #define RHEA_AP_TILE_ID         0x04
@@ -147,7 +147,7 @@ int d2d_sync_remote(struct d2d_sync_put_cmd *put_cmd)
 
             cmd->data_head = *sync_priv->rdata.tail;
             cmd->data_size = put_cmd->data_size;
-            cmd->data_crc = crc16_ccitt(0, put_cmd->data_addr, put_cmd->data_size);
+            cmd->data_crc = crc32(0, put_cmd->data_addr, put_cmd->data_size);
             ret = d2d_ring_put_data_remote(&sync_priv->rdata, 
                                     put_cmd->data_addr, put_cmd->data_size);
             if (ret)
@@ -169,8 +169,8 @@ int d2d_sync_remote(struct d2d_sync_put_cmd *put_cmd)
             ret = -EINVAL;
             goto free_cmd;
     }
-    cmd->cmd_crc = crc16_ccitt(0, (uint8_t *) cmd, 
-                                    cmd_len - sizeof(uint32_t));
+    cmd->cmd_crc = crc32(0, (uint8_t *) cmd, 
+                        cmd_len - sizeof(uint32_t));
     ret = d2d_ring_put_data_remote(&sync_priv->rcmd, cmd, cmd_len);
     if (ret)
         goto free_cmd;
@@ -265,7 +265,7 @@ static int d2d_sync_obtain_data(struct d2d_sync_cmd *cmd)
     if (ret)
         goto free_data;
 
-    crc_val = crc16_ccitt(0, data, cmd->data_size);
+    crc_val = crc32(0, data, cmd->data_size);
     if (cmd->data_crc != crc_val) {
         printf("Data verification of command %d failed "
                 "and %d bytes discarded\n",
@@ -345,13 +345,16 @@ int d2d_sync_obtain_cmd(void)
     while (used_len >= cmd_len) {
         cmd = (struct d2d_sync_cmd *) 
                 ((uintptr_t) sync_priv->lcmd.local_addr + *sync_priv->lcmd.head);
-        pr_dbg("Got command (%08x %010lx %08x %08x %08x), buffer length 0x%x\n",
-                    cmd->cmd_idx, cmd->data_head, cmd->data_size, 
+        pr_dbg("Got command at 0x%p (%08x %010lx %08x %08x %08x), buffer length 0x%x\n",
+                    cmd, cmd->cmd_idx, cmd->data_head, cmd->data_size, 
                     cmd->data_crc, cmd->cmd_crc, used_len);
 
-        crc_val = crc16_ccitt(0, (uint8_t *) cmd, cmd_len - sizeof(uint32_t));
+        crc_val = crc32(0, (uint8_t *) cmd, cmd_len - sizeof(uint32_t));
         if (crc_val != cmd->cmd_crc) {
-            printf("Command verification failed\n");
+            printf("Command verification failed "
+                    "(calculated: 0x%x, expected: 0x%x)\n",
+                    crc_val, cmd->cmd_crc);
+            d2d_ring_move_head(&sync_priv->lcmd, cmd_len);
             return -EIO;
         }
 

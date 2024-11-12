@@ -8,6 +8,7 @@
 #include "dw_apb_gpio.h"
 #include "utils_def.h"
 #include "d2d_api.h"
+#include "d2d_sync.h"
 
 /*                                   This is BAR Define
 ┌────┬─────┬────────────────┬────┬───────────────────┬────────────────┬───────────────┬───────────┐
@@ -1586,6 +1587,7 @@ int main()
 	uint32_t result = HAL_ERROR;
 	uint32_t cnt = 0;
 	struct HAL_PCIE_HANDLE *pcie = &s_pcie;
+	int ret;
 
 #if SEEHI_FPGA_PCIE_TEST
 	s_pcie.dev = &g_pcieDevX8;
@@ -1681,14 +1683,20 @@ int main()
 	}
 #endif
 
-	rhea_d2d_init();
+	ret = rhea_d2d_init();
+    if (ret) return ret;
+
+    ret = rhea_d2d_sync_init();
+    if (ret) return ret;
 
 #if	SEEHI_PLD_PCIE_TEST
 	REG32(0x12000fe0)=0x4;
 #endif
 
 	while(1) {
-		asm volatile ("nop");
+        ret = d2d_sync_obtain_cmd();
+        if (ret < 0) 
+			printf("Obtain cmd error (%d).\n", ret);
 	};
 
 	return result;
