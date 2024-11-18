@@ -119,6 +119,7 @@ static inline uint32_t readl(uint64_t address)
 
 static inline void HAL_PCIE_DbiWritel(struct HAL_PCIE_HANDLE *pcie, uint32_t reg, uint32_t val)
 {
+	// printf("seehi--> %s line: %d (0x%x , 0x%lx)\n", __func__, __LINE__, val, pcie->dev->dbiBase + reg);
 	writel(pcie->dev->dbiBase + reg, val);
 }
 

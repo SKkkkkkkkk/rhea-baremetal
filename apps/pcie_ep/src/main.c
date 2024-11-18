@@ -28,12 +28,15 @@
 #define SEEHI_FPGA_PCIE_TEST		0
 
 #define SEEHI_AP_PCIE_TEST			0
-#define SEEHI_C2C_PCIE_TEST			0
+#define SEEHI_C2C_PCIE_TEST			1
 #define SEEHI_TILE14_PCIE_TEST		0
 #define SEEHI_4TILE_PCIE_TEST		0
-#define SEEHI_DUAL_PCIE_TEST		1
+#define SEEHI_DUAL_PCIE_TEST		0
 
 #define SEEHI_MSIX_ENABLE			0
+
+#define PLD_Z1						1
+#define PLD_Z2						0
 
 #define TCM_04_CFG_BASE         0x0015000000
 #define TCM_14_CFG_BASE			0x8a22000000
@@ -85,6 +88,10 @@ struct HAL_PCIE_DEV g_pcieDev_73;
 #define PORT_LINK_MODE_8_LANES (0xf << 16)
 #define PORT_LINK_MODE_16_LANES (0x1f << 16)
 
+#define PCIE_FILTER_MASK_2 0x720
+#define CX_FLT_MASK_VENMSG0_DROP (0x1 << 0)
+#define CX_FLT_MASK_VENMSG1_DROP (0x1 << 1)
+
 #define PCIE_LINK_WIDTH_SPEED_CONTROL 0x80C
 #define PORT_LOGIC_SPEED_CHANGE       (0x1 << 17)
 #define PORT_LOGIC_LINK_WIDTH_MASK    (0x1f << 8)
@@ -93,6 +100,7 @@ struct HAL_PCIE_DEV g_pcieDev_73;
 #define PORT_LOGIC_LINK_WIDTH_4_LANES (0x4 << 8)
 #define PORT_LOGIC_LINK_WIDTH_8_LANES (0x8 << 8)
 #define PORT_LOGIC_LINK_WIDTH_16_LANES (0x10 << 8)
+
 
 #define PCIE_DIRECT_SPEED_CHANGE (0x1 << 17)
 
@@ -107,24 +115,24 @@ struct HAL_PCIE_DEV g_pcieDev_73;
 #define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00440000000   //tile 04 tcm mem
 #endif
 
-#define AP_SYS_C2C0_CPU_ADDRESS		C2C_SYS_CFG_03
-#define DWC_PCIE_CTL_X16_DBI		(AP_SYS_C2C0_CPU_ADDRESS + 0x0)
-#define C2C_ENGINE_X16				(AP_SYS_C2C0_CPU_ADDRESS + 0x140000)
-#define PCIE_X16_REG				(AP_SYS_C2C0_CPU_ADDRESS + 0x180000)
-#define DWC_PCIE_CTL_X8_DBI			(AP_SYS_C2C0_CPU_ADDRESS + 0x200000)
-#define C2C_ENGINE_X8				(AP_SYS_C2C0_CPU_ADDRESS + 0x340000)
-#define PCIE_X8_REG					(AP_SYS_C2C0_CPU_ADDRESS + 0x380000)
-#define PCIE_PHY_REG				(AP_SYS_C2C0_CPU_ADDRESS + 0x400000)
-#define DWC_PCIE5_PHY0_CRI			(AP_SYS_C2C0_CPU_ADDRESS + 0x480000)
-#define DWC_PCIE5_PHY1_CRI			(AP_SYS_C2C0_CPU_ADDRESS + 0x4a0000)
-#define DWC_PCIE5_PHY2_CRI			(AP_SYS_C2C0_CPU_ADDRESS + 0x4c0000)
-#define DWC_PCIE5_PHY3_CRI			(AP_SYS_C2C0_CPU_ADDRESS + 0x4e0000)
-#define C2C_SS_REG					(AP_SYS_C2C0_CPU_ADDRESS + 0x580000)
-#define DROUTER						(AP_SYS_C2C0_CPU_ADDRESS + 0x581000)
-#define CROUTER						(AP_SYS_C2C0_CPU_ADDRESS + 0x582000)
-#define DNIU						(AP_SYS_C2C0_CPU_ADDRESS + 0x583000)
-#define CNIU						(AP_SYS_C2C0_CPU_ADDRESS + 0x584000)
-#define MBI_TX						(AP_SYS_C2C0_CPU_ADDRESS + 0x585000)
+#define AP_SYS_C2C0_CPU_ADDRESS_03		C2C_SYS_CFG_03
+#define DWC_PCIE_CTL_X16_DBI		(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x0)
+#define C2C_ENGINE_X16				(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x140000)
+#define PCIE_X16_REG				(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x180000)
+#define DWC_PCIE_CTL_X8_DBI			(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x200000)
+#define C2C_ENGINE_X8				(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x340000)
+#define PCIE_X8_REG					(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x380000)
+#define PCIE_PHY_REG				(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x400000)
+#define DWC_PCIE5_PHY0_CRI			(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x480000)
+#define DWC_PCIE5_PHY1_CRI			(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x4a0000)
+#define DWC_PCIE5_PHY2_CRI			(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x4c0000)
+#define DWC_PCIE5_PHY3_CRI			(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x4e0000)
+#define C2C_SS_REG					(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x580000)
+#define DROUTER						(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x581000)
+#define CROUTER						(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x582000)
+#define DNIU						(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x583000)
+#define CNIU						(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x584000)
+#define MBI_TX						(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x585000)
 
 #define AP_SYS_C2C0_CPU_ADDRESS_02	C2C_SYS_CFG_02
 #define DWC_PCIE_CTL_X16_DBI_02		(AP_SYS_C2C0_CPU_ADDRESS_02 + 0x0)
@@ -145,6 +153,25 @@ struct HAL_PCIE_DEV g_pcieDev_73;
 #define CNIU_02						(AP_SYS_C2C0_CPU_ADDRESS_02 + 0x584000)
 #define MBI_TX_02					(AP_SYS_C2C0_CPU_ADDRESS_02 + 0x585000)
 
+#define AP_SYS_C2C0_CPU_ADDRESS_73	C2C_SYS_CFG_73
+#define DWC_PCIE_CTL_X16_DBI_73		(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x0)
+#define C2C_ENGINE_X16_73			(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x140000)
+#define PCIE_X16_REG_73 			(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x180000)
+#define DWC_PCIE_CTL_X8_DBI_73		(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x200000)
+#define C2C_ENGINE_X8_73			(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x340000)
+#define PCIE_X8_REG_73				(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x380000)
+#define PCIE_PHY_REG_73				(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x400000)
+#define DWC_PCIE5_PHY0_CRI_73		(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x480000)
+#define DWC_PCIE5_PHY1_CRI_73		(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x4a0000)
+#define DWC_PCIE5_PHY2_CRI_73		(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x4c0000)
+#define DWC_PCIE5_PHY3_CRI_73		(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x4e0000)
+#define C2C_SS_REG_73				(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x580000)
+#define DROUTER_73					(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x581000)
+#define CROUTER_73					(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x582000)
+#define DNIU_73						(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x583000)
+#define CNIU_73						(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x584000)
+#define MBI_TX_73					(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x585000)
+
 #define A510_APB_PCIE_EN_INT0				0xa0
 #define A510_APB_PCIE_CLR_INT0				0xa4
 #define A510_APB_PCIE_STAT_INT0				0xa8
@@ -157,6 +184,7 @@ struct HAL_PCIE_DEV g_pcieDev_73;
 #define A510_APB_PCIE_RADM_MSG_LTR_INT		BIT(6)
 #define A510_APB_PCIE_RADM_MSG_VDM_INT		BIT(7)
 #define A510_APB_PCIE_RADM_MSG_SLOT_PWR_INT	BIT(8)
+#define A510_APB_PCIE_DIAG_CTRL_BUS         0x110
 
 //apb vdm
 #define A510_APB_PCIE_MSG_VDM_REG0			0x300
@@ -280,21 +308,6 @@ void mc_init(uint64_t addr, uint8_t layer) {
 }
 #endif
 
-uint64_t get_pcie_base(uint32_t pcie_sel) {
-	if( pcie_sel == 2){
-		return C2C_SYS_CFG_02;
-	}else if(pcie_sel == 3){
-		return C2C_SYS_CFG_03;
-	}else if(pcie_sel == 72){
-		return C2C_SYS_CFG_72;
-	}else if(pcie_sel == 73){
-		return C2C_SYS_CFG_73;
-	}else{
-		printf("pcie_sel error !!!\n");
-		return 0;
-	}
-}
-
 static inline void delay(uint32_t value)
 {
 	volatile uint32_t i, j;
@@ -303,21 +316,46 @@ static inline void delay(uint32_t value)
 		for(j = 0; j < 1000; j++);
 }
 
-static inline void writel(uint32_t value, uint32_t address)
+static inline void writeb(uint8_t value, uint64_t address)
 {
 	uintptr_t addr = (uintptr_t)address;
 
-	// printf("writel addr 0x%lx value 0x%x\n", addr, value);
+	*((volatile uint8_t *)(addr)) = value;
+}
+
+static inline uint8_t readb(uint64_t address)
+{
+	uintptr_t addr = (uintptr_t)address;
+
+	return *((volatile uint8_t *)(addr));
+}
+
+static inline void writew(uint16_t value, uint64_t address)
+{
+	uintptr_t addr = (uintptr_t)address;
+
+	*((volatile uint16_t *)(addr)) = value;
+}
+
+static inline uint16_t readw(uint64_t address)
+{
+	uintptr_t addr = (uintptr_t)address;
+
+	return *((volatile uint16_t *)(addr));
+}
+
+static inline void writel(uint32_t value, uint64_t address)
+{
+	uintptr_t addr = (uintptr_t)address;
+
 	*((volatile uint32_t *)(addr)) = value;
 }
 
-static inline uint32_t readl(uint32_t address)
+static inline uint32_t readl(uint64_t address)
 {
 	uintptr_t addr = (uintptr_t)address;
-	uint32_t value = *((volatile uint32_t *)(addr));
 
-	// printf("readl addr 0x%lx value 0x%x\n", addr, value);
-	return value;
+	return *((volatile uint32_t *)(addr));
 }
 
 static inline void writeq(uint32_t value, uint64_t address)
@@ -356,7 +394,40 @@ static inline uint32_t pcie_readl_apb(struct HAL_PCIE_HANDLE *pcie, uint64_t add
 	return value;
 }
 
-void BSP_PCIE_EP_VDM(const struct HAL_PCIE_HANDLE *pcie , int cnt, uint32_t l, uint32_t h)
+static void dump_regs(char * name, uint64_t addr, uint32_t length)
+{
+	if(name == NULL)
+		return;
+
+	printf("%s\n", name);
+	for(int i = 0; i < length; i = i + 4){
+		if((i % 16) == 0 && i != 0){
+			printf("\n");
+		}
+		if((i % 16) == 0){
+			printf("0x%lx: ", addr + i);
+		}
+		printf("0x%08x ", readl(addr + i));
+	}
+	printf("\n");
+}
+
+static uint64_t get_pcie_base(uint32_t pcie_sel) {
+	if( pcie_sel == 2){
+		return C2C_SYS_CFG_02;
+	}else if(pcie_sel == 3){
+		return C2C_SYS_CFG_03;
+	}else if(pcie_sel == 72){
+		return C2C_SYS_CFG_72;
+	}else if(pcie_sel == 73){
+		return C2C_SYS_CFG_73;
+	}else{
+		printf("pcie_sel error !!!\n");
+		return 0;
+	}
+}
+
+static void BSP_PCIE_EP_VDM(const struct HAL_PCIE_HANDLE *pcie , int cnt, uint32_t l, uint32_t h)
 {
 	uint64_t apb_base = pcie->dev->apbBase;
 	vdm_msg_typedef *vdm = (vdm_msg_typedef *)(apb_base + 0x130);
@@ -396,12 +467,24 @@ void BSP_PCIE_EP_LTR(const struct HAL_PCIE_HANDLE *pcie, int cnt)
 		while(ltr->cfg_ltr_msg_0.app_ltr_msg_req_stat == 1);
 
 		ltr->cfg_ltr_msg_0.app_ltr_msg_func_num = cnt;
-		ltr->app_ltr_msg_latency = 0xff00ff + cnt;
+		ltr->app_ltr_msg_latency = 0x7f007f + cnt;
 
 		printf("ltr->app_ltr_msg_latency 0x%x\n", ltr->app_ltr_msg_latency);
 		ltr->cfg_ltr_msg_0.app_ltr_msg_req = 0x1;
 	}
 
+}
+
+void BSP_PCIE_EP_INTX(const struct HAL_PCIE_HANDLE *pcie, int cnt)
+{
+	uint64_t apb_base = pcie->dev->apbBase;
+
+	printf("seehi--> %s line: %d cnt 0x%x\n", __func__, __LINE__, cnt);
+	writel(0x2, apb_base + 0x108);
+	dump_regs("intx:", apb_base + 0x108, 4);
+	delay(10);
+	writel(0x0, apb_base + 0x108);
+	dump_regs("intx:", apb_base + 0x108, 4);
 }
 
 static void a510_radm_msg_payload_parse(struct HAL_PCIE_HANDLE *pcie, uint32_t *req, uint32_t *byte8, uint32_t * byte12)
@@ -426,7 +509,7 @@ static void a510_radm_msg_payload_parse(struct HAL_PCIE_HANDLE *pcie, uint32_t *
 
 					temp0 = *(byte8 + i);
 					temp1 = *(byte12 + i);
-					printf("seehi--> %s line: %d bayte8 0x%x byte12 0x%x\n", __func__, __LINE__, temp0, temp1);
+					printf("seehi--> %s line: %d x8 fifo | bayte8 0x%x byte12 0x%x\n", __func__, __LINE__, temp0, temp1);
 					BSP_PCIE_EP_VDM(pcie, cnt++, temp0, temp1);
 				}
 
@@ -464,6 +547,18 @@ static void a510_radm_msg_payload_parse(struct HAL_PCIE_HANDLE *pcie, uint32_t *
 				*(byte8 + i) = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG0);
 				*(byte12 + i) = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG1);
 
+				temp0 = *(byte8 + i);
+				temp1 = *(byte12 + i);
+				printf("seehi--> %s line: %d x16 fifo | bayte8 0x%x byte12 0x%x\n", __func__, __LINE__, temp0, temp1);
+
+				if(temp0 == 0x1){
+					BSP_PCIE_EP_LTR(pcie, cnt++);
+				}else if(temp0 == 0x2){
+					BSP_PCIE_EP_INTX(pcie, cnt++);
+				}else{
+					BSP_PCIE_EP_VDM(pcie, cnt++, temp0, temp1);
+				}
+
 				i++;
 				if(i >= 10){
 					printf("fifo full break!!!\n");
@@ -487,7 +582,7 @@ static void a510_radm_msg_payload_parse(struct HAL_PCIE_HANDLE *pcie, uint32_t *
 
 				temp0 = *byte8;
 				temp1 = *byte12;
-				printf("seehi--> %s line: %d bayte8 0x%x byte12 0x%x\n", __func__, __LINE__, temp0, temp1);
+				printf("seehi--> %s line: %d x8 no_fifo | bayte8 0x%x byte12 0x%x\n", __func__, __LINE__, temp0, temp1);
 			}
 
 			if((val & A510_APB_PCIE_MSG_VDM_VLD_MASK) >> 1 == 2){
@@ -514,6 +609,18 @@ static void a510_radm_msg_payload_parse(struct HAL_PCIE_HANDLE *pcie, uint32_t *
 				*req = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG4);
 				*byte8 = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG0);
 				*byte12 = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_VDM_REG1);
+
+				temp0 = *byte8;
+				temp1 = *byte12;
+				printf("seehi--> %s line: %d x16 no_fifo | bayte8 0x%x byte12 0x%x\n", __func__, __LINE__, temp0, temp1);
+
+				if(temp0 == 0x1){
+					BSP_PCIE_EP_LTR(pcie, cnt++);
+				}else if(temp0 == 0x2){
+					BSP_PCIE_EP_INTX(pcie, cnt++);
+				}else{
+					BSP_PCIE_EP_VDM(pcie, cnt++, temp0, temp1);
+				}
 			}
 
 			pcie_writel_apb(pcie, A510_APB_PCIE_MSG_VDM_CLR, A510_APB_PCIE_MSG_VDM);
@@ -523,68 +630,28 @@ static void a510_radm_msg_payload_parse(struct HAL_PCIE_HANDLE *pcie, uint32_t *
 
 }
 
-void pcie_03_irq_handler(void)
+void pcie_irq_handler(void)
 {
-	struct HAL_PCIE_HANDLE *pcie = &s_pcie_03;
+	struct HAL_PCIE_HANDLE *pcie;
 	uint32_t reg, val, req, byte8[10], byte12[10];
+
+	if(g_c2c_base == C2C_SYS_CFG_02){
+		pcie = &s_pcie_02;
+	}else if(g_c2c_base == C2C_SYS_CFG_03){
+		pcie = &s_pcie_03;
+	}else if(g_c2c_base == C2C_SYS_CFG_72){
+		pcie = &s_pcie_72;
+	}else if(g_c2c_base == C2C_SYS_CFG_73){
+		pcie = &s_pcie_73;
+	}else{
+		pcie = NULL;
+		printf("pcie_irq_handler error !!!\n");
+		return;
+	}
 
 	reg = pcie_readl_apb(pcie, A510_APB_PCIE_STAT_INT0);
 
-	// printf("seehi--> %s line: %d ********** reg = 0x%x **********\n", __func__, __LINE__, reg);
-	if (reg & A510_APB_PCIE_CFG_LINK_EQ_REQ_INT)
-		printf("A510_APB_PCIE_CFG_LINK_EQ_REQ_INT\n");
-
-	if (reg & A510_APB_PCIE_CFG_BW_MGT_MSI)
-		printf("A510_APB_PCIE_CFG_BW_MGT_MSI\n");
-
-	if (reg & A510_APB_PCIE_CFG_LINK_AUTO_BW_MSI)
-		printf("A510_APB_PCIE_CFG_LINK_AUTO_BW_MSI\n");
-
-	if (reg & A510_APB_PCIE_CFG_BW_MGT_INT)
-		printf("A510_APB_PCIE_CFG_BW_MGT_INT\n");
-
-	if (reg & A510_APB_PCIE_CFG_LINK_AUTO_BW_INT)
-		printf("A510_APB_PCIE_CFG_LINK_AUTO_BW_INT\n");
-
-	if (reg & A510_APB_PCIE_RADM_MSG_UNLOCK_INT)
-		printf("A510_APB_PCIE_RADM_MSG_UNLOCK_INT\n");
-
-	if (reg & A510_APB_PCIE_RADM_MSG_LTR_INT){
-		printf("A510_APB_PCIE_RADM_MSG_LTR_INT\n");
-		pcie_writel_apb(pcie, 0x1, A510_APB_PCIE_MSG_LTR_LATCH);
-		val = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_LTR);
-		if(val & A510_APB_PCIE_RADM_MSG_LTR){
-
-			req = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_LTR_REG4);
-			byte8[0] = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_LTR_REG1);
-			byte12[0] = pcie_readl_apb(pcie, A510_APB_PCIE_MSG_LTR_REG0);
-
-			pcie_writel_apb(pcie, A510_APB_PCIE_MSG_LTR_CLR, A510_APB_PCIE_MSG_LTR);
-			printf("seehi--> %s line: %d req 0x%x bayte8 0x%x byte12 0x%x\n", __func__, __LINE__, req, byte8[0], byte12[0]);
-		}
-	}
-
-	if (reg & A510_APB_PCIE_RADM_MSG_VDM_INT){
-		printf("A510_APB_PCIE_RADM_MSG_VDM_INT\n");
-		a510_radm_msg_payload_parse(pcie, &req, byte8, byte12);
-	}
-
-	if (reg & A510_APB_PCIE_RADM_MSG_SLOT_PWR_INT)
-		printf("A510_APB_PCIE_RADM_MSG_SLOT_PWR_INT\n");
-
-	pcie_writel_apb(pcie, reg, A510_APB_PCIE_CLR_INT0);
-
-	return;
-}
-
-void pcie_02_irq_handler(void)
-{
-	struct HAL_PCIE_HANDLE *pcie = &s_pcie_02;
-	uint32_t reg, val, req, byte8[10], byte12[10];
-
-	reg = pcie_readl_apb(pcie, A510_APB_PCIE_STAT_INT0);
-
-	// printf("seehi--> %s line: %d ********** reg = 0x%x **********\n", __func__, __LINE__, reg);
+	printf("seehi--> %s line: %d A510_APB_PCIE_STAT_INT0 = 0x%x \n", __func__, __LINE__, reg);
 	if (reg & A510_APB_PCIE_CFG_LINK_EQ_REQ_INT)
 		printf("A510_APB_PCIE_CFG_LINK_EQ_REQ_INT\n");
 
@@ -838,7 +905,7 @@ void BSP_PCIE_EP_Init(const struct HAL_PCIE_HANDLE *pcie)
 	uint32_t lanes = pcie->dev->max_lanes;
 	uint32_t val;
 
-	val = readq(apb_base + 0x100);  //RK有时钟相关配置我们是否也有
+	val = readq(apb_base + 0x100);
 	val &= 0xfffffffe;
 	writeq(val, apb_base + 0x100);  //disable app_ltssm_enable
 
@@ -852,6 +919,14 @@ void BSP_PCIE_EP_Init(const struct HAL_PCIE_HANDLE *pcie)
 	}else{
 		printf("PHY bifurcation error !\n");
 	}
+#if SEEHI_C2C_PCIE_TEST
+	writeq(1, phy_base + 0x18);	//pipe16_pclkchange_hs_en
+
+	// val = readq(apb_base + 0x100);
+	// val |= 1 << 3;
+	// writeq(val, apb_base + 0x100);  //app_hold_phy_rst
+#endif
+
 #elif SEEHI_FPGA_PCIE_TEST
 
 #else
@@ -861,13 +936,23 @@ void BSP_PCIE_EP_Init(const struct HAL_PCIE_HANDLE *pcie)
 	writeq(0, apb_base + 0x104);  //ep mode
 }
 
-void BSP_First_Reset(void)
+static void BSP_First_Reset(void)
 {
 	// printf("BSP_First_Reset\n");
 }
 
 static void gpio_sync_init(void)
 {
+#if  SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST
+	pinmux_select(PORTA, 0, 7);
+	gpio_init_config_t gpio_init_config = {
+		.port = PORTA,
+		.gpio_control_mode = Software_Mode,
+		.gpio_mode = GPIO_Input_Mode,
+		.pin = 0
+	};
+	gpio_init(&gpio_init_config);
+#else
 	pinmux_select(PORTA, 24, 7);
 	gpio_init_config_t gpio_init_config = {
 		.port = PORTA,
@@ -876,6 +961,7 @@ static void gpio_sync_init(void)
 		.pin = 24
 	};
 	gpio_init(&gpio_init_config);
+#endif
 }
 
 HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
@@ -944,7 +1030,7 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 
 	writeq(0x12000001, dbi_base + 0x08);  //class processing accelerators
 
-	writeq(0x0, dbi_base + 0x3c);  // interrrupt pin  no legacy interrupt Message
+	writeq(0x1ff, dbi_base + 0x3c);  // interrrupt pin  legacy interrupt Message
 								   //
 	writeq(0x00102130, dbi_base + 0x78);   //验证配置,DEVICE_CONTROL_DEVICE_STATUS 和MAX PAYLOAD SIZE 相关
 
@@ -956,13 +1042,17 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	val |= 1 << 10;
 	writeq(val, dbi_base + 0x98);
 
-	val = readq(dbi_base + 0x80c);   //GEN2_CTRL_OFF
+	val = readq(dbi_base + 0x80c);   //GEN2_CTRL_OFF  DIRECT_SPEED_CHANGE
 	val |= 1 << 17;
 	writeq(val, dbi_base + 0x80c);
 
-	val = readq(dbi_base + 0x720);   //FILTER_MASK_2_OFF
-	val |= 0x3;
-	writeq(val, dbi_base + 0x720);
+	val = readl(dbi_base + 0x708);
+	val |= 0x400000;
+	writel(val, dbi_base + 0x708);  // Poling Active to Poling x1 x4 x8
+
+	val = readq(dbi_base + PCIE_FILTER_MASK_2);   //FILTER_MASK_2_OFF
+	val |= CX_FLT_MASK_VENMSG0_DROP | CX_FLT_MASK_VENMSG1_DROP;
+	writeq(val, dbi_base + PCIE_FILTER_MASK_2);
 
 	switch (pcie->dev->gen) {  //gen speed
 	case 1:
@@ -984,12 +1074,20 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 		printf("Gen unkown\n");
 	}
 	dw_pcie_link_set_lanes(dbi_base, pcie->dev->lanes);  //lanes
+	printf("pcie ep GEN %d, x%d\n", pcie->dev->gen, pcie->dev->lanes);
 
 	systimer_delay(1, IN_MS);
 
+	//rc only
 	writeq(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
-	writeq(0x01402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
-	writeq(0x02402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
+	writeq(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
+
+	writeq(0x01402200, dbi_base + 0x890);  //GEN4_RELATED_OFF.EQ_PHASE_2_3=0
+	writeq(0x01402200, dbi_base + 0x890);  //GEN4_RELATED_OFF.EQ_PHASE_2_3=0
+
+	writeq(0x02402200, dbi_base + 0x890);  //GEN5_RELATED_OFF.EQ_PHASE_2_3=0
+	writeq(0x02402200, dbi_base + 0x890);  //GEN5_RELATED_OFF.EQ_PHASE_2_3=0
+
 	writeq(0x4d004071, dbi_base + 0x8a8);  //GEN3_EQ_CONTROL_OFF
 
 	dw_pcie_ep_set_msix(dbi_base, 31, 0x70000, 1);  //有默认值不需要软件配置
@@ -1010,11 +1108,40 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 
 		systimer_delay(1, IN_MS);
 	}
+#elif SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST
+	while(1){
+		val = gpio_read_pin(PORTA, 0);
+		if(val == 0){
+			temp = 0x55;
+		}
+
+		if(val == 1 && temp == 0x55){
+			printf("get rc sync single\n");
+			break;
+		}
+
+		systimer_delay(1, IN_US);
+	}
+	// val = readq(apb_base + 0x100);
+	// val &= ~(1 << 3);
+	// writeq(val, apb_base + 0x100);  //disable app_hold_phy_rst
 #endif
 
 	val = readq(apb_base + 0x100);  // 验证配置的0x25
 	val |= 0x1;
 	writeq(val, apb_base + 0x100);  //enable app_ltssm_enable
+
+#if SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST
+	//only pld use
+	val = readw(dbi_base + 0x70a);  // force phy link to state 1
+	val |= 0x1;
+	writew(val, dbi_base + 0x70a);  // force phy link to state 1
+
+	val = readw(dbi_base + 0x708);  // force phy link to state 1
+	val |= 0x8000;
+	writew(val, dbi_base + 0x708);  // force phy link to state 1
+	printf("force phy link to state 1\n");
+#endif
 
 	/////////////////////////////////////END//////////////////////////////////////////////////////
 	dw_pcie_dbi_ro_wr_dis(dbi_base);
@@ -1069,15 +1196,13 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 		BSP_First_Reset();
 	}
 
-#if SEEHI_FPGA_PCIE_TEST
 	printf("Link up\n");
-#endif
 
 #if  SEEHI_PLD_PCIE_TEST
 	#if SEEHI_C2C_PCIE_TEST
 	HAL_PCIE_InboundConfig(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
 	HAL_PCIE_InboundConfig(pcie, 1, 2, BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS);
-	HAL_PCIE_InboundConfig(pcie, 3, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);
+	HAL_PCIE_InboundConfig(pcie, 2, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);
 	#else
 	HAL_PCIE_InboundConfig(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
 	HAL_PCIE_InboundConfig(pcie, 1, 2, BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS);
@@ -1430,7 +1555,7 @@ struct HAL_PCIE_DEV g_pcieDevX16_03 =
 	.max_lanes = 16,
 	.lanes = 16,
 	.gen = 5,
-	.firstBusNo = 0x0,
+	.firstBusNo = 0x20,
 	.ltrIrqNum = 172,
 	.vdmIrqNum = 173,
 };
@@ -1451,11 +1576,31 @@ struct HAL_PCIE_DEV g_pcieDevX16_02 =
 	.lanes = 16,
 	.gen = 5,
 	.firstBusNo = 0x0,
-	.ltrIrqNum = 172,
-	.vdmIrqNum = 173,
+	.ltrIrqNum = 108,
+	.vdmIrqNum = 109,
 };
 
-struct HAL_PCIE_DEV g_pcieDevX16toX8 =
+struct HAL_PCIE_DEV g_pcieDevX16_73 =
+{
+	.apbBase = PCIE_X16_REG_73,
+	.engineBase = C2C_ENGINE_X16_73,
+	.dbiBase = DWC_PCIE_CTL_X16_DBI_73,
+	.phyBase = PCIE_PHY_REG_73,
+	.ssBase = C2C_SS_REG_73,
+	.drouterBase = DROUTER_73,
+	.crouterBase = CROUTER_73,
+	.dniuBase = DNIU_73,
+	.cniuBase = CNIU_73,
+	.mbitxBase = MBI_TX_73,
+	.max_lanes = 16,
+	.lanes = 16,
+	.gen = 5,
+	.firstBusNo = 0x60,
+	.ltrIrqNum = 300,
+	.vdmIrqNum = 301,
+};
+
+struct HAL_PCIE_DEV g_pcieDevX16toX8_03 =
 {
 	.apbBase = PCIE_X16_REG,
 	.engineBase = C2C_ENGINE_X16,
@@ -1467,15 +1612,15 @@ struct HAL_PCIE_DEV g_pcieDevX16toX8 =
 	.dniuBase = DNIU,
 	.cniuBase = CNIU,
 	.mbitxBase = MBI_TX,
-	.max_lanes = 8,
+	.max_lanes = 16,
 	.lanes = 8,
-	.gen = 3,
-	.firstBusNo = 0x0,
+	.gen = 5,
+	.firstBusNo = 0x20,
 	.ltrIrqNum = 172,
 	.vdmIrqNum = 173,
 };
 
-struct HAL_PCIE_DEV g_pcieDevX8 =
+struct HAL_PCIE_DEV g_pcieDevX8_03 =
 {
 	.apbBase = PCIE_X8_REG,
 	.engineBase = C2C_ENGINE_X8,
@@ -1488,14 +1633,14 @@ struct HAL_PCIE_DEV g_pcieDevX8 =
 	.cniuBase = CNIU,
 	.mbitxBase = MBI_TX,
 	.max_lanes = 8,
-	.lanes = 4,
-	.gen = 1,
-	.firstBusNo = 0x20,
+	.lanes = 8,
+	.gen = 5,
+	.firstBusNo = 0x30,
 	.ltrIrqNum = 204,
 	.vdmIrqNum = 205,
 };
 
-void init_g_pcie(struct HAL_PCIE_HANDLE *pcie, char tile, char mode, char lanes, char gen)
+static void init_g_pcie(struct HAL_PCIE_HANDLE *pcie, char tile, char mode, char lanes, char gen)
 {
 	struct HAL_PCIE_DEV *dev = pcie->dev;
 	g_c2c_base = get_pcie_base(tile);
@@ -1566,15 +1711,15 @@ void init_g_pcie(struct HAL_PCIE_HANDLE *pcie, char tile, char mode, char lanes,
 	dev->gen = gen;
 }
 
-
 int main()
 {
 	uint32_t result = HAL_ERROR;
 	uint32_t cnt = 0;
 	struct HAL_PCIE_HANDLE *pcie = &s_pcie;
+	printf("seehi--> %s line: %d\n", __func__, __LINE__);
 
 #if SEEHI_FPGA_PCIE_TEST
-	s_pcie.dev = &g_pcieDevX8;
+	s_pcie.dev = &g_pcieDevX8_03;
 
 	g_c2c_base = get_pcie_base(3);
 	pcie = &s_pcie_03;
@@ -1586,6 +1731,10 @@ int main()
 #elif SEEHI_PLD_PCIE_TEST
 	mc_init(TCM_04_CFG_BASE, 4);
 
+#if SEEHI_C2C_PCIE_TEST
+	gpio_sync_init();
+#endif
+
 #if SEEHI_TILE14_PCIE_TEST
 	mc_init(TCM_14_CFG_BASE, 4);
 #elif SEEHI_4TILE_PCIE_TEST
@@ -1595,17 +1744,29 @@ int main()
 	mc_init(TCM_25_CFG_BASE, 4);
 #endif
 
-	g_c2c_base = get_pcie_base(3);
+#if PLD_Z1
+	g_c2c_base = get_pcie_base(03);
 	pcie = &s_pcie_03;
 	s_pcie_03.dev = &g_pcieDevX16_03;
+	// s_pcie_03.dev = &g_pcieDevX16toX8_03;
+	// s_pcie_03.dev = &g_pcieDevX8_03;
+#elif PLD_Z2
+	g_c2c_base = get_pcie_base(73);
+	pcie = &s_pcie_73;
+	s_pcie_73.dev = &g_pcieDevX16_73;
+#else
+	#error
+#endif
 	// init_g_pcie(pcie, 3, 16, 16, 5);
+#else
+	#error
 #endif
 
 	systimer_init();
 
 	GIC_Init();
 
-    IRQ_SetHandler(pcie->dev->vdmIrqNum, pcie_03_irq_handler);
+    IRQ_SetHandler(pcie->dev->vdmIrqNum, pcie_irq_handler);
     GIC_SetPriority(pcie->dev->vdmIrqNum, 0 << 3);
 	GIC_EnableIRQ(pcie->dev->vdmIrqNum);
 
@@ -1653,13 +1814,14 @@ int main()
 
 #if SEEHI_C2C_PCIE_TEST
 	// printf("BSP_PCIE_EP_VDM !!!\n");
-	systimer_delay(10, IN_S);
-	while(cnt < 10){
-		// BSP_PCIE_EP_VDM(pcie , cnt);
-		// BSP_PCIE_EP_LTR(pcie, cnt);
-		// printf("BSP_PCIE_EP_LTR !!!\n");
+	systimer_delay(10, IN_MS);
+	while(1){
+		printf("BSP_PCIE_EP_LOOP !!! cnt %d\n", cnt);
 		cnt++;
-		systimer_delay(10, IN_S);
+		systimer_delay(20, IN_MS);
+
+		// dump_regs("vdm int:", pcie->dev->apbBase + A510_APB_PCIE_EN_INT0, 16);
+		// dump_regs("vdm message:", pcie->dev->apbBase + A510_APB_PCIE_MSG_VDM_REG0, 32);
 	}
 #endif
 
