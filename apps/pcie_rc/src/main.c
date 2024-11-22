@@ -9,13 +9,13 @@
 
 #define SEEHI_PLD_PCIE_TEST			1
 #define SEEHI_FPGA_PCIE_TEST		0
-#define SEEHI_MSIX_ENABLE			0
-
-#define SEEHI_C2C_PCIE_TEST			1
 
 #define PLD_Z1						1
 #define PLD_Z2						0
 
+#define SEEHI_C2C_PCIE_TEST			1
+
+#define SEEHI_MSIX_ENABLE			0
 
 #define TCM_CFG_BASE          0x15000000
 #define C2C_SYS_CFG_03       0x8180000000ULL
@@ -24,35 +24,6 @@
 #define C2C_SYS_CFG_72       0xB900000000ULL
 
 static uint64_t g_c2c_base;
-
-struct PCIE_IDB_CFG {
-	volatile uint32_t magic;
-#define PCIE_IDB_CFG_MAGIC 0x65696370
-	volatile uint32_t bootconfig;
-#define PCIE_IDB_CFG_PHY_MODE_SHIFT       0
-#define PCIE_IDB_CFG_PHY_MODE_MASK        0x7
-#define PCIE_IDB_CFG_PHY_MODE_AGGREGATION PHY_MODE_PCIE_AGGREGATION /**< PCIE3x4 */
-#define PCIE_IDB_CFG_PHY_MODE_NANBNB      PHY_MODE_PCIE_NANBNB      /**< P1:PCIE3x2  +  P0:PCIE3x2 */
-#define PCIE_IDB_CFG_PHY_MODE_NANBBI      PHY_MODE_PCIE_NANBBI      /**< P1:PCIE3x2  +  P0:PCIE3x1*2 */
-#define PCIE_IDB_CFG_PHY_MODE_NABINB      PHY_MODE_PCIE_NABINB      /**< P1:PCIE3x1*2 + P0:PCIE3x2 */
-#define PCIE_IDB_CFG_PHY_MODE_NABIBI      PHY_MODE_PCIE_NABIBI      /**< P1:PCIE3x1*2 + P0:PCIE3x1*2 */
-#define PCIE_IDB_CFG_GEN_SHIFT            8
-#define PCIE_IDB_CFG_GEN_MASK             0x7
-#define PCIE_IDB_CFG_LANE_SHIFT           12
-#define PCIE_IDB_CFG_LANE_MASK            0x7
-#define PCIE_IDB_CFG_UART_ID_SHIFT        16
-#define PCIE_IDB_CFG_UART_ID_MASK         0x7
-#define PCIE_IDB_CFG_UART_MUX_SHIFT       20
-#define PCIE_IDB_CFG_UART_MUX_MASK        0x7
-#define PCIE_IDB_CFG_UART_RATE_SHIFT      24
-#define PCIE_IDB_CFG_UART_RATE_MASK       0x3
-#define PCIE_IDB_CFG_UART_RATE_DEFAULT    0
-#define PCIE_IDB_CFG_UART_RATE_15000000   1
-#define PCIE_IDB_CFG_UART_RATE_1152000    2
-	volatile uint16_t vid;
-	volatile uint16_t did;
-};
-
 
 /********************* Private MACRO Definition ******************************/
 #define PCI_BASE_ADDRESS_0             0x10    /* 32 bits */
@@ -225,7 +196,7 @@ static inline void delay(uint32_t value)
 
 	for(i = 0; i < value; i++)
 		for(j = 0; j < 1000; j++);
-			// for(k = 0; k < 1000; k++);
+	// for(k = 0; k < 1000; k++);
 }
 
 static inline void writeb(uint8_t value, uint64_t address)
@@ -313,9 +284,9 @@ static int seehi_pcie_ep_set_bar_flag(uint64_t dbi_base, uint32_t barno, int fla
 	uint32_t reg, val;
 
 	reg = PCI_BASE_ADDRESS_0 + (4 * bar);
-	val = readq(dbi_base + reg);
+	val = readl(dbi_base + reg);
 	val &= 0xfffffff0;
-	writeq(flags | val, dbi_base + reg);
+	writel(flags | val, dbi_base + reg);
 
 	return 0;
 }
@@ -325,15 +296,15 @@ static void dw_pcie_link_set_max_speed(uint64_t dbi_base, uint32_t link_gen)
 	uint32_t cap, ctrl2, link_speed;
 	uint8_t offset = 0x70;
 
-	cap = readq(dbi_base + offset + PCI_EXP_LNKCAP);  //最大
-	ctrl2 = readq(dbi_base + offset + PCI_EXP_LNKCTL2);  //当前的
+	cap = readl(dbi_base + offset + PCI_EXP_LNKCAP);  //最大
+	ctrl2 = readl(dbi_base + offset + PCI_EXP_LNKCTL2);  //当前的
 	ctrl2 &= ~PCI_EXP_LNKCTL2_TLS;
 
 	link_speed = link_gen;
 
 	cap &= ~((uint32_t)PCI_EXP_LNKCAP_SLS);
-	writeq(ctrl2 | link_speed, dbi_base + offset + PCI_EXP_LNKCTL2);
-	writeq(cap | link_speed, dbi_base + offset + PCI_EXP_LNKCAP);
+	writel(ctrl2 | link_speed, dbi_base + offset + PCI_EXP_LNKCTL2);
+	writel(cap | link_speed, dbi_base + offset + PCI_EXP_LNKCAP);
 }
 
 static void dw_pcie_link_set_lanes(uint64_t dbi_base, uint32_t lanes)
@@ -341,7 +312,7 @@ static void dw_pcie_link_set_lanes(uint64_t dbi_base, uint32_t lanes)
 	uint32_t val;
 
 	/* Set the number of lanes */
-	val = readq(dbi_base + PCIE_PORT_LINK_CONTROL);  //支持最大lanes
+	val = readl(dbi_base + PCIE_PORT_LINK_CONTROL);  //支持最大lanes
 	val &= ~PORT_LINK_MODE_MASK;
 	switch (lanes) {
 	case 1:
@@ -364,10 +335,10 @@ static void dw_pcie_link_set_lanes(uint64_t dbi_base, uint32_t lanes)
 
 		return;
 	}
-	writeq(val, dbi_base + PCIE_PORT_LINK_CONTROL);
+	writel(val, dbi_base + PCIE_PORT_LINK_CONTROL);
 
 	/* Set link width speed control register */  //正确链接的lanes
-	val = readq(dbi_base + PCIE_LINK_WIDTH_SPEED_CONTROL);
+	val = readl(dbi_base + PCIE_LINK_WIDTH_SPEED_CONTROL);
 	val &= ~PORT_LOGIC_LINK_WIDTH_MASK;
 	switch (lanes) {
 	case 1:
@@ -389,7 +360,7 @@ static void dw_pcie_link_set_lanes(uint64_t dbi_base, uint32_t lanes)
 
 	val |= PCIE_DIRECT_SPEED_CHANGE;
 
-	writeq(val, dbi_base + PCIE_LINK_WIDTH_SPEED_CONTROL);
+	writel(val, dbi_base + PCIE_LINK_WIDTH_SPEED_CONTROL);
 }
 
 /* MSI-X registers (in MSI-X capability) */
@@ -423,9 +394,9 @@ static inline void dw_pcie_dbi_ro_wr_en(uint64_t dbi_base)
 	uint32_t val;
 
 	reg = PCIE_MISC_CONTROL_1_OFF;
-	val = readq(dbi_base + reg);
+	val = readl(dbi_base + reg);
 	val |= PCIE_DBI_RO_WR_EN;
-	writeq(val, dbi_base + reg);
+	writel(val, dbi_base + reg);
 }
 
 static inline void dw_pcie_dbi_ro_wr_dis(uint64_t dbi_base)
@@ -434,9 +405,9 @@ static inline void dw_pcie_dbi_ro_wr_dis(uint64_t dbi_base)
 	uint32_t val;
 
 	reg = PCIE_MISC_CONTROL_1_OFF;
-	val = readq(dbi_base + reg);
+	val = readl(dbi_base + reg);
 	val &= ~PCIE_DBI_RO_WR_EN;
-	writeq(val, dbi_base + reg);
+	writel(val, dbi_base + reg);
 }
 
 static int dw_pcie_ep_set_msix(uint64_t dbi_base, uint32_t interrupts, uint32_t bar_offset, uint32_t bir)
@@ -445,18 +416,18 @@ static int dw_pcie_ep_set_msix(uint64_t dbi_base, uint32_t interrupts, uint32_t 
 	uint32_t val, reg;
 
 	reg = offset;
-	val = readq(dbi_base + reg);
+	val = readl(dbi_base + reg);
 	val &= ~(PCI_MSIX_FLAGS_QSIZE << 16);
 	val |= interrupts << 16;
-	writeq(val, dbi_base + reg);
+	writel(val, dbi_base + reg);
 
 	reg = offset + PCI_MSIX_TABLE;
 	val = bar_offset | bir;
-	writeq(val, dbi_base + reg);
+	writel(val, dbi_base + reg);
 
 	reg = offset + PCI_MSIX_PBA;
 	val = (offset + (interrupts * PCI_MSIX_ENTRY_SIZE)) | bir;
-	writeq(val, dbi_base + reg);
+	writel(val, dbi_base + reg);
 
 	return 0;
 }
@@ -483,10 +454,10 @@ static int dw_pcie_ep_set_msi(uint64_t dbi_base, uint32_t interrupts)
 	uint8_t offset = 0x50;
 
 	reg = offset;
-	val = readq(dbi_base + reg);
+	val = readl(dbi_base + reg);
 	val &= ~(PCI_MSI_FLAGS_QMASK << 16);
 	val |= interrupts << 17;
-	writeq(val, dbi_base + reg);
+	writel(val, dbi_base + reg);
 
 	return 0;
 }
@@ -536,46 +507,46 @@ void BSP_PCIE_RC_Init(const struct HAL_PCIE_HANDLE *pcie)
 	uint32_t lanes = pcie->dev->max_lanes;
 	uint32_t val;
 
-	val = readq(apb_base + 0x100);  //
+	val = readl(apb_base + 0x100);  //
 	val &= 0xfffffffe;
-	writeq(val, apb_base + 0x100);  //disable app_ltssm_enable
+	writel(val, apb_base + 0x100);  //disable app_ltssm_enable
 
 #if  SEEHI_PLD_PCIE_TEST
+	if(lanes == 16){
+		writel(0, phy_base + 0x0);  //bif_en X16
+		writel(0, phy_base + 0x94);  //pipe8_lane_mode  //
+	}else if(lanes == 8){
+		writel(1, phy_base + 0x0);  //bif_en X8
+		writel(8, phy_base + 0x94);  //pipe8_lane_mode  //选phy clk
+	}else{
+		printf("PHY bifurcation error !\n");
+	}
 
 #if SEEHI_C2C_PCIE_TEST
-	writeq(1, phy_base + 0x18);	//pipe16_pclkchange_hs_en
+	writel(1, phy_base + 0x18);	//pipe16_pclkchange_hs_en
 
-	// val = readq(apb_base + 0x100);
+	// val = readl(apb_base + 0x100);
 	// val |= 1 << 3;
-	// writeq(val, apb_base + 0x100);  //app_hold_phy_rst
+	// writel(val, apb_base + 0x100);  //app_hold_phy_rst
 #endif
 #elif SEEHI_FPGA_PCIE_TEST
 
 #else
-	if(lanes == 16){
-		writeq(0, phy_base + 0x0);  //bif_en X16
-		writeq(0, phy_base + 0x94);  //pipe8_lane_mode  //
-	}else if(lanes == 8){
-		writeq(1, phy_base + 0x0);  //bif_en X8
-		writeq(8, phy_base + 0x94);  //pipe8_lane_mode  //选phy clk
-	}else{
-		printf("PHY bifurcation error !\n");
-	}
 #endif
 
 
-	writeq(0, apb_base + 0x110);  //close fast link PCIE_DIAG_CTRL_BUS
-	writeq(4, apb_base + 0x104);  //rc mode
+	writel(0, apb_base + 0x110);  //close fast link PCIE_DIAG_CTRL_BUS
+	writel(4, apb_base + 0x104);  //rc mode
 #if PLD_Z1
-	writeq(0x18000000, ss_base + 0x200);  //config space todo
-	writeq(0x0, ss_base + 0x204);
+	writel(0x18000000, ss_base + 0x200);  //config space todo
+	writel(0x0, ss_base + 0x204);
 #elif PLD_Z2
-	writeq(0x1c000000, ss_base + 0x200);  //config space todo
-	writeq(0x0, ss_base + 0x204);
+	writel(0x1c000000, ss_base + 0x200);  //config space todo
+	writel(0x0, ss_base + 0x204);
 #endif
 
-	writeq(0x1ff, apb_base + 0xa0);
-	writeq(0x1, apb_base + 0x318);
+	writel(0x1ff, apb_base + 0xa0);
+	writel(0x1, apb_base + 0x318);
 
 }
 
@@ -640,73 +611,73 @@ static void rc_init_pre(struct HAL_PCIE_HANDLE *pcie)
 
 	BSP_PCIE_RC_Init(pcie);    //
 
-	writeq(0x1, ss_base + 0x1b8);    //MSI MBI
-	writeq(0xffff0000, ss_base + 0x1cc);  //MBI MASK
+	writel(0x1, ss_base + 0x1b8);    //MSI MBI
+	writel(0xffff0000, ss_base + 0x1cc);  //MBI MASK
 #if PLD_Z1
-	writeq(0x21000000, ss_base + 0x1d0); //todo
+	writel(0x21000000, ss_base + 0x1d0); //todo
 #elif PLD_Z2
-	writeq(0x61000000, ss_base + 0x1d0); //todo
+	writel(0x61000000, ss_base + 0x1d0); //todo
 #endif
 
 	val = readl(dbi_base + 0x708);
 	val |= 0x400000;
 	writel(val, dbi_base + 0x708);  // Poling Active to Poling x1 x4 x8
 
-	writeq(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
-	writeq(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
+	writel(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
+	writel(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
 
-	writeq(0x01402200, dbi_base + 0x890);  //GEN4_RELATED_OFF.EQ_PHASE_2_3=0
-	writeq(0x01402200, dbi_base + 0x890);  //GEN4_RELATED_OFF.EQ_PHASE_2_3=0
+	writel(0x01402200, dbi_base + 0x890);  //GEN4_RELATED_OFF.EQ_PHASE_2_3=0
+	writel(0x01402200, dbi_base + 0x890);  //GEN4_RELATED_OFF.EQ_PHASE_2_3=0
 
-	writeq(0x02402200, dbi_base + 0x890);  //GEN5_RELATED_OFF.EQ_PHASE_2_3=0
-	writeq(0x02402200, dbi_base + 0x890);  //GEN5_RELATED_OFF.EQ_PHASE_2_3=0
+	writel(0x02402200, dbi_base + 0x890);  //GEN5_RELATED_OFF.EQ_PHASE_2_3=0
+	writel(0x02402200, dbi_base + 0x890);  //GEN5_RELATED_OFF.EQ_PHASE_2_3=0
 
-	writeq(0x4d004071, dbi_base + 0x8a8);  //GEN3_EQ_CONTROL_OFF
+	writel(0x4d004071, dbi_base + 0x8a8);  //GEN3_EQ_CONTROL_OFF
 
-	writeq(0x10001, dbi_base + 0x24);  //pref
-	writeq(0x536105, dbi_base + 0x7c); //LINK_CAPABILITIES_REG
+	writel(0x10001, dbi_base + 0x24);  //pref
+	writel(0x536105, dbi_base + 0x7c); //LINK_CAPABILITIES_REG
 
-	writeq(0x3, dbi_base + 0x720);   //vdm msg drop
+	writel(0x3, dbi_base + 0x720);   //vdm msg drop
 
-	writeq(0x11110000, dbi_base + 0x30014);
-	writeq(0x11110000, dbi_base + 0x30214);
-	writeq(0x11110000, dbi_base + 0x30414);
-	writeq(0x11110000, dbi_base + 0x30614);
-	writeq(0x11110000, dbi_base + 0x30814);
-	writeq(0x11110000, dbi_base + 0x30a14);
-	writeq(0x11110000, dbi_base + 0x30c14);
-	writeq(0x11110000, dbi_base + 0x30e14);
-	writeq(0x11110000, dbi_base + 0x30114);
-	writeq(0x11110000, dbi_base + 0x30314);
-	writeq(0x11110000, dbi_base + 0x30514);
-	writeq(0x11110000, dbi_base + 0x30714);
-	writeq(0x11110000, dbi_base + 0x30914);
-	writeq(0x11110000, dbi_base + 0x30b14);
-	writeq(0x11110000, dbi_base + 0x30d14);
-	writeq(0x11110000, dbi_base + 0x30f14);
+	writel(0x11110000, dbi_base + 0x30014);
+	writel(0x11110000, dbi_base + 0x30214);
+	writel(0x11110000, dbi_base + 0x30414);
+	writel(0x11110000, dbi_base + 0x30614);
+	writel(0x11110000, dbi_base + 0x30814);
+	writel(0x11110000, dbi_base + 0x30a14);
+	writel(0x11110000, dbi_base + 0x30c14);
+	writel(0x11110000, dbi_base + 0x30e14);
+	writel(0x11110000, dbi_base + 0x30114);
+	writel(0x11110000, dbi_base + 0x30314);
+	writel(0x11110000, dbi_base + 0x30514);
+	writel(0x11110000, dbi_base + 0x30714);
+	writel(0x11110000, dbi_base + 0x30914);
+	writel(0x11110000, dbi_base + 0x30b14);
+	writel(0x11110000, dbi_base + 0x30d14);
+	writel(0x11110000, dbi_base + 0x30f14);
 
 #if PLD_Z1
-	writeq(0x2f2120, dbi_base + 0x18);
+	writel(0x2f2120, dbi_base + 0x18);
 #elif PLD_Z2
-	writeq(0x6f6160, dbi_base + 0x18);
+	writel(0x6f6160, dbi_base + 0x18);
 #endif
 
-	writeq(0x300310c8, dbi_base + 0x80c);
-	writeq(0x4, dbi_base + 0x10);  //bar0
-	writeq(0x0, dbi_base + 0x14);  //bar1
-	writeq(0x0, dbi_base + 0x10014);
-	writeq(0x1ff, dbi_base + 0x3c);  // interrrupt pin
+	writel(0x300310c8, dbi_base + 0x80c);
+	writel(0x4, dbi_base + 0x10);  //bar0
+	writel(0x0, dbi_base + 0x14);  //bar1
+	writel(0x0, dbi_base + 0x10014);
+	writel(0x1ff, dbi_base + 0x3c);  // interrrupt pin
 									 //
-	writeq(0x100107, dbi_base + 0x4);  // cmd  bus & mem enable
+	writel(0x100107, dbi_base + 0x4);  // cmd  bus & mem enable
 
-	writeq(0x7fffffff, dbi_base + 0x30014);
-	writeq(0x7fffffff, dbi_base + 0x30214);
-	writeq(0x7fffffff, dbi_base + 0x30414);
-	writeq(0x7fffffff, dbi_base + 0x30614);
-	writeq(0x7fffffff, dbi_base + 0x30814);
-	writeq(0x7fffffff, dbi_base + 0x30a14);
-	writeq(0x7fffffff, dbi_base + 0x30c14);
-	writeq(0x7fffffff, dbi_base + 0x30e14);
+	writel(0x7fffffff, dbi_base + 0x30014);
+	writel(0x7fffffff, dbi_base + 0x30214);
+	writel(0x7fffffff, dbi_base + 0x30414);
+	writel(0x7fffffff, dbi_base + 0x30614);
+	writel(0x7fffffff, dbi_base + 0x30814);
+	writel(0x7fffffff, dbi_base + 0x30a14);
+	writel(0x7fffffff, dbi_base + 0x30c14);
+	writel(0x7fffffff, dbi_base + 0x30e14);
 
 #if  SEEHI_PLD_PCIE_TEST
 	HAL_PCIE_OutboundConfig(pcie, 0, PCIE_ATU_TYPE_CFG0, PCIE_C2C_CONFIG_BASE, PCIE_C2C_CONFIG_TARGET, PCIE_C2C_CONFIG_BASE_SIZE);  //todo
@@ -730,16 +701,16 @@ static void rc_init_pre(struct HAL_PCIE_HANDLE *pcie)
 
 #endif
 
-	writeq(0x0, dbi_base + 0x10);  //bar0
-	writeq(0x0, dbi_base + 0x10010);
+	writel(0x0, dbi_base + 0x10);  //bar0
+	writel(0x0, dbi_base + 0x10010);
 	writew(0x604, dbi_base + 0xa);
-	writeq(0x300310c8, dbi_base + 0x80c);
+	writel(0x300310c8, dbi_base + 0x80c);
 
 	vid = 0x7368;    //sh
 	did = 0xa510;    //a510
-	writeq(did << 16 | vid, dbi_base + 0x00);  //vendor id & device id
+	writel(did << 16 | vid, dbi_base + 0x00);  //vendor id & device id
 
-	// writeq(0x00102130, dbi_base + 0x78);   //DEVICE_CONTROL_DEVICE_STATUS 和MAX PAYLOAD SIZE 相关
+	// writel(0x00102130, dbi_base + 0x78);   //DEVICE_CONTROL_DEVICE_STATUS 和MAX PAYLOAD SIZE 相关
 
 	switch (pcie->dev->gen) {  //gen speed
 	case 1:
@@ -761,7 +732,7 @@ static void rc_init_pre(struct HAL_PCIE_HANDLE *pcie)
 		printf("Gen unkown\n");
 	}
 	dw_pcie_link_set_lanes(dbi_base, pcie->dev->lanes);  //lanes
-	printf("pcie ep GEN %d, x%d\n", pcie->dev->gen, pcie->dev->lanes);
+	printf("pcie rc GEN %d, x%d\n", pcie->dev->gen, pcie->dev->lanes);
 }
 
 
@@ -809,10 +780,10 @@ static void rc_rescan(struct HAL_PCIE_HANDLE *pcie)
 
 	writew(0x8008, PCIE_C2C_CONFIG_BASE + 0x44);
 #if PLD_Z1
-	writeq(0x212120, dbi_base + 0x18);
+	writel(0x212120, dbi_base + 0x18);
 	writel(0x18100000, dbi_base + 0x14);
 #elif PLD_Z2
-	writeq(0x616160, dbi_base + 0x18);
+	writel(0x616160, dbi_base + 0x18);
 	writel(0x1c100000, dbi_base + 0x14);
 #endif
 	writew(0x2, dbi_base + 0x3e);
@@ -894,14 +865,24 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 #endif
 #endif
 
-	val = readq(apb_base + 0x100);  // 
+	val = readl(apb_base + 0x100);  //
 	val |= 0x1;
-	writeq(val, apb_base + 0x100);  //enable app_ltssm_enable
+	writel(val, apb_base + 0x100);  //enable app_ltssm_enable
 
-	systimer_delay(1, IN_MS);
+#if SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST
+	//only pld use
+	val = readw(dbi_base + 0x70a);  // force phy link to state 1
+	val |= 0x1;
+	writew(val, dbi_base + 0x70a);  // force phy link to state 1
+
+	val = readw(dbi_base + 0x708);  // force phy link to state 1
+	val |= 0x8000;
+	writew(val, dbi_base + 0x708);  // force phy link to state 1
+	printf("force phy link to state 1\n");
+#endif
 
 	while (1) {   //判断状态link up 用smlh_link_up和rdlh_link_up,smlh_ltssm_state
-		val = readq(apb_base + 0x150);
+		val = readl(apb_base + 0x150);
 		if ((val & 0xffff) == 0x110f) { //L0
 			phy_linkup = 1;
 			break;
@@ -917,7 +898,7 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 
 		if (val != val_cmp) {
 			val_cmp = val;
-			printf("ctrl_link_status = 0x%x\n", val);
+			printf("rc--> ctrl_link_status = 0x%x\n", val);
 		}
 	}
 
@@ -927,7 +908,7 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 
 	printf("Link up\n");
 
-	val = readq(apb_base + 0x150);
+	val = readl(apb_base + 0x150);
 	printf("Link stable, ltssm: 0x%x\n", val);
 
 #if SEEHI_C2C_PCIE_TEST
@@ -952,14 +933,14 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 
 #if 1
 	printf("rc set hot reset start test:\n");
-	// writeq(0x004201ff, dbi_base + 0x3c);  // hot reset
+	// writel(0x004201ff, dbi_base + 0x3c);  // hot reset
 	// systimer_delay(1, IN_MS);
-	// writeq(0x000201ff, dbi_base + 0x3c);  // hot reset
+	// writel(0x000201ff, dbi_base + 0x3c);  // hot reset
 
-	writeq(0x1, apb_base + 0x108);  // hot reset
-										  //
+	writel(0x1, apb_base + 0x108);  // hot reset
+									//
 	while (1) {   //判断状态link up 用smlh_link_up和rdlh_link_up,smlh_ltssm_state
-		val = readq(apb_base + 0x150);
+		val = readl(apb_base + 0x150);
 		if ((val & 0xffff) == 0x1143) { //L0
 			phy_linkup = 1;
 			break;
@@ -980,7 +961,7 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 	}
 
 	printf("retry link up\n");
-	val = readq(apb_base + 0x150);
+	val = readl(apb_base + 0x150);
 	printf("Link stable, ltssm: 0x%x\n", val);
 	val = readl(PCIE_C2C_CONFIG_BASE + 0x80);
 	printf("read LinkSta 0x%x\n", val);
@@ -1012,7 +993,7 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 #endif  //vdm test
 
 #endif  //SEEHI_C2C_PCIE_TEST
-	/////////////////////////////////////END//////////////////////////////////////////////////////
+		/////////////////////////////////////END//////////////////////////////////////////////////////
 
 	dw_pcie_dbi_ro_wr_dis(dbi_base);
 
@@ -1129,11 +1110,11 @@ int main()
 #elif PLD_Z2
 	s_pcie.dev = &g_pcieDevX16_73;
 #else
-	#error
+#error
 #endif  //PLD_Z1
 
 #else
-	#error
+#error
 #endif  //SEEHI_FPGA_PCIE_TEST
 
 	systimer_init();

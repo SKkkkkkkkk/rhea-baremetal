@@ -23,20 +23,25 @@
 │BAR4│512MB│  prefetchable  │ 64 │    TCM_MEM_BAR    │    TCM MEM     │0x004_4000_0000│     3     │
 └────┴─────┴────────────────┴────┴───────────────────┴────────────────┴───────────────┴───────────┘
 */
-
+//either-or
 #define SEEHI_PLD_PCIE_TEST			1
 #define SEEHI_FPGA_PCIE_TEST		0
 
+//either-or
+#define PLD_Z1						0
+#define PLD_Z2						1
+
+//either-or
+#define SEEHI_SINGLE_PCIE_TEST		0
+#define SEEHI_DUAL_PCIE_TEST		1
+
+//Choose more than one.
 #define SEEHI_AP_PCIE_TEST			0
 #define SEEHI_C2C_PCIE_TEST			1
 #define SEEHI_TILE14_PCIE_TEST		0
 #define SEEHI_4TILE_PCIE_TEST		0
-#define SEEHI_DUAL_PCIE_TEST		0
 
 #define SEEHI_MSIX_ENABLE			0
-
-#define PLD_Z1						1
-#define PLD_Z2						0
 
 #define TCM_04_CFG_BASE         0x0015000000
 #define TCM_14_CFG_BASE			0x8a22000000
@@ -48,7 +53,8 @@
 #define C2C_SYS_CFG_73       0xB980000000ULL
 #define C2C_SYS_CFG_72       0xB900000000ULL
 
-static uint64_t g_c2c_base;
+static uint64_t g_c2c_base;		// select c2c control
+static uint8_t g_c2c_link;			// select link c2c 1: c2c  0: host
 struct HAL_PCIE_HANDLE s_pcie;
 struct HAL_PCIE_HANDLE s_pcie_02;
 struct HAL_PCIE_HANDLE s_pcie_03;
@@ -104,18 +110,16 @@ struct HAL_PCIE_DEV g_pcieDev_73;
 
 #define PCIE_DIRECT_SPEED_CHANGE (0x1 << 17)
 
-#if SEEHI_C2C_PCIE_TEST
-#define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x10410000000  //tile 14 cfg
-#define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x00440000000   //tile 14 dram
-#define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00400000000   //tile 0 5
-#else
+#define BOOT_USING_PCIE_C2C_BAR0_CPU_ADDRESS 0x10410000000  //tile 14 cfg
+#define BOOT_USING_PCIE_C2C_BAR2_CPU_ADDRESS 0x00440000000   //tile 14 dram
+#define BOOT_USING_PCIE_C2C_BAR4_CPU_ADDRESS 0x00400000000   //tile 0 5
+															 //
 #define BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS 0x11430000000   //tile 14 npu.s2
 #define BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS 0x11420000000   //tile 14 tile cfg
 #define BOOT_USING_PCIE_EP_BAR3_CPU_ADDRESS 0x00457ff0000   //HDMA Link List
 #define BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS 0x00440000000   //tile 04 tcm mem
-#endif
 
-#define AP_SYS_C2C0_CPU_ADDRESS_03		C2C_SYS_CFG_03
+#define AP_SYS_C2C0_CPU_ADDRESS_03	C2C_SYS_CFG_03
 #define DWC_PCIE_CTL_X16_DBI		(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x0)
 #define C2C_ENGINE_X16				(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x140000)
 #define PCIE_X16_REG				(AP_SYS_C2C0_CPU_ADDRESS_03 + 0x180000)
@@ -156,7 +160,7 @@ struct HAL_PCIE_DEV g_pcieDev_73;
 #define AP_SYS_C2C0_CPU_ADDRESS_73	C2C_SYS_CFG_73
 #define DWC_PCIE_CTL_X16_DBI_73		(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x0)
 #define C2C_ENGINE_X16_73			(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x140000)
-#define PCIE_X16_REG_73 			(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x180000)
+#define PCIE_X16_REG_73				(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x180000)
 #define DWC_PCIE_CTL_X8_DBI_73		(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x200000)
 #define C2C_ENGINE_X8_73			(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x340000)
 #define PCIE_X8_REG_73				(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x380000)
@@ -171,6 +175,25 @@ struct HAL_PCIE_DEV g_pcieDev_73;
 #define DNIU_73						(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x583000)
 #define CNIU_73						(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x584000)
 #define MBI_TX_73					(AP_SYS_C2C0_CPU_ADDRESS_73 + 0x585000)
+
+#define AP_SYS_C2C0_CPU_ADDRESS_72	C2C_SYS_CFG_72
+#define DWC_PCIE_CTL_X16_DBI_72		(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x0)
+#define C2C_ENGINE_X16_72			(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x140000)
+#define PCIE_X16_REG_72				(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x180000)
+#define DWC_PCIE_CTL_X8_DBI_72		(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x200000)
+#define C2C_ENGINE_X8_72			(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x340000)
+#define PCIE_X8_REG_72				(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x380000)
+#define PCIE_PHY_REG_72				(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x400000)
+#define DWC_PCIE5_PHY0_CRI_72		(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x480000)
+#define DWC_PCIE5_PHY1_CRI_72		(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x4a0000)
+#define DWC_PCIE5_PHY2_CRI_72		(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x4c0000)
+#define DWC_PCIE5_PHY3_CRI_72		(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x4e0000)
+#define C2C_SS_REG_72				(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x580000)
+#define DROUTER_72					(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x581000)
+#define CROUTER_72					(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x582000)
+#define DNIU_72						(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x583000)
+#define CNIU_72						(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x584000)
+#define MBI_TX_72					(AP_SYS_C2C0_CPU_ADDRESS_72 + 0x585000)
 
 #define A510_APB_PCIE_EN_INT0				0xa0
 #define A510_APB_PCIE_CLR_INT0				0xa4
@@ -451,7 +474,7 @@ static void BSP_PCIE_EP_VDM(const struct HAL_PCIE_HANDLE *pcie , int cnt, uint32
 	vdm->cfg_ven_msg_data_l = l;
 	vdm->cfg_ven_msg_data_h = h;
 
-	// printf("0x130 0x%x 0x134 0x%x 8byte 0x%x 12byte 0x%x\n", readq(apb_base + 0x130), readq(apb_base + 0x134), l, h);
+	// printf("0x130 0x%x 0x134 0x%x 8byte 0x%x 12byte 0x%x\n", readl(apb_base + 0x130), readl(apb_base + 0x134), l, h);
 	vdm->cfg_ven_msg_0.cfg_ven_msg_req = 0x1;
 }
 
@@ -704,9 +727,9 @@ static int seehi_pcie_ep_set_bar_flag(uint64_t dbi_base, uint32_t barno, int fla
 	uint32_t reg, val;
 
 	reg = PCI_BASE_ADDRESS_0 + (4 * bar);
-	val = readq(dbi_base + reg);
+	val = readl(dbi_base + reg);
 	val &= 0xfffffff0;
-	writeq(flags | val, dbi_base + reg);
+	writel(flags | val, dbi_base + reg);
 
 	return 0;
 }
@@ -716,15 +739,15 @@ static void dw_pcie_link_set_max_speed(uint64_t dbi_base, uint32_t link_gen)
 	uint32_t cap, ctrl2, link_speed;
 	uint8_t offset = 0x70;
 
-	cap = readq(dbi_base + offset + PCI_EXP_LNKCAP);  //最大
-	ctrl2 = readq(dbi_base + offset + PCI_EXP_LNKCTL2);  //当前的
+	cap = readl(dbi_base + offset + PCI_EXP_LNKCAP);  //最大
+	ctrl2 = readl(dbi_base + offset + PCI_EXP_LNKCTL2);  //当前的
 	ctrl2 &= ~PCI_EXP_LNKCTL2_TLS;
 
 	link_speed = link_gen;
 
 	cap &= ~((uint32_t)PCI_EXP_LNKCAP_SLS);
-	writeq(ctrl2 | link_speed, dbi_base + offset + PCI_EXP_LNKCTL2);
-	writeq(cap | link_speed, dbi_base + offset + PCI_EXP_LNKCAP);
+	writel(ctrl2 | link_speed, dbi_base + offset + PCI_EXP_LNKCTL2);
+	writel(cap | link_speed, dbi_base + offset + PCI_EXP_LNKCAP);
 }
 
 static void dw_pcie_link_set_lanes(uint64_t dbi_base, uint32_t lanes)
@@ -732,7 +755,7 @@ static void dw_pcie_link_set_lanes(uint64_t dbi_base, uint32_t lanes)
 	uint32_t val;
 
 	/* Set the number of lanes */
-	val = readq(dbi_base + PCIE_PORT_LINK_CONTROL);  //支持最大lanes
+	val = readl(dbi_base + PCIE_PORT_LINK_CONTROL);  //支持最大lanes
 	val &= ~PORT_LINK_MODE_MASK;
 	switch (lanes) {
 	case 1:
@@ -755,10 +778,10 @@ static void dw_pcie_link_set_lanes(uint64_t dbi_base, uint32_t lanes)
 
 		return;
 	}
-	writeq(val, dbi_base + PCIE_PORT_LINK_CONTROL);
+	writel(val, dbi_base + PCIE_PORT_LINK_CONTROL);
 
 	/* Set link width speed control register */  //正确链接的lanes
-	val = readq(dbi_base + PCIE_LINK_WIDTH_SPEED_CONTROL);
+	val = readl(dbi_base + PCIE_LINK_WIDTH_SPEED_CONTROL);
 	val &= ~PORT_LOGIC_LINK_WIDTH_MASK;
 	switch (lanes) {
 	case 1:
@@ -780,7 +803,7 @@ static void dw_pcie_link_set_lanes(uint64_t dbi_base, uint32_t lanes)
 
 	val |= PCIE_DIRECT_SPEED_CHANGE;
 
-	writeq(val, dbi_base + PCIE_LINK_WIDTH_SPEED_CONTROL);
+	writel(val, dbi_base + PCIE_LINK_WIDTH_SPEED_CONTROL);
 }
 
 /* MSI-X registers (in MSI-X capability) */
@@ -814,9 +837,9 @@ static inline void dw_pcie_dbi_ro_wr_en(uint64_t dbi_base)
 	uint32_t val;
 
 	reg = PCIE_MISC_CONTROL_1_OFF;
-	val = readq(dbi_base + reg);
+	val = readl(dbi_base + reg);
 	val |= PCIE_DBI_RO_WR_EN;
-	writeq(val, dbi_base + reg);
+	writel(val, dbi_base + reg);
 }
 
 static inline void dw_pcie_dbi_ro_wr_dis(uint64_t dbi_base)
@@ -825,9 +848,9 @@ static inline void dw_pcie_dbi_ro_wr_dis(uint64_t dbi_base)
 	uint32_t val;
 
 	reg = PCIE_MISC_CONTROL_1_OFF;
-	val = readq(dbi_base + reg);
+	val = readl(dbi_base + reg);
 	val &= ~PCIE_DBI_RO_WR_EN;
-	writeq(val, dbi_base + reg);
+	writel(val, dbi_base + reg);
 }
 
 static int dw_pcie_ep_set_msix(uint64_t dbi_base, uint32_t interrupts, uint32_t bar_offset, uint32_t bir)
@@ -836,18 +859,18 @@ static int dw_pcie_ep_set_msix(uint64_t dbi_base, uint32_t interrupts, uint32_t 
 	uint32_t val, reg;
 
 	reg = offset;
-	val = readq(dbi_base + reg);
+	val = readl(dbi_base + reg);
 	val &= ~(PCI_MSIX_FLAGS_QSIZE << 16);
 	val |= interrupts << 16;
-	writeq(val, dbi_base + reg);
+	writel(val, dbi_base + reg);
 
 	reg = offset + PCI_MSIX_TABLE;
 	val = bar_offset | bir;
-	writeq(val, dbi_base + reg);
+	writel(val, dbi_base + reg);
 
 	reg = offset + PCI_MSIX_PBA;
 	val = (offset + (interrupts * PCI_MSIX_ENTRY_SIZE)) | bir;
-	writeq(val, dbi_base + reg);
+	writel(val, dbi_base + reg);
 
 	return 0;
 }
@@ -875,10 +898,10 @@ static int dw_pcie_ep_set_msi(uint64_t dbi_base, uint32_t interrupts)
 	uint8_t offset = 0x50;
 
 	reg = offset;
-	val = readq(dbi_base + reg);
+	val = readl(dbi_base + reg);
 	val &= ~(PCI_MSI_FLAGS_QMASK << 16);
 	val |= interrupts << 17;
-	writeq(val, dbi_base + reg);
+	writel(val, dbi_base + reg);
 
 	return 0;
 }
@@ -889,9 +912,9 @@ static int dw_pcie_ep_msi_32_data(uint64_t dbi_base)
 	uint8_t offset = 0x50;
 
 	reg = offset;
-	val = readq(dbi_base + reg);
+	val = readl(dbi_base + reg);
 	val |= PCI_MSI_EXT_DATA_EN;
-	writeq(val, dbi_base + reg);
+	writel(val, dbi_base + reg);
 
 	return 0;
 }
@@ -905,35 +928,37 @@ void BSP_PCIE_EP_Init(const struct HAL_PCIE_HANDLE *pcie)
 	uint32_t lanes = pcie->dev->max_lanes;
 	uint32_t val;
 
-	val = readq(apb_base + 0x100);
+	val = readl(apb_base + 0x100);
 	val &= 0xfffffffe;
-	writeq(val, apb_base + 0x100);  //disable app_ltssm_enable
+	writel(val, apb_base + 0x100);  //disable app_ltssm_enable
 
 #if  SEEHI_PLD_PCIE_TEST
 	if(lanes == 16){
-		writeq(0, phy_base + 0x0);  //bif_en X16
-		writeq(0, phy_base + 0x94);  //pipe8_lane_mode  //
+		writel(0, phy_base + 0x0);  //bif_en X16
+		writel(0, phy_base + 0x94);  //pipe8_lane_mode  //
 	}else if(lanes == 8){
-		writeq(1, phy_base + 0x0);  //bif_en X8
-		writeq(8, phy_base + 0x94);  //pipe8_lane_mode  //选phy clk
+		writel(1, phy_base + 0x0);  //bif_en X8
+		writel(8, phy_base + 0x94);  //pipe8_lane_mode  //选phy clk
 	}else{
 		printf("PHY bifurcation error !\n");
 	}
-#if SEEHI_C2C_PCIE_TEST
-	writeq(1, phy_base + 0x18);	//pipe16_pclkchange_hs_en
 
-	// val = readq(apb_base + 0x100);
-	// val |= 1 << 3;
-	// writeq(val, apb_base + 0x100);  //app_hold_phy_rst
-#endif
+	if(g_c2c_link){
+		writel(1, phy_base + 0x18);	//pipe16_pclkchange_hs_en
+
+		// val = readl(apb_base + 0x100);
+		// val |= 1 << 3;
+		// writel(val, apb_base + 0x100);  //app_hold_phy_rst
+	}
 
 #elif SEEHI_FPGA_PCIE_TEST
 
 #else
+#error
 #endif
 
-	writeq(0, apb_base + 0x110);  ////close fast link
-	writeq(0, apb_base + 0x104);  //ep mode
+	writel(0, apb_base + 0x110);  ////close fast link
+	writel(0, apb_base + 0x104);  //ep mode
 }
 
 static void BSP_First_Reset(void)
@@ -943,7 +968,7 @@ static void BSP_First_Reset(void)
 
 static void gpio_sync_init(void)
 {
-#if  SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST
+#if  SEEHI_PLD_PCIE_TEST
 	pinmux_select(PORTA, 0, 7);
 	gpio_init_config_t gpio_init_config = {
 		.port = PORTA,
@@ -988,71 +1013,70 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 
 	bar = 0;
 	resbar_base = dbi_base + 0x10000;
-#if SEEHI_C2C_PCIE_TEST
-	writeq(0x007fffff, resbar_base + 0x10 + bar * 0x4);   //8M
-#else
-	writeq(0x00ffffff, resbar_base + 0x10 + bar * 0x4);   //16M
-#endif
+	if(g_c2c_link)
+		writel(0x007fffff, resbar_base + 0x10 + bar * 0x4);   //8M
+	else
+		writel(0x00ffffff, resbar_base + 0x10 + bar * 0x4);   //16M
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
 
 	bar = 1;
-	writeq(0x000fffff, resbar_base + 0x10 + bar * 0x4);   //1M
+	writel(0x000fffff, resbar_base + 0x10 + bar * 0x4);   //1M
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
 
-#if SEEHI_C2C_PCIE_TEST
-	bar = 2;
-	writeq(0x3fffffff, resbar_base + 0x10 + bar * 0x4);   //
-	writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //1G
-#else
-	bar = 2;
-	writeq(0x00ffffff, resbar_base + 0x10 + bar * 0x4);   //16M
-	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
+	if(g_c2c_link){
+		bar = 2;
+		writel(0x3fffffff, resbar_base + 0x10 + bar * 0x4);   //
+		writel(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //1G
+	}else{
+		bar = 2;
+		writel(0x00ffffff, resbar_base + 0x10 + bar * 0x4);   //16M
+		seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
 
-	bar = 3;
-	writeq(0x0000ffff, resbar_base + 0x10 + bar * 0x4);   //64K
-	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
-#endif
+		bar = 3;
+		writel(0x0000ffff, resbar_base + 0x10 + bar * 0x4);   //64K
+		seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
+	}
 
 	bar = 4;
-#if SEEHI_C2C_PCIE_TEST
-	writeq(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
-	writeq(0x00000003, resbar_base + 0x10 + bar * 0x4 + 0x4);   //16G
-#else
-	writeq(0x1fffffff, resbar_base + 0x10 + bar * 0x4);   //
-	writeq(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //512M
-#endif
+	if(g_c2c_link){
+		writel(0xffffffff, resbar_base + 0x10 + bar * 0x4);   //
+		writel(0x00000003, resbar_base + 0x10 + bar * 0x4 + 0x4);   //16G
+	}else{
+		writel(0x1fffffff, resbar_base + 0x10 + bar * 0x4);   //
+		writel(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //512M
+	}
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);
 	/* BAR Config End */
 
 	vid = 0x5348;    //SH
 	did = 0xa510;    //a510
-	writeq(did << 16 | vid, dbi_base + 0x00);  //vendor id & device id
+	writel(did << 16 | vid, dbi_base + 0x00);  //vendor id & device id
 
-	writeq(0x12000001, dbi_base + 0x08);  //class processing accelerators
+	writel(0x12000001, dbi_base + 0x08);  //class processing accelerators
 
-	writeq(0x1ff, dbi_base + 0x3c);  // interrrupt pin  legacy interrupt Message
-								   //
-	writeq(0x00102130, dbi_base + 0x78);   //验证配置,DEVICE_CONTROL_DEVICE_STATUS 和MAX PAYLOAD SIZE 相关
+	writel(0x1ff, dbi_base + 0x3c);  // interrrupt pin  legacy interrupt Message
+									 //
+	writel(0x00102130, dbi_base + 0x78);   //验证配置,DEVICE_CONTROL_DEVICE_STATUS 和MAX PAYLOAD SIZE 相关
 
-	val = readq(dbi_base + 0x7c);   //LINK_CAPABILITIES_REG  No ASPM Support
+	val = readl(dbi_base + 0x7c);   //LINK_CAPABILITIES_REG  No ASPM Support
 	val &= ~(3 << 10);
-	writeq(val, dbi_base + 0x7c);
+	writel(val, dbi_base + 0x7c);
 
-	val = readq(dbi_base + 0x98);   //DEVICE_CONTROL2_DEVICE_STATUS2_REG  PCIE_CAP_LTR_EN
+	val = readl(dbi_base + 0x98);   //DEVICE_CONTROL2_DEVICE_STATUS2_REG  PCIE_CAP_LTR_EN
 	val |= 1 << 10;
-	writeq(val, dbi_base + 0x98);
+	writel(val, dbi_base + 0x98);
 
-	val = readq(dbi_base + 0x80c);   //GEN2_CTRL_OFF  DIRECT_SPEED_CHANGE
+	val = readl(dbi_base + 0x80c);   //GEN2_CTRL_OFF  DIRECT_SPEED_CHANGE
 	val |= 1 << 17;
-	writeq(val, dbi_base + 0x80c);
+	writel(val, dbi_base + 0x80c);
 
 	val = readl(dbi_base + 0x708);
 	val |= 0x400000;
 	writel(val, dbi_base + 0x708);  // Poling Active to Poling x1 x4 x8
 
-	val = readq(dbi_base + PCIE_FILTER_MASK_2);   //FILTER_MASK_2_OFF
+	val = readl(dbi_base + PCIE_FILTER_MASK_2);   //FILTER_MASK_2_OFF
 	val |= CX_FLT_MASK_VENMSG0_DROP | CX_FLT_MASK_VENMSG1_DROP;
-	writeq(val, dbi_base + PCIE_FILTER_MASK_2);
+	writel(val, dbi_base + PCIE_FILTER_MASK_2);
 
 	switch (pcie->dev->gen) {  //gen speed
 	case 1:
@@ -1079,24 +1103,27 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	systimer_delay(1, IN_MS);
 
 	//rc only
-	writeq(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
-	writeq(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
+	writel(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
+	writel(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
 
-	writeq(0x01402200, dbi_base + 0x890);  //GEN4_RELATED_OFF.EQ_PHASE_2_3=0
-	writeq(0x01402200, dbi_base + 0x890);  //GEN4_RELATED_OFF.EQ_PHASE_2_3=0
+	writel(0x01402200, dbi_base + 0x890);  //GEN4_RELATED_OFF.EQ_PHASE_2_3=0
+	writel(0x01402200, dbi_base + 0x890);  //GEN4_RELATED_OFF.EQ_PHASE_2_3=0
 
-	writeq(0x02402200, dbi_base + 0x890);  //GEN5_RELATED_OFF.EQ_PHASE_2_3=0
-	writeq(0x02402200, dbi_base + 0x890);  //GEN5_RELATED_OFF.EQ_PHASE_2_3=0
+	writel(0x02402200, dbi_base + 0x890);  //GEN5_RELATED_OFF.EQ_PHASE_2_3=0
+	writel(0x02402200, dbi_base + 0x890);  //GEN5_RELATED_OFF.EQ_PHASE_2_3=0
 
-	writeq(0x4d004071, dbi_base + 0x8a8);  //GEN3_EQ_CONTROL_OFF
+	writel(0x4d004071, dbi_base + 0x8a8);  //GEN3_EQ_CONTROL_OFF
 
 	dw_pcie_ep_set_msix(dbi_base, 31, 0x70000, 1);  //有默认值不需要软件配置
 	dw_pcie_ep_set_msi(dbi_base, 5);
 	dw_pcie_ep_msi_32_data(dbi_base); //32 data
 
+	while(g_c2c_link){
 #if SEEHI_FPGA_PCIE_TEST
-	while(1){
 		val = gpio_read_pin(PORTA, 24);
+#elif SEEHI_PLD_PCIE_TEST
+		val = gpio_read_pin(PORTA, 0);
+#endif
 		if(val == 0){
 			temp = 0x55;
 		}
@@ -1108,39 +1135,26 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 
 		systimer_delay(1, IN_MS);
 	}
-#elif SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST
-	while(1){
-		val = gpio_read_pin(PORTA, 0);
-		if(val == 0){
-			temp = 0x55;
-		}
-
-		if(val == 1 && temp == 0x55){
-			printf("get rc sync single\n");
-			break;
-		}
-
-		systimer_delay(1, IN_US);
-	}
-	// val = readq(apb_base + 0x100);
+	// val = readl(apb_base + 0x100);
 	// val &= ~(1 << 3);
-	// writeq(val, apb_base + 0x100);  //disable app_hold_phy_rst
-#endif
+	// writel(val, apb_base + 0x100);  //disable app_hold_phy_rst
 
-	val = readq(apb_base + 0x100);  // 验证配置的0x25
+	val = readl(apb_base + 0x100);  // 验证配置的0x25
 	val |= 0x1;
-	writeq(val, apb_base + 0x100);  //enable app_ltssm_enable
+	writel(val, apb_base + 0x100);  //enable app_ltssm_enable
 
-#if SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST
-	//only pld use
-	val = readw(dbi_base + 0x70a);  // force phy link to state 1
-	val |= 0x1;
-	writew(val, dbi_base + 0x70a);  // force phy link to state 1
+#if SEEHI_PLD_PCIE_TEST
+	if(g_c2c_link){
+		//only pld use
+		val = readw(dbi_base + 0x70a);  // force phy link to state 1
+		val |= 0x1;
+		writew(val, dbi_base + 0x70a);  // force phy link to state 1
 
-	val = readw(dbi_base + 0x708);  // force phy link to state 1
-	val |= 0x8000;
-	writew(val, dbi_base + 0x708);  // force phy link to state 1
-	printf("force phy link to state 1\n");
+		val = readw(dbi_base + 0x708);  // force phy link to state 1
+		val |= 0x8000;
+		writew(val, dbi_base + 0x708);  // force phy link to state 1
+		printf("force phy link to state 1\n");
+	}
 #endif
 
 	/////////////////////////////////////END//////////////////////////////////////////////////////
@@ -1169,10 +1183,15 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 
 	dw_pcie_dbi_ro_wr_en(dbi_base);
 
+	if(g_c2c_link)
+		printf("seehi--> %s line: %d for c2c link 73 \n", __func__, __LINE__);
+	else
+		printf("seehi--> %s line: %d for x86 link 03\n", __func__, __LINE__);
+
 	while (1) {   //判断状态link up 用smlh_link_up和rdlh_link_up,smlh_ltssm_state
-		val = readq(apb_base + 0x150);
+		val = readl(apb_base + 0x150);
 		if ((val & 0xffff) == 0x1103) { //L0
-			printf("ctrl_link_status = 0x%x\n", val);
+			printf("ep--> ctrl_link_status = 0x%x\n", val);
 			phy_linkup = 1;
 			break;
 		}
@@ -1188,7 +1207,7 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 
 		if (val != val_cmp) {
 			val_cmp = val;
-			printf("ctrl_link_status = 0x%x\n", val);
+			printf("ep--> ctrl_link_status = 0x%x\n", val);
 		}
 	}
 
@@ -1199,16 +1218,17 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 	printf("Link up\n");
 
 #if  SEEHI_PLD_PCIE_TEST
-	#if SEEHI_C2C_PCIE_TEST
-	HAL_PCIE_InboundConfig(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
-	HAL_PCIE_InboundConfig(pcie, 1, 2, BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS);
-	HAL_PCIE_InboundConfig(pcie, 2, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);
-	#else
-	HAL_PCIE_InboundConfig(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
-	HAL_PCIE_InboundConfig(pcie, 1, 2, BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS);
-	HAL_PCIE_InboundConfig(pcie, 2, 3, BOOT_USING_PCIE_EP_BAR3_CPU_ADDRESS);
-	HAL_PCIE_InboundConfig(pcie, 3, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);
-	#endif
+
+	if(g_c2c_link){
+		HAL_PCIE_InboundConfig(pcie, 0, 0, BOOT_USING_PCIE_C2C_BAR0_CPU_ADDRESS);
+		HAL_PCIE_InboundConfig(pcie, 1, 2, BOOT_USING_PCIE_C2C_BAR2_CPU_ADDRESS);
+		HAL_PCIE_InboundConfig(pcie, 2, 4, BOOT_USING_PCIE_C2C_BAR4_CPU_ADDRESS);
+	}else{
+		HAL_PCIE_InboundConfig(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
+		HAL_PCIE_InboundConfig(pcie, 1, 2, BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS);
+		HAL_PCIE_InboundConfig(pcie, 2, 3, BOOT_USING_PCIE_EP_BAR3_CPU_ADDRESS);
+		HAL_PCIE_InboundConfig(pcie, 3, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);
+	}
 
 #elif SEEHI_FPGA_PCIE_TEST
 	dw_pcie_prog_inbound_atu(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
@@ -1221,94 +1241,92 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 
 #endif
 
-	val = readq(dbi_base + 0x4);
-	writeq(val | 0x6, dbi_base + 0x4);   // cmd  bus & mem enable
+	val = readl(dbi_base + 0x4);
+	writel(val | 0x6, dbi_base + 0x4);   // cmd  bus & mem enable
 
-#if SEEHI_FPGA_PCIE_TEST
-	val = readq(apb_base + 0x150);
+	val = readl(apb_base + 0x150);
 	printf("Link stable, ltssm: 0x%x\n", val);
-#endif
 
 #if SEEHI_MSIX_ENABLE
 	/////////////////////////////////////MSIX//////////////////////////////////////////////////////
 	if(pcie->dev->max_lanes == 16){
-		writeq(0x40000, ss_base + 0x94);    // int_mbi_message_for_vector_00
-		writeq(0x40001, ss_base + 0x98);    // int_mbi_message_for_vector_01
-		writeq(0x40002, ss_base + 0x9c);    // int_mbi_message_for_vector_02
-		writeq(0x40003, ss_base + 0xa0);    // int_mbi_message_for_vector_03
-		writeq(0x40004, ss_base + 0xa4);    // int_mbi_message_for_vector_04
-		writeq(0x40005, ss_base + 0xa8);    // int_mbi_message_for_vector_05
-		writeq(0x40006, ss_base + 0xac);    // int_mbi_message_for_vector_06
-		writeq(0x40007, ss_base + 0xb0);    // int_mbi_message_for_vector_07
-		writeq(0x40008, ss_base + 0xb4);    // int_mbi_message_for_vector_08
-		writeq(0x40009, ss_base + 0xb8);    // int_mbi_message_for_vector_09
-		writeq(0x4000a, ss_base + 0xbc);    // int_mbi_message_for_vector_10
-		writeq(0x4000b, ss_base + 0xc0);    // int_mbi_message_for_vector_11
-		writeq(0x4000c, ss_base + 0xc4);    // int_mbi_message_for_vector_12
-		writeq(0x4000d, ss_base + 0xc8);    // int_mbi_message_for_vector_13
-		writeq(0x4000e, ss_base + 0xcc);    // int_mbi_message_for_vector_14
-		writeq(0x4000f, ss_base + 0xd0);    // int_mbi_message_for_vector_15
-		writeq(0x40010, ss_base + 0xd4);    // int_mbi_message_for_vector_16
-		writeq(0x40011, ss_base + 0xd8);    // int_mbi_message_for_vector_17
-		writeq(0x40012, ss_base + 0xdc);    // int_mbi_message_for_vector_18
-		writeq(0x40013, ss_base + 0xe0);    // int_mbi_message_for_vector_19
-		writeq(0x40014, ss_base + 0xe4);    // int_mbi_message_for_vector_20
-		writeq(0x40015, ss_base + 0xe8);    // int_mbi_message_for_vector_21
-		writeq(0x40016, ss_base + 0xec);    // int_mbi_message_for_vector_22
-		writeq(0x40017, ss_base + 0xf0);    // int_mbi_message_for_vector_23
-		writeq(0x40018, ss_base + 0xf4);    // int_mbi_message_for_vector_24
-		writeq(0x40019, ss_base + 0xf8);    // int_mbi_message_for_vector_25
-		writeq(0x4001a, ss_base + 0xfc);    // int_mbi_message_for_vector_26
-		writeq(0x4001b, ss_base + 0x100);    // int_mbi_message_for_vector_27
-		writeq(0x4001c, ss_base + 0x104);    // int_mbi_message_for_vector_28
-		writeq(0x4001d, ss_base + 0x108);    // int_mbi_message_for_vector_29
-		writeq(0x4001e, ss_base + 0x10c);    // int_mbi_message_for_vector_30
-		writeq(0, ss_base + 0x110);    // int_mbi_message_for_vector_31
+		writel(0x40000, ss_base + 0x94);    // int_mbi_message_for_vector_00
+		writel(0x40001, ss_base + 0x98);    // int_mbi_message_for_vector_01
+		writel(0x40002, ss_base + 0x9c);    // int_mbi_message_for_vector_02
+		writel(0x40003, ss_base + 0xa0);    // int_mbi_message_for_vector_03
+		writel(0x40004, ss_base + 0xa4);    // int_mbi_message_for_vector_04
+		writel(0x40005, ss_base + 0xa8);    // int_mbi_message_for_vector_05
+		writel(0x40006, ss_base + 0xac);    // int_mbi_message_for_vector_06
+		writel(0x40007, ss_base + 0xb0);    // int_mbi_message_for_vector_07
+		writel(0x40008, ss_base + 0xb4);    // int_mbi_message_for_vector_08
+		writel(0x40009, ss_base + 0xb8);    // int_mbi_message_for_vector_09
+		writel(0x4000a, ss_base + 0xbc);    // int_mbi_message_for_vector_10
+		writel(0x4000b, ss_base + 0xc0);    // int_mbi_message_for_vector_11
+		writel(0x4000c, ss_base + 0xc4);    // int_mbi_message_for_vector_12
+		writel(0x4000d, ss_base + 0xc8);    // int_mbi_message_for_vector_13
+		writel(0x4000e, ss_base + 0xcc);    // int_mbi_message_for_vector_14
+		writel(0x4000f, ss_base + 0xd0);    // int_mbi_message_for_vector_15
+		writel(0x40010, ss_base + 0xd4);    // int_mbi_message_for_vector_16
+		writel(0x40011, ss_base + 0xd8);    // int_mbi_message_for_vector_17
+		writel(0x40012, ss_base + 0xdc);    // int_mbi_message_for_vector_18
+		writel(0x40013, ss_base + 0xe0);    // int_mbi_message_for_vector_19
+		writel(0x40014, ss_base + 0xe4);    // int_mbi_message_for_vector_20
+		writel(0x40015, ss_base + 0xe8);    // int_mbi_message_for_vector_21
+		writel(0x40016, ss_base + 0xec);    // int_mbi_message_for_vector_22
+		writel(0x40017, ss_base + 0xf0);    // int_mbi_message_for_vector_23
+		writel(0x40018, ss_base + 0xf4);    // int_mbi_message_for_vector_24
+		writel(0x40019, ss_base + 0xf8);    // int_mbi_message_for_vector_25
+		writel(0x4001a, ss_base + 0xfc);    // int_mbi_message_for_vector_26
+		writel(0x4001b, ss_base + 0x100);    // int_mbi_message_for_vector_27
+		writel(0x4001c, ss_base + 0x104);    // int_mbi_message_for_vector_28
+		writel(0x4001d, ss_base + 0x108);    // int_mbi_message_for_vector_29
+		writel(0x4001e, ss_base + 0x10c);    // int_mbi_message_for_vector_30
+		writel(0, ss_base + 0x110);    // int_mbi_message_for_vector_31
 
-		writeq(0x1 << 0, ss_base + 0x194);    // pcie_x16 outbound bit0
-		writeq(0x6, ss_base + 0x1a0);    // pcie_x16 int_tx_msi_doorbell_x16
-												//
-		writeq(0x60000001, dbi_base + 0x940);   //MSIX_ADDRESS_MATCH_LOW_OFF  doorbell 只有32位，高位截断
-		writeq(0x0, dbi_base + 0x944);              //MSIX_ADDRESS_MATCH_EN  addr = 0x81_c000_000
+		writel(0x1 << 0, ss_base + 0x194);    // pcie_x16 outbound bit0
+		writel(0x6, ss_base + 0x1a0);    // pcie_x16 int_tx_msi_doorbell_x16
+										 //
+		writel(0x60000001, dbi_base + 0x940);   //MSIX_ADDRESS_MATCH_LOW_OFF  doorbell 只有32位，高位截断
+		writel(0x0, dbi_base + 0x944);              //MSIX_ADDRESS_MATCH_EN  addr = 0x81_c000_000
 	}else if(pcie->dev->max_lanes == 8){
-		writeq(0x40000, ss_base + 0x114);    // int_mbi_message_for_vector_00
-		writeq(0x40001, ss_base + 0x118);    // int_mbi_message_for_vector_01
-		writeq(0x40002, ss_base + 0x11c);    // int_mbi_message_for_vector_02
-		writeq(0x40003, ss_base + 0x120);    // int_mbi_message_for_vector_03
-		writeq(0x40004, ss_base + 0x124);    // int_mbi_message_for_vector_04
-		writeq(0x40005, ss_base + 0x128);    // int_mbi_message_for_vector_05
-		writeq(0x40006, ss_base + 0x12c);    // int_mbi_message_for_vector_06
-		writeq(0x40007, ss_base + 0x130);    // int_mbi_message_for_vector_07
-		writeq(0x40008, ss_base + 0x134);    // int_mbi_message_for_vector_08
-		writeq(0x40009, ss_base + 0x138);    // int_mbi_message_for_vector_09
-		writeq(0x4000a, ss_base + 0x13c);    // int_mbi_message_for_vector_10
-		writeq(0x4000b, ss_base + 0x140);    // int_mbi_message_for_vector_11
-		writeq(0x4000c, ss_base + 0x144);    // int_mbi_message_for_vector_12
-		writeq(0x4000d, ss_base + 0x148);    // int_mbi_message_for_vector_13
-		writeq(0x4000e, ss_base + 0x14c);    // int_mbi_message_for_vector_14
-		writeq(0x4000f, ss_base + 0x150);    // int_mbi_message_for_vector_15
-		writeq(0x40010, ss_base + 0x154);    // int_mbi_message_for_vector_16
-		writeq(0x40011, ss_base + 0x158);    // int_mbi_message_for_vector_17
-		writeq(0x40012, ss_base + 0x15c);    // int_mbi_message_for_vector_18
-		writeq(0x40013, ss_base + 0x160);    // int_mbi_message_for_vector_19
-		writeq(0x40014, ss_base + 0x164);    // int_mbi_message_for_vector_20
-		writeq(0x40015, ss_base + 0x168);    // int_mbi_message_for_vector_21
-		writeq(0x40016, ss_base + 0x16c);    // int_mbi_message_for_vector_22
-		writeq(0x40017, ss_base + 0x170);    // int_mbi_message_for_vector_23
-		writeq(0x40018, ss_base + 0x174);    // int_mbi_message_for_vector_24
-		writeq(0x40019, ss_base + 0x178);    // int_mbi_message_for_vector_25
-		writeq(0x4001a, ss_base + 0x17c);    // int_mbi_message_for_vector_26
-		writeq(0x4001b, ss_base + 0x180);    // int_mbi_message_for_vector_27
-		writeq(0x4001c, ss_base + 0x184);    // int_mbi_message_for_vector_28
-		writeq(0x4001d, ss_base + 0x188);    // int_mbi_message_for_vector_29
-		writeq(0x4001e, ss_base + 0x18c);    // int_mbi_message_for_vector_30
-		writeq(0, ss_base + 0x190);    // int_mbi_message_for_vector_31
+		writel(0x40000, ss_base + 0x114);    // int_mbi_message_for_vector_00
+		writel(0x40001, ss_base + 0x118);    // int_mbi_message_for_vector_01
+		writel(0x40002, ss_base + 0x11c);    // int_mbi_message_for_vector_02
+		writel(0x40003, ss_base + 0x120);    // int_mbi_message_for_vector_03
+		writel(0x40004, ss_base + 0x124);    // int_mbi_message_for_vector_04
+		writel(0x40005, ss_base + 0x128);    // int_mbi_message_for_vector_05
+		writel(0x40006, ss_base + 0x12c);    // int_mbi_message_for_vector_06
+		writel(0x40007, ss_base + 0x130);    // int_mbi_message_for_vector_07
+		writel(0x40008, ss_base + 0x134);    // int_mbi_message_for_vector_08
+		writel(0x40009, ss_base + 0x138);    // int_mbi_message_for_vector_09
+		writel(0x4000a, ss_base + 0x13c);    // int_mbi_message_for_vector_10
+		writel(0x4000b, ss_base + 0x140);    // int_mbi_message_for_vector_11
+		writel(0x4000c, ss_base + 0x144);    // int_mbi_message_for_vector_12
+		writel(0x4000d, ss_base + 0x148);    // int_mbi_message_for_vector_13
+		writel(0x4000e, ss_base + 0x14c);    // int_mbi_message_for_vector_14
+		writel(0x4000f, ss_base + 0x150);    // int_mbi_message_for_vector_15
+		writel(0x40010, ss_base + 0x154);    // int_mbi_message_for_vector_16
+		writel(0x40011, ss_base + 0x158);    // int_mbi_message_for_vector_17
+		writel(0x40012, ss_base + 0x15c);    // int_mbi_message_for_vector_18
+		writel(0x40013, ss_base + 0x160);    // int_mbi_message_for_vector_19
+		writel(0x40014, ss_base + 0x164);    // int_mbi_message_for_vector_20
+		writel(0x40015, ss_base + 0x168);    // int_mbi_message_for_vector_21
+		writel(0x40016, ss_base + 0x16c);    // int_mbi_message_for_vector_22
+		writel(0x40017, ss_base + 0x170);    // int_mbi_message_for_vector_23
+		writel(0x40018, ss_base + 0x174);    // int_mbi_message_for_vector_24
+		writel(0x40019, ss_base + 0x178);    // int_mbi_message_for_vector_25
+		writel(0x4001a, ss_base + 0x17c);    // int_mbi_message_for_vector_26
+		writel(0x4001b, ss_base + 0x180);    // int_mbi_message_for_vector_27
+		writel(0x4001c, ss_base + 0x184);    // int_mbi_message_for_vector_28
+		writel(0x4001d, ss_base + 0x188);    // int_mbi_message_for_vector_29
+		writel(0x4001e, ss_base + 0x18c);    // int_mbi_message_for_vector_30
+		writel(0, ss_base + 0x190);    // int_mbi_message_for_vector_31
 
-		writeq(0x1 << 1, ss_base + 0x194);    // pcie_x8 outbound bit1
-		writeq(0x7, ss_base + 0x1b0);    // pcie_x16 int_tx_msi_doorbell_x8
-												//
-		writeq(0x70000001, dbi_base + 0x940);   //MSIX_ADDRESS_MATCH_LOW_OFF  doorbell 只有32位，高位截断
-		writeq(0x0, dbi_base + 0x944);              //MSIX_ADDRESS_MATCH_EN  addr = 0x81_c000_000
+		writel(0x1 << 1, ss_base + 0x194);    // pcie_x8 outbound bit1
+		writel(0x7, ss_base + 0x1b0);    // pcie_x16 int_tx_msi_doorbell_x8
+										 //
+		writel(0x70000001, dbi_base + 0x940);   //MSIX_ADDRESS_MATCH_LOW_OFF  doorbell 只有32位，高位截断
+		writel(0x0, dbi_base + 0x944);              //MSIX_ADDRESS_MATCH_EN  addr = 0x81_c000_000
 	}else{
 		printf("msi config error !!!\n");
 	}
@@ -1358,125 +1376,127 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 
 		writel(0xb9, mbitx_ap_base + 0x14);
 	}else{
-			printf("msi config error !!!\n");
+		printf("msi config error !!!\n");
 	}
 	writel(0xffffffff, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
 	writel(0x0, mbitx_ap_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
 
-	// writeq(0x0, dbi_base + 0x948);              //0:10 vector
+	// writel(0x0, dbi_base + 0x948);              //0:10 vector
 
 #else
 
 	if(pcie->dev->max_lanes == 16){
-		writeq(0x40000, ss_base + 0x94);    // int_mbi_message_for_vector_00
+		writel(0x40000, ss_base + 0x94);    // int_mbi_message_for_vector_00
 #if SEEHI_TILE14_PCIE_TEST
-		writeq(0x00140020, ss_base + 0x98);    // int_mbi_message_for_vector_01
+		writel(0x00140020, ss_base + 0x98);    // int_mbi_message_for_vector_01
 #elif SEEHI_4TILE_PCIE_TEST
-		writeq(0x00240020, ss_base + 0x98);    // int_mbi_message_for_vector_01
+		writel(0x00240020, ss_base + 0x98);    // int_mbi_message_for_vector_01
 #else
-		writeq(0x40001, ss_base + 0x98);    // int_mbi_message_for_vector_01
+		writel(0x40001, ss_base + 0x98);    // int_mbi_message_for_vector_01
 #endif
-		writeq(0x40002, ss_base + 0x9c);    // int_mbi_message_for_vector_02
-		writeq(0x40003, ss_base + 0xa0);    // int_mbi_message_for_vector_03
-		writeq(0x40004, ss_base + 0xa4);    // int_mbi_message_for_vector_04
-		writeq(0x40005, ss_base + 0xa8);    // int_mbi_message_for_vector_05
-		writeq(0x40006, ss_base + 0xac);    // int_mbi_message_for_vector_06
-		writeq(0x40007, ss_base + 0xb0);    // int_mbi_message_for_vector_07
-		writeq(0x40008, ss_base + 0xb4);    // int_mbi_message_for_vector_08
-		writeq(0x40009, ss_base + 0xb8);    // int_mbi_message_for_vector_09
-		writeq(0x4000a, ss_base + 0xbc);    // int_mbi_message_for_vector_10
-		writeq(0x4000b, ss_base + 0xc0);    // int_mbi_message_for_vector_11
-		writeq(0x4000c, ss_base + 0xc4);    // int_mbi_message_for_vector_12
-		writeq(0x4000d, ss_base + 0xc8);    // int_mbi_message_for_vector_13
-		writeq(0x4000e, ss_base + 0xcc);    // int_mbi_message_for_vector_14
-		writeq(0x4000f, ss_base + 0xd0);    // int_mbi_message_for_vector_15
-		writeq(0x40010, ss_base + 0xd4);    // int_mbi_message_for_vector_16
-		writeq(0x40011, ss_base + 0xd8);    // int_mbi_message_for_vector_17
-		writeq(0x40012, ss_base + 0xdc);    // int_mbi_message_for_vector_18
-		writeq(0x40013, ss_base + 0xe0);    // int_mbi_message_for_vector_19
-		writeq(0x40014, ss_base + 0xe4);    // int_mbi_message_for_vector_20
-		writeq(0x40015, ss_base + 0xe8);    // int_mbi_message_for_vector_21
-		writeq(0x40016, ss_base + 0xec);    // int_mbi_message_for_vector_22
-		writeq(0x40017, ss_base + 0xf0);    // int_mbi_message_for_vector_23
-		writeq(0x40018, ss_base + 0xf4);    // int_mbi_message_for_vector_24
-		writeq(0x40019, ss_base + 0xf8);    // int_mbi_message_for_vector_25
-		writeq(0x4001a, ss_base + 0xfc);    // int_mbi_message_for_vector_26
-		writeq(0x4001b, ss_base + 0x100);    // int_mbi_message_for_vector_27
-		writeq(0x4001c, ss_base + 0x104);    // int_mbi_message_for_vector_28
-		writeq(0x4001d, ss_base + 0x108);    // int_mbi_message_for_vector_29
-		writeq(0x4001e, ss_base + 0x10c);    // int_mbi_message_for_vector_30
-		writeq(0, ss_base + 0x110);    // int_mbi_message_for_vector_31
+		writel(0x40002, ss_base + 0x9c);    // int_mbi_message_for_vector_02
+		writel(0x40003, ss_base + 0xa0);    // int_mbi_message_for_vector_03
+		writel(0x40004, ss_base + 0xa4);    // int_mbi_message_for_vector_04
+		writel(0x40005, ss_base + 0xa8);    // int_mbi_message_for_vector_05
+		writel(0x40006, ss_base + 0xac);    // int_mbi_message_for_vector_06
+		writel(0x40007, ss_base + 0xb0);    // int_mbi_message_for_vector_07
+		writel(0x40008, ss_base + 0xb4);    // int_mbi_message_for_vector_08
+		writel(0x40009, ss_base + 0xb8);    // int_mbi_message_for_vector_09
+		writel(0x4000a, ss_base + 0xbc);    // int_mbi_message_for_vector_10
+		writel(0x4000b, ss_base + 0xc0);    // int_mbi_message_for_vector_11
+		writel(0x4000c, ss_base + 0xc4);    // int_mbi_message_for_vector_12
+		writel(0x4000d, ss_base + 0xc8);    // int_mbi_message_for_vector_13
+		writel(0x4000e, ss_base + 0xcc);    // int_mbi_message_for_vector_14
+		writel(0x4000f, ss_base + 0xd0);    // int_mbi_message_for_vector_15
+		writel(0x40010, ss_base + 0xd4);    // int_mbi_message_for_vector_16
+		writel(0x40011, ss_base + 0xd8);    // int_mbi_message_for_vector_17
+		writel(0x40012, ss_base + 0xdc);    // int_mbi_message_for_vector_18
+		writel(0x40013, ss_base + 0xe0);    // int_mbi_message_for_vector_19
+		writel(0x40014, ss_base + 0xe4);    // int_mbi_message_for_vector_20
+		writel(0x40015, ss_base + 0xe8);    // int_mbi_message_for_vector_21
+		writel(0x40016, ss_base + 0xec);    // int_mbi_message_for_vector_22
+		writel(0x40017, ss_base + 0xf0);    // int_mbi_message_for_vector_23
+		writel(0x40018, ss_base + 0xf4);    // int_mbi_message_for_vector_24
+		writel(0x40019, ss_base + 0xf8);    // int_mbi_message_for_vector_25
+		writel(0x4001a, ss_base + 0xfc);    // int_mbi_message_for_vector_26
+		writel(0x4001b, ss_base + 0x100);    // int_mbi_message_for_vector_27
+		writel(0x4001c, ss_base + 0x104);    // int_mbi_message_for_vector_28
+		writel(0x4001d, ss_base + 0x108);    // int_mbi_message_for_vector_29
+		writel(0x4001e, ss_base + 0x10c);    // int_mbi_message_for_vector_30
+		writel(0, ss_base + 0x110);    // int_mbi_message_for_vector_31
 
-		writeq(0x0 << 0, ss_base + 0x194);    // pcie_x16 outbound bit0
-		writeq(0x40000000, ss_base + 0x198);    // pcie_x16 int_tx_msi_doorbell_x16
+		writel(0x0 << 0, ss_base + 0x194);    // pcie_x16 outbound bit0
+		writel(0x40000000, ss_base + 0x198);    // pcie_x16 int_tx_msi_doorbell_x16
 	}else if(pcie->dev->max_lanes == 8){
-		writeq(0x40000, ss_base + 0x114);    // int_mbi_message_for_vector_00
-		writeq(0x40001, ss_base + 0x118);    // int_mbi_message_for_vector_01
-		writeq(0x40002, ss_base + 0x11c);    // int_mbi_message_for_vector_02
-		writeq(0x40003, ss_base + 0x120);    // int_mbi_message_for_vector_03
-		writeq(0x40004, ss_base + 0x124);    // int_mbi_message_for_vector_04
-		writeq(0x40005, ss_base + 0x128);    // int_mbi_message_for_vector_05
-		writeq(0x40006, ss_base + 0x12c);    // int_mbi_message_for_vector_06
-		writeq(0x40007, ss_base + 0x130);    // int_mbi_message_for_vector_07
-		writeq(0x40008, ss_base + 0x134);    // int_mbi_message_for_vector_08
-		writeq(0x40009, ss_base + 0x138);    // int_mbi_message_for_vector_09
-		writeq(0x4000a, ss_base + 0x13c);    // int_mbi_message_for_vector_10
-		writeq(0x4000b, ss_base + 0x140);    // int_mbi_message_for_vector_11
-		writeq(0x4000c, ss_base + 0x144);    // int_mbi_message_for_vector_12
-		writeq(0x4000d, ss_base + 0x148);    // int_mbi_message_for_vector_13
-		writeq(0x4000e, ss_base + 0x14c);    // int_mbi_message_for_vector_14
-		writeq(0x4000f, ss_base + 0x150);    // int_mbi_message_for_vector_15
-		writeq(0x40010, ss_base + 0x154);    // int_mbi_message_for_vector_16
-		writeq(0x40011, ss_base + 0x158);    // int_mbi_message_for_vector_17
-		writeq(0x40012, ss_base + 0x15c);    // int_mbi_message_for_vector_18
-		writeq(0x40013, ss_base + 0x160);    // int_mbi_message_for_vector_19
-		writeq(0x40014, ss_base + 0x164);    // int_mbi_message_for_vector_20
-		writeq(0x40015, ss_base + 0x168);    // int_mbi_message_for_vector_21
-		writeq(0x40016, ss_base + 0x16c);    // int_mbi_message_for_vector_22
-		writeq(0x40017, ss_base + 0x170);    // int_mbi_message_for_vector_23
-		writeq(0x40018, ss_base + 0x174);    // int_mbi_message_for_vector_24
-		writeq(0x40019, ss_base + 0x178);    // int_mbi_message_for_vector_25
-		writeq(0x4001a, ss_base + 0x17c);    // int_mbi_message_for_vector_26
-		writeq(0x4001b, ss_base + 0x180);    // int_mbi_message_for_vector_27
-		writeq(0x4001c, ss_base + 0x184);    // int_mbi_message_for_vector_28
-		writeq(0x4001d, ss_base + 0x188);    // int_mbi_message_for_vector_29
-		writeq(0x4001e, ss_base + 0x18c);    // int_mbi_message_for_vector_30
-		writeq(0, ss_base + 0x190);    // int_mbi_message_for_vector_31
+		writel(0x40000, ss_base + 0x114);    // int_mbi_message_for_vector_00
+		writel(0x40001, ss_base + 0x118);    // int_mbi_message_for_vector_01
+		writel(0x40002, ss_base + 0x11c);    // int_mbi_message_for_vector_02
+		writel(0x40003, ss_base + 0x120);    // int_mbi_message_for_vector_03
+		writel(0x40004, ss_base + 0x124);    // int_mbi_message_for_vector_04
+		writel(0x40005, ss_base + 0x128);    // int_mbi_message_for_vector_05
+		writel(0x40006, ss_base + 0x12c);    // int_mbi_message_for_vector_06
+		writel(0x40007, ss_base + 0x130);    // int_mbi_message_for_vector_07
+		writel(0x40008, ss_base + 0x134);    // int_mbi_message_for_vector_08
+		writel(0x40009, ss_base + 0x138);    // int_mbi_message_for_vector_09
+		writel(0x4000a, ss_base + 0x13c);    // int_mbi_message_for_vector_10
+		writel(0x4000b, ss_base + 0x140);    // int_mbi_message_for_vector_11
+		writel(0x4000c, ss_base + 0x144);    // int_mbi_message_for_vector_12
+		writel(0x4000d, ss_base + 0x148);    // int_mbi_message_for_vector_13
+		writel(0x4000e, ss_base + 0x14c);    // int_mbi_message_for_vector_14
+		writel(0x4000f, ss_base + 0x150);    // int_mbi_message_for_vector_15
+		writel(0x40010, ss_base + 0x154);    // int_mbi_message_for_vector_16
+		writel(0x40011, ss_base + 0x158);    // int_mbi_message_for_vector_17
+		writel(0x40012, ss_base + 0x15c);    // int_mbi_message_for_vector_18
+		writel(0x40013, ss_base + 0x160);    // int_mbi_message_for_vector_19
+		writel(0x40014, ss_base + 0x164);    // int_mbi_message_for_vector_20
+		writel(0x40015, ss_base + 0x168);    // int_mbi_message_for_vector_21
+		writel(0x40016, ss_base + 0x16c);    // int_mbi_message_for_vector_22
+		writel(0x40017, ss_base + 0x170);    // int_mbi_message_for_vector_23
+		writel(0x40018, ss_base + 0x174);    // int_mbi_message_for_vector_24
+		writel(0x40019, ss_base + 0x178);    // int_mbi_message_for_vector_25
+		writel(0x4001a, ss_base + 0x17c);    // int_mbi_message_for_vector_26
+		writel(0x4001b, ss_base + 0x180);    // int_mbi_message_for_vector_27
+		writel(0x4001c, ss_base + 0x184);    // int_mbi_message_for_vector_28
+		writel(0x4001d, ss_base + 0x188);    // int_mbi_message_for_vector_29
+		writel(0x4001e, ss_base + 0x18c);    // int_mbi_message_for_vector_30
+		writel(0, ss_base + 0x190);    // int_mbi_message_for_vector_31
 
-		writeq(0x0 << 1, ss_base + 0x194);    // pcie_x8 outbound bit1
-		writeq(0x50000000, ss_base + 0x1a8);    // pcie_x16 int_tx_msi_doorbell_x8
+		writel(0x0 << 1, ss_base + 0x194);    // pcie_x8 outbound bit1
+		writel(0x50000000, ss_base + 0x1a8);    // pcie_x16 int_tx_msi_doorbell_x8
 	}else{
 		printf("msi config error !!!\n");
 	}
 
 #if SEEHI_TILE14_PCIE_TEST
 	if(pcie->dev->max_lanes == 16){
-		writeq(0x40000000, mbitx_14tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
+		writel(0x40000000, mbitx_14tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
 	}else if(pcie->dev->max_lanes == 8){
-		writeq(0x50000000, mbitx_14tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+		writel(0x50000000, mbitx_14tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
 	}else{
 		printf("msi config error !!!\n");
 	}
 
-	writeq(0x03, mbitx_14tile_base + 0x14);
+	writel(0x03, mbitx_14tile_base + 0x14);
 	// writel(0x7fffffff, mbitx_14tile_base + 0x30);    //时能对应bit中断，总共32个bit
-	writeq(0x1, mbitx_14tile_base + 0x34);    //时能对应bit中断，总共32个bit
+	writel(0x1, mbitx_14tile_base + 0x34);    //时能对应bit中断，总共32个bit
+
 	// writel(0x0, mbitx_14tile_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
 #elif SEEHI_4TILE_PCIE_TEST
 	if(pcie->dev->max_lanes == 16){
-		writeq(0x40000000, mbitx_24tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
+		writel(0x40000000, mbitx_24tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
 	}else if(pcie->dev->max_lanes == 8){
-		writeq(0x50000000, mbitx_24tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+		writel(0x50000000, mbitx_24tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
 	}else{
 		printf("msi config error !!!\n");
 	}
 
-	writeq(0x03, mbitx_24tile_base + 0x14);
+	writel(0x03, mbitx_24tile_base + 0x14);
 	// writel(0x7fffffff, mbitx_14tile_base + 0x30);    //时能对应bit中断，总共32个bit
-	writeq(0x1, mbitx_24tile_base + 0x34);    //时能对应bit中断，总共32个bit
-	// writel(0x0, mbitx_14tile_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
+	writel(0x1, mbitx_24tile_base + 0x34);    //时能对应bit中断，总共32个bit
+
+	// writel(0x0, mbitx_24tile_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
 #else
-	// writeq((0 << 4), apb_base + 0x70);    //4:8  产生msi对应中断 bit0=1
+	// writel((0 << 4), apb_base + 0x70);    //4:8  产生msi对应中断 bit0=1
 
 	if(g_c2c_base == C2C_SYS_CFG_02){
 		//配置AP SYS MBI_TX 0x1005_0000
@@ -1523,7 +1543,7 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 
 		writel(0xb9, mbitx_ap_base + 0x14);
 	}else{
-			printf("msi config error !!!\n");
+		printf("msi config error !!!\n");
 	}
 
 	writel(0xffffffff, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
@@ -1531,7 +1551,7 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 #endif //SEEHI_TILE14_PCIE_TEST
 
 #endif //SEEHI_MSIX_ENABLE
-	/////////////////////////////////////END//////////////////////////////////////////////////////
+	   /////////////////////////////////////END//////////////////////////////////////////////////////
 	dw_pcie_dbi_ro_wr_dis(dbi_base);
 
 	pcie_writel_apb(pcie, 0x1ff, A510_APB_PCIE_EN_INT0);
@@ -1718,6 +1738,9 @@ int main()
 	struct HAL_PCIE_HANDLE *pcie = &s_pcie;
 	printf("seehi--> %s line: %d\n", __func__, __LINE__);
 
+	g_c2c_base = 0;
+	g_c2c_link = 0;
+
 #if SEEHI_FPGA_PCIE_TEST
 	s_pcie.dev = &g_pcieDevX8_03;
 
@@ -1727,23 +1750,29 @@ int main()
 	// init_g_pcie(pcie, 3, 16, 16, 5);
 
 	gpio_sync_init();
-
 #elif SEEHI_PLD_PCIE_TEST
 	mc_init(TCM_04_CFG_BASE, 4);
-
-#if SEEHI_C2C_PCIE_TEST
-	gpio_sync_init();
-#endif
-
-#if SEEHI_TILE14_PCIE_TEST
+#if SEEHI_AP_PCIE_TEST
+#elif SEEHI_C2C_PCIE_TEST
+#elif SEEHI_TILE14_PCIE_TEST
 	mc_init(TCM_14_CFG_BASE, 4);
 #elif SEEHI_4TILE_PCIE_TEST
 	mc_init(TCM_14_CFG_BASE, 4);
 	mc_init(TCM_15_CFG_BASE, 4);
 	mc_init(TCM_24_CFG_BASE, 4);
 	mc_init(TCM_25_CFG_BASE, 4);
+#else
+#error
 #endif
 
+#if SEEHI_C2C_PCIE_TEST
+#if SEEHI_DUAL_PCIE_TEST
+	g_c2c_base = get_pcie_base(03);
+	pcie = &s_pcie_03;
+	s_pcie_03.dev = &g_pcieDevX16_03;
+	// s_pcie_03.dev = &g_pcieDevX16toX8_03;
+	// s_pcie_03.dev = &g_pcieDevX8_03;
+#elif SEEHI_SINGLE_PCIE_TEST
 #if PLD_Z1
 	g_c2c_base = get_pcie_base(03);
 	pcie = &s_pcie_03;
@@ -1755,24 +1784,31 @@ int main()
 	pcie = &s_pcie_73;
 	s_pcie_73.dev = &g_pcieDevX16_73;
 #else
-	#error
+#error
 #endif
-	// init_g_pcie(pcie, 3, 16, 16, 5);
 #else
-	#error
-#endif
+#error
+#endif  //SEEHI_DUAL_PCIE_TEST
+#else
+	g_c2c_base = get_pcie_base(03);
+	pcie = &s_pcie_03;
+	s_pcie_03.dev = &g_pcieDevX16_03;
+#endif  //SEEHI_C2C_PCIE_TEST
+#else
+#error
+#endif //SEEHI_FPGA_PCIE_TEST
 
 	systimer_init();
 
 	GIC_Init();
 
-    IRQ_SetHandler(pcie->dev->vdmIrqNum, pcie_irq_handler);
-    GIC_SetPriority(pcie->dev->vdmIrqNum, 0 << 3);
+#if SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST
+	IRQ_SetHandler(pcie->dev->vdmIrqNum, pcie_irq_handler);
+	GIC_SetPriority(pcie->dev->vdmIrqNum, 0 << 3);
 	GIC_EnableIRQ(pcie->dev->vdmIrqNum);
-
-#if SEEHI_FPGA_PCIE_TEST
-	printf("PCIe_EP_Init start !!!\n");
 #endif
+
+	printf("PCIe_EP_Init start !!!\n");
 
 #if SEEHI_4TILE_PCIE_TEST
 	/* when print start, please power on x86 pc */
@@ -1782,35 +1818,31 @@ int main()
 	printf("t25:0x%08x\n", REG32(0x2540000000 + 536870912 + 0xc0));
 #endif
 
-#if SEEHI_DUAL_PCIE_TEST
+#if  SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST && SEEHI_DUAL_PCIE_TEST
+	g_c2c_link = 0;
 	PCIe_EP_Init(pcie);
+	PCIe_EP_Link(pcie);
 
-	g_c2c_base = get_pcie_base(2);
-	pcie = &s_pcie_02;
-	s_pcie_02.dev = &g_pcieDevX16_02;
-	// init_g_pcie(pcie, 2, 16, 16, 5);
+	g_c2c_base = get_pcie_base(73);
+	pcie = &s_pcie_73;
+	s_pcie_73.dev = &g_pcieDevX16_73;
 
-	IRQ_SetHandler(pcie->dev->vdmIrqNum, pcie_02_irq_handler);
+	IRQ_SetHandler(pcie->dev->vdmIrqNum, pcie_irq_handler);
 	GIC_SetPriority(pcie->dev->vdmIrqNum, 0 << 3);
 	GIC_EnableIRQ(pcie->dev->vdmIrqNum);
 
-	printf("SEEHI_DUAL_PCIE_TEST\n");
+	printf("seehi_dual_pcie_test c2c\n");
+#endif
+
+#if SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST
+	g_c2c_link = 1;
+	gpio_sync_init();
 #endif
 
 	PCIe_EP_Init(pcie);
-
 	PCIe_EP_Link(pcie);
 
-#if SEEHI_DUAL_PCIE_TEST
-	g_c2c_base = get_pcie_base(3);
-	pcie = &s_pcie_03;
-	s_pcie_03.dev = &g_pcieDevX16_03;
-	PCIe_EP_Link(pcie);
-#endif
-
-#if SEEHI_FPGA_PCIE_TEST
 	printf("PCIe_EP_Init end !!!\n");
-#endif
 
 #if SEEHI_C2C_PCIE_TEST
 	// printf("BSP_PCIE_EP_VDM !!!\n");
