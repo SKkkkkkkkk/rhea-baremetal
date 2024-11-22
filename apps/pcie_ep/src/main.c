@@ -36,10 +36,11 @@
 #define SEEHI_DUAL_PCIE_TEST		1
 
 //Choose more than one.
-#define SEEHI_AP_PCIE_TEST			0
-#define SEEHI_C2C_PCIE_TEST			1
+#define SEEHI_AP_PCIE_TEST			1
 #define SEEHI_TILE14_PCIE_TEST		0
 #define SEEHI_4TILE_PCIE_TEST		0
+
+#define SEEHI_C2C_PCIE_TEST			1
 
 #define SEEHI_MSIX_ENABLE			0
 
@@ -1753,7 +1754,6 @@ int main()
 #elif SEEHI_PLD_PCIE_TEST
 	mc_init(TCM_04_CFG_BASE, 4);
 #if SEEHI_AP_PCIE_TEST
-#elif SEEHI_C2C_PCIE_TEST
 #elif SEEHI_TILE14_PCIE_TEST
 	mc_init(TCM_14_CFG_BASE, 4);
 #elif SEEHI_4TILE_PCIE_TEST
