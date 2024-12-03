@@ -36,9 +36,10 @@
 #define SEEHI_DUAL_PCIE_TEST		1
 
 //Choose more than one.
-#define SEEHI_AP_PCIE_TEST			1
+#define SEEHI_AP_PCIE_TEST			0
 #define SEEHI_TILE14_PCIE_TEST		0
 #define SEEHI_4TILE_PCIE_TEST		0
+#define SEEHI_NPU_PCIE_TEST			1
 
 #define SEEHI_C2C_PCIE_TEST			1
 
@@ -49,6 +50,12 @@
 #define TCM_15_CFG_BASE			0x8aa2000000
 #define TCM_24_CFG_BASE			0x9222000000
 #define TCM_25_CFG_BASE			0x92a2000000
+
+#define TCM_53_CFG_BASE			0xa9a2000000
+#define TCM_54_CFG_BASE			0xaa22000000
+#define TCM_63_CFG_BASE			0xb1a2000000
+#define TCM_64_CFG_BASE			0xb222000000
+
 #define C2C_SYS_CFG_03       0x8180000000ULL
 #define C2C_SYS_CFG_02       0x8100000000ULL
 #define C2C_SYS_CFG_73       0xB980000000ULL
@@ -945,7 +952,7 @@ void BSP_PCIE_EP_Init(const struct HAL_PCIE_HANDLE *pcie)
 	}
 
 	if(g_c2c_link){
-		writel(1, phy_base + 0x18);	//pipe16_pclkchange_hs_en
+		writel(3, phy_base + 0x18);	//pipe16_pclkchange_hs_en
 
 		// val = readl(apb_base + 0x100);
 		// val |= 1 << 3;
@@ -1015,7 +1022,7 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	bar = 0;
 	resbar_base = dbi_base + 0x10000;
 	if(g_c2c_link)
-		writel(0x007fffff, resbar_base + 0x10 + bar * 0x4);   //8M
+		writel(0x003fffff, resbar_base + 0x10 + bar * 0x4);   //4M
 	else
 		writel(0x00ffffff, resbar_base + 0x10 + bar * 0x4);   //16M
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
@@ -1026,8 +1033,12 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 
 	if(g_c2c_link){
 		bar = 2;
-		writel(0x3fffffff, resbar_base + 0x10 + bar * 0x4);   //
-		writel(0x00000000, resbar_base + 0x10 + bar * 0x4 + 0x4);   //1G
+		writel(0x003fffff, resbar_base + 0x10 + bar * 0x4);   //4M
+		seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
+
+		bar = 3;
+		writel(0x0000ffff, resbar_base + 0x10 + bar * 0x4);   //64K
+		seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_32);
 	}else{
 		bar = 2;
 		writel(0x00ffffff, resbar_base + 0x10 + bar * 0x4);   //16M
@@ -1053,6 +1064,7 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	did = 0xa510;    //a510
 	writel(did << 16 | vid, dbi_base + 0x00);  //vendor id & device id
 
+	writel(0x20002, dbi_base + 0x2c);  //sub vendor id & device id
 	writel(0x12000001, dbi_base + 0x08);  //class processing accelerators
 
 	writel(0x1ff, dbi_base + 0x3c);  // interrrupt pin  legacy interrupt Message
@@ -1185,7 +1197,11 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 	dw_pcie_dbi_ro_wr_en(dbi_base);
 
 	if(g_c2c_link)
+#if PLD_Z1
+		printf("seehi--> %s line: %d for c2c link 03 \n", __func__, __LINE__);
+#else
 		printf("seehi--> %s line: %d for c2c link 73 \n", __func__, __LINE__);
+#endif
 	else
 		printf("seehi--> %s line: %d for x86 link 03\n", __func__, __LINE__);
 
@@ -1221,9 +1237,20 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 #if  SEEHI_PLD_PCIE_TEST
 
 	if(g_c2c_link){
+#if SEEHI_NPU_PCIE_TEST
+		HAL_PCIE_InboundConfig_addr(pcie, 0, 0, 0x10410000000, 0x1c800000, 0x400000);
+		HAL_PCIE_InboundConfig_addr(pcie, 1, 0, 0x16330000000, 0xf130000000, 0x800000);
+		HAL_PCIE_InboundConfig_addr(pcie, 2, 0, 0x6330800000, 0xf130800000, 0x20800000);
+
+		HAL_PCIE_OutboundConfig(pcie, 0, 0, 0x130000000, 0x16330000000, 0x800000);
+		HAL_PCIE_OutboundConfig(pcie, 1, 0, 0x130800000, 0x6330800000, 0x20800000);
+		// writel(0x30000000, ss_base + 0x208);
+		// writel(0x0, ss_base + 0x20c);
+#else
 		HAL_PCIE_InboundConfig(pcie, 0, 0, BOOT_USING_PCIE_C2C_BAR0_CPU_ADDRESS);
 		HAL_PCIE_InboundConfig(pcie, 1, 2, BOOT_USING_PCIE_C2C_BAR2_CPU_ADDRESS);
 		HAL_PCIE_InboundConfig(pcie, 2, 4, BOOT_USING_PCIE_C2C_BAR4_CPU_ADDRESS);
+#endif
 	}else{
 		HAL_PCIE_InboundConfig(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
 		HAL_PCIE_InboundConfig(pcie, 1, 2, BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS);
@@ -1761,6 +1788,11 @@ int main()
 	mc_init(TCM_15_CFG_BASE, 4);
 	mc_init(TCM_24_CFG_BASE, 4);
 	mc_init(TCM_25_CFG_BASE, 4);
+#elif SEEHI_NPU_PCIE_TEST
+	mc_init(TCM_53_CFG_BASE, 4);
+	mc_init(TCM_54_CFG_BASE, 4);
+	mc_init(TCM_63_CFG_BASE, 4);
+	mc_init(TCM_64_CFG_BASE, 4);
 #else
 #error
 #endif
@@ -1816,6 +1848,14 @@ int main()
 	printf("t15:0x%08x\n", REG32(0x1540000000 + 536870912 + 0xc0));
 	printf("t24:0x%08x\n", REG32(0x2440000000 + 536870912 + 0xc0));
 	printf("t25:0x%08x\n", REG32(0x2540000000 + 536870912 + 0xc0));
+#endif
+
+#if SEEHI_NPU_PCIE_TEST
+	/* when print start, please power on x86 pc */
+	printf("t53:0x%08x\n", REG32(0x5340000000 + 536870912 + 0xc0));
+	printf("t54:0x%08x\n", REG32(0x5440000000 + 536870912 + 0xc0));
+	printf("t63:0x%08x\n", REG32(0x6340000000 + 536870912 + 0xc0));
+	printf("t64:0x%08x\n", REG32(0x6440000000 + 536870912 + 0xc0));
 #endif
 
 #if  SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST && SEEHI_DUAL_PCIE_TEST
