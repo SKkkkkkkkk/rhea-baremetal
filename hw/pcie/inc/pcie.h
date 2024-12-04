@@ -100,6 +100,8 @@ struct HAL_PCIE_DEV {
 	uint8_t firstBusNo;
 	uint32_t ltrIrqNum;
 	uint32_t vdmIrqNum;
+	uint8_t bif_en;
+	uint8_t pipe8;
 	void *phy;
 };
 
