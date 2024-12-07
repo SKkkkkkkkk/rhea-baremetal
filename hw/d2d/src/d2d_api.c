@@ -16,6 +16,11 @@
 #define D2D_DIE_OFFSET(die)     ((die) * 0x1000)
 #define D2D_DIE_MAX             (4)
 #define D2D_CFG_REG_MASK        (D2D_DIE_OFFSET(D2D_DIE_MAX) - 1)
+/* CLCIx reset */
+#define D2D_REG_CLCIx_RESET(x)  (0x0100 + (x) * 0x4)
+#define D2D_REG_MBI_TX_RESET    (0x0110)
+#define D2D_REG_CLCI_BRIDGE_RESET   (0x0114)
+#define D2D_REG_CLCIx_MCU_RESET(x)  (0x0118 + (x) * 0x4)
 /* CLCI bridge working mode */
 #define D2D_REG_CFG_WORK_MODE   (0x0200)
 #define D2D_WORK_MODE0          (0x0)   /* 2 die normal mode */
@@ -32,18 +37,28 @@
 #define D2D_REG_CFG_TX_SEL_GRP1 (0x0218)
 #define D2D_REG_CLCIx_APB_MUX(x)    (0x0300 + (x) * 0x0100)
 #define D2D_REG_CLCIx_CHIPLET_ID(x) (0x0304 + (x) * 0x0100)
-#define D2D_REG_CLCIx_I2C_ID(x) (0x0308 + (x) * 0x0100)
+#define D2D_REG_CLCIx_I2C_ID(x)     (0x0308 + (x) * 0x0100)
+#define D2D_REG_CLCIx_BOOT_SEL(x)   (0x0314 + (x) * 0x0100)
 #define D2D_REG_CFG_DNIU_POSTW  (0x0704)
+
+#define CLCI_BOOT_SEL_UCIE      (0x0)
+#define CLCI_BOOT_SEL_UART      (0x2)
 /* D2D lock */
 #define D2D_REG_LOCK_BASE       (0x0800)
 #define D2D_REG_LOCK(idx)       (D2D_REG_LOCK_BASE + (((idx) & 0xf) << 7))
-/* CLCIx_APB */
+/* CLCIx_APB (CLCI_BIU) */
 #define CLCIx_APB_BASE(x)       (0x20040000 + (x) * 0x20000)
-#define CLCIx_APB_REG(x, reg)   (CLCIx_APB_BASE(x) + CLCI_REG_##reg)
 /* CLCIx_AHB */
 #define CLCIx_AHB_BASE(x)       (0x20200000 + (x) * 0x200000)
+#define CLCI_MCU_ROM_OFFSET     (0x00000)
+#define CLCI_MCU_RAM_OFFSET     (0x10000)
+#define CLCI_MCU_LOCAL_CTRL_OFFSET  (0x20000)
+#define CLCI_MCU_BIU_OFFSET     (0x30000)
+#define CLCIx_AHB_SET_ROLE(x)   (CLCIx_AHB_BASE(x) + CLCI_MCU_RAM_OFFSET + 0x7FF4)
+#define CLCIx_MCU_BIU_REG(x, reg)   (CLCIx_APB_BASE(x) + CLCI_MCU_BIU_OFFSET + CLCI_REG_##reg)
 
 /* Sysctrl CLCI about */
+/* Clock */
 #define SYSCTRL_CLCI_CLK_EN1    ((uintptr_t) (SYSCTRL_BASE + 0x104))
 #define SYSCTRL_CLCI_PLL_DIV    ((uintptr_t) (SYSCTRL_BASE + 0x1D8))
 #define SYSCTRL_CLCI_CFG_DIV    ((uintptr_t) (SYSCTRL_BASE + 0x1DC))
@@ -51,6 +66,9 @@
 #define SYSCTRL_CLCI_SCAN_20_DIV    ((uintptr_t) (SYSCTRL_BASE + 0x1E4))
 #define SYSCTRL_CLCI_SCAN_80_DIV    ((uintptr_t) (SYSCTRL_BASE + 0x1E8))
 #define SYSCTRL_CLCI_MCU_DIV    ((uintptr_t) (SYSCTRL_BASE + 0x1F4))
+/* Pinmux */
+#define SYSCTRL_CLCIx_UART_RX(x)    ((uintptr_t) (SYSCTRL_BASE + 0x8C8 + (x) * 0x8))
+#define SYSCTRL_CLCIx_UART_TX(x)    ((uintptr_t) (SYSCTRL_BASE + 0x8CC + (x) * 0x8))
 
 /* Mailbox interrupt */
 #define MAILBOX_IRQn            (32 + 27)
@@ -350,6 +368,37 @@ void *rhea_d2d_get_cnoc_addr(void)
     return d2d_cnoc;
 }
 
+static void rhea_clci_clk_init(void)
+{
+    uint32_t tmp_val;
+
+    /* Sysctrl configuration */
+    tmp_val = readl((void *) SYSCTRL_CLCI_CLK_EN1);
+    tmp_val |= 0xffcc400;
+    writel(tmp_val, (void *) SYSCTRL_CLCI_CLK_EN1);
+    writel(1, (void *) SYSCTRL_CLCI_PLL_DIV);
+    writel(1, (void *) SYSCTRL_CLCI_CFG_DIV);
+    writel(1, (void *) SYSCTRL_CLCI_AXI_DIV);
+    writel(1, (void *) SYSCTRL_CLCI_SCAN_20_DIV);
+    writel(1, (void *) SYSCTRL_CLCI_SCAN_80_DIV);
+    writel(1, (void *) SYSCTRL_CLCI_MCU_DIV);
+}
+
+static void rhea_clci_pinmux_init(void)
+{
+    uint32_t val;
+    enum clci_idx clci_idx;
+
+    for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
+        val = readl((void *) SYSCTRL_CLCIx_UART_RX(clci_idx));
+        val &= ~0x70;
+        writel(val, (void *) SYSCTRL_CLCIx_UART_RX(clci_idx));
+        val = readl((void *) SYSCTRL_CLCIx_UART_TX(clci_idx));
+        val &= ~0x70;
+        writel(val, (void *) SYSCTRL_CLCIx_UART_TX(clci_idx));
+    }
+}
+
 int rhea_d2d_init(void)
 {
     enum clci_idx clci_idx;
@@ -359,63 +408,57 @@ int rhea_d2d_init(void)
     d2d_dnoc = (void *) D2D_DNOC_BASE;
     d2d_cnoc = (void *) D2D_CNOC_BASE;
 
-    /* Sysctrl configuration */
-    tmp_val = readl((void *)SYSCTRL_CLCI_CLK_EN1);
-    tmp_val |= 0xffcc400;
-    writel(tmp_val, (void *) SYSCTRL_CLCI_CLK_EN1);
-
-    tmp_val = readl((void *)SYSCTRL_CLCI_PLL_DIV);
-    tmp_val |= 1;
-    writel(tmp_val, (void *) SYSCTRL_CLCI_PLL_DIV);
-
-    tmp_val = readl((void *)SYSCTRL_CLCI_CFG_DIV);
-    tmp_val |= 1;
-    writel(tmp_val, (void *) SYSCTRL_CLCI_CFG_DIV);
-    
-    tmp_val = readl((void *)SYSCTRL_CLCI_AXI_DIV);
-    tmp_val |= 1;
-    writel(tmp_val, (void *) SYSCTRL_CLCI_AXI_DIV);
-
-    tmp_val = readl((void *)SYSCTRL_CLCI_SCAN_20_DIV);
-    tmp_val |= 1;
-    writel(tmp_val, (void *) SYSCTRL_CLCI_SCAN_20_DIV);
-
-    tmp_val = readl((void *)SYSCTRL_CLCI_SCAN_80_DIV);
-    tmp_val |= 1;
-    writel(tmp_val, (void *) SYSCTRL_CLCI_SCAN_80_DIV);
-
-    tmp_val = readl((void *)SYSCTRL_CLCI_MCU_DIV);
-    tmp_val |= 1;
-    writel(tmp_val, (void *) SYSCTRL_CLCI_MCU_DIV);
-    printf("CLCI clock enable done\n");
-
     /* CLCI configuration */
+    rhea_clci_clk_init();
+    rhea_clci_pinmux_init();
     for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
-        rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0, 
+        rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0,
                             D2D_REG_CLCIx_APB_MUX(clci_idx));
-        rhea_d2d_cfg_writel(RHEA_DIE_SELF, clci_idx, 
+        rhea_d2d_cfg_writel(RHEA_DIE_SELF, clci_idx,
                             D2D_REG_CLCIx_CHIPLET_ID(clci_idx));
-        rhea_d2d_cfg_writel(RHEA_DIE_SELF, clci_idx, 
+        rhea_d2d_cfg_writel(RHEA_DIE_SELF, clci_idx,
                             D2D_REG_CLCIx_I2C_ID(clci_idx));
+        rhea_d2d_cfg_writel(RHEA_DIE_SELF, CLCI_BOOT_SEL_UART,
+                            D2D_REG_CLCIx_BOOT_SEL(clci_idx));
     }
     printf("CLCI configuration done\n");
+    for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
+        printf("0x17ff4:0x%x\n",
+            rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_SET_ROLE(clci_idx)));
+    }
 
-    printf("CLCI waiting for training_end ");
+    /* CLCI auto link */
+    printf("CLCI waiting for link\n");
     for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
         while (1) {
-            tmp_val = rhea_d2d_cfg_readl(RHEA_DIE_SELF, 
+            tmp_val = rhea_d2d_cfg_readl(RHEA_DIE_SELF,
+                            CLCIx_AHB_BASE(clci_idx) + 0x2105c);
+            printf("0x2105c:0x%x, 0x21054:0x%x, 0x30004:0x%x, 0x17c1c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x\n",
+                    tmp_val,
+                    rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x21054),
+                    rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x30004),
+                    rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c1c),
+                    rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c24),
+                    rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c30));
+            if ((tmp_val & 0xf) == 0x2) break;
+            if (!timeout--) return -ETIMEDOUT;
+            udelay(1000);
+        }
+        printf("clci%d init done\n",  clci_idx);
+        while (1) {
+            tmp_val = rhea_d2d_cfg_readl(RHEA_DIE_SELF,
                             CLCIx_AHB_BASE(clci_idx) + 0x3003c);
-            printf(".");
             if ((tmp_val & 0x00001c00) == 0x00001c00) break;
             if (!timeout--) return -ETIMEDOUT;
-            udelay(10);
+            udelay(1000);
         }
+        printf("clci%d link done\n",  clci_idx);
         rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0xa0,
                             CLCIx_AHB_BASE(clci_idx) + 0x3021c);
         rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0xff0080,
                             CLCIx_AHB_BASE(clci_idx) + 0x30304);
     }
-    printf(" done\n");
+    printf("CLCI link finished\n");
 
     /* D2D configuration */
     rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x0, D2D_REG_CFG_WORK_MODE);
