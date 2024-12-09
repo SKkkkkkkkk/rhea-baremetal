@@ -8,11 +8,20 @@ target_sources(${TARGET_NAME}
 		src/d2d_sync.c
 		src/d2d_ring_buf.c
 		src/crc32.c
+		lib/src/clci_api.c
+		lib/src/clci_error.c
+		lib/src/commands_common.c
+		lib/src/commands_sys.c
+		lib/src/doorbell.c
+		lib/src/mailbox_drv.c
+		lib/src/mailbox_sys.c
+		lib/src/ring_buf.c
 )
 
 target_include_directories(${TARGET_NAME}
 	PUBLIC
 		inc
+		lib/inc
 )
 
 target_link_libraries(${TARGET_NAME}

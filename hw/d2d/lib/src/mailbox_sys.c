@@ -1,6 +1,6 @@
 #include <mailbox_sys.h>
-#include <errno.h>
-#include <stdio.h>
+
+#include "clci_errno.h"
 
 /*
 * As the master, send specific length data to the slave via the mailbox
@@ -24,13 +24,11 @@ int mailbox_sys_send(uint8_t *in_buff, uint8_t in_len, uint8_t *out_buff, uint8_
 	int ret;
 
 	ret = mailbox_send((uint8_t *)in_buff, in_len, timeout_ms);
-	printf("===[%d]%s\n", __LINE__, __func__);
 
 	if (CLCI_SUCCESS != ret)
 		return ret;
 
 	ret = mailbox_rev(out_buff, out_len, timeout_ms);
-	printf("===[%d]%s ret %d\n", __LINE__, __func__, ret);
 
 	return ret;
 }

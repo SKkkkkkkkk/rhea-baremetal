@@ -284,9 +284,7 @@ int32_t clci_link_status()
 	uint32_t regdata_1 = 0;
 
 	cmd_clci_get_reg(1, 0x3003c, &regdata_0);
-	printf("===[%d]%s regdata_0 0x%x\n", __LINE__, __func__, regdata_0);
 	cmd_clci_get_reg(0, 0x3003c, &regdata_1);
-	printf("===[%d]%s regdata_1 0x%x\n", __LINE__, __func__, regdata_1);
 
 	if (((regdata_0 >> 12) & 0x1) && ((regdata_1 >> 12) & 1)) {
 		return 0;

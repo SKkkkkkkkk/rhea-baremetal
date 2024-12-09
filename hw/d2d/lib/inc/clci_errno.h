@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#ifndef ERRNO_H
-#define ERRNO_H
+#ifndef CLCI_ERRNO_H
+#define CLCI_ERRNO_H
 
 
 /*
@@ -72,4 +72,4 @@
 /*! Unkown error */
 #define CLCI_E_UNKNOWN        -19
 
-#endif /* ERRNO_H */
+#endif /* CLCI_ERRNO_H */

@@ -422,10 +422,6 @@ int rhea_d2d_init(void)
                             D2D_REG_CLCIx_BOOT_SEL(clci_idx));
     }
     printf("CLCI configuration done\n");
-    for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
-        printf("0x17ff4:0x%x\n",
-            rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_SET_ROLE(clci_idx)));
-    }
 
     /* CLCI auto link */
     printf("CLCI waiting for link\n");
@@ -433,7 +429,7 @@ int rhea_d2d_init(void)
         while (1) {
             tmp_val = rhea_d2d_cfg_readl(RHEA_DIE_SELF,
                             CLCIx_AHB_BASE(clci_idx) + 0x2105c);
-            printf("0x2105c:0x%x, 0x21054:0x%x, 0x30004:0x%x, 0x17c1c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x\n",
+            pr_dbg("0x2105c:0x%x, 0x21054:0x%x, 0x30004:0x%x, 0x17c1c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x\n",
                     tmp_val,
                     rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x21054),
                     rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x30004),
@@ -444,7 +440,7 @@ int rhea_d2d_init(void)
             if (!timeout--) return -ETIMEDOUT;
             udelay(1000);
         }
-        printf("clci%d init done\n",  clci_idx);
+        pr_dbg("clci%d init done\n",  clci_idx);
         while (1) {
             tmp_val = rhea_d2d_cfg_readl(RHEA_DIE_SELF,
                             CLCIx_AHB_BASE(clci_idx) + 0x3003c);
@@ -452,7 +448,7 @@ int rhea_d2d_init(void)
             if (!timeout--) return -ETIMEDOUT;
             udelay(1000);
         }
-        printf("clci%d link done\n",  clci_idx);
+        pr_dbg("clci%d link success\n",  clci_idx);
         rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0xa0,
                             CLCIx_AHB_BASE(clci_idx) + 0x3021c);
         rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0xff0080,

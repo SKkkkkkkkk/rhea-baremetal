@@ -1,6 +1,5 @@
 #include <config.h>
 #include <string.h>
-#include <errno.h>
 #include <stdio.h>
 #include <log.h>
 // #include <sys_timer.h>
@@ -13,6 +12,7 @@
 
 #include "delay.h"
 #include "local_ctrl.h"
+#include "clci_errno.h"
 
 mailbox_com_st maiblbox_blk;
 mailbox_pkg_st data_pkg;
@@ -205,13 +205,11 @@ int32_t mailbox_rev(uint8_t *out_buff, uint8_t len, uint32_t timeout_ms)
 	int res;
 	uint32_t content_len = 0;
 	uint32_t time_count = 0;
-	printf("===[%d]%s\n", __LINE__, __func__);
 
 	if (maiblbox_blk.mailbox_status == MAILBOX_STATUS_ERROR)
 		return CLCI_E_DEVICE;
 
 	res = mailbox_buff_polling();
-	printf("===[%d]%s res 0x%x\n", __LINE__, __func__, res);
 
 	if (res == CLCI_E_DATA) {
 		maiblbox_blk.mailbox_status = MAILBOX_STATUS_ERROR;
@@ -228,15 +226,6 @@ int32_t mailbox_rev(uint8_t *out_buff, uint8_t len, uint32_t timeout_ms)
 			}
 			udelay(10);
 			res = mailbox_buff_polling();
-			printf("===[%d]%s res %d 0x21054:0x%x, 0x30004:0x%x, 0x2105c:0x%x, 0x17c1c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x, 0x30400:0x%x\n",
-				__LINE__, __func__, res, 
-				mmio_read_32(0x9c00000000 + 0x20200000 + 0x21054),
-				mmio_read_32(0x9c00000000 + 0x20200000 + 0x30004),
-				mmio_read_32(0x9c00000000 + 0x20200000 + 0x2105c),
-				mmio_read_32(0x9c00000000 + 0x20200000 + 0x17c1c),
-				mmio_read_32(0x9c00000000 + 0x20200000 + 0x17c24),
-				mmio_read_32(0x9c00000000 + 0x20200000 + 0x17c30),
-				mmio_read_32(0x9c00000000 + 0x20200000 + 0x30400));
 
 			if (res == CLCI_SUCCESS)
 				break;
@@ -279,12 +268,10 @@ int32_t mailbox_send(uint8_t *in_buff, uint8_t len, uint32_t timeout_ms)
 		mmio_write_32(maiblbox_blk.reg.reg_send, send_data);
 		i_pos += sizeof(uint32_t);
 		remain_len = remain_len - DB_TRANS_ONE_FRAM_LEN;
-		printf("===[%d]%s\n", __LINE__, __func__);
 		if (mailbox_db_trans_start(DB_TRANS_ONE_FRAM_LEN, timeout_ms) != CLCI_SUCCESS) {
 			res = CLCI_E_TIMEOUT;
 			goto SEND_ERR;
 		}
-		printf("===[%d]%s\n", __LINE__, __func__);
 		if (mailbox_db_trans_wait(timeout_ms) != CLCI_SUCCESS) {
 			res = CLCI_E_TIMEOUT;
 			goto SEND_ERR;
@@ -292,14 +279,12 @@ int32_t mailbox_send(uint8_t *in_buff, uint8_t len, uint32_t timeout_ms)
 	}
 
 	if (remain_len > 0) {
-		printf("===[%d]%s\n", __LINE__, __func__);
 		memcpy(&send_data, (send_buff + i_pos), remain_len);
 		mmio_write_32(maiblbox_blk.reg.reg_send, send_data);
 		if (mailbox_db_trans_start(remain_len, timeout_ms) != CLCI_SUCCESS) {
 			res = CLCI_E_TIMEOUT;
 			goto SEND_ERR;
 		}
-		printf("===[%d]%s\n", __LINE__, __func__);
 		if (mailbox_db_trans_wait(timeout_ms) != CLCI_SUCCESS) {
 			res = CLCI_E_TIMEOUT;
 			goto SEND_ERR;
