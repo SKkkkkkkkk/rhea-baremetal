@@ -429,26 +429,25 @@ int rhea_d2d_init(void)
         while (1) {
             tmp_val = rhea_d2d_cfg_readl(RHEA_DIE_SELF,
                             CLCIx_AHB_BASE(clci_idx) + 0x2105c);
-            pr_dbg("0x2105c:0x%x, 0x21054:0x%x, 0x30004:0x%x, 0x17c1c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x\n",
-                    tmp_val,
-                    rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x21054),
-                    rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x30004),
-                    rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c1c),
-                    rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c24),
-                    rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c30));
             if ((tmp_val & 0xf) == 0x2) break;
-            if (!timeout--) return -ETIMEDOUT;
+            if (!timeout--) {
+                printf("clci%d init timed out\n", clci_idx);
+                goto timeout;
+            }
             udelay(1000);
         }
-        pr_dbg("clci%d init done\n",  clci_idx);
+        pr_dbg("clci%d init done\n", clci_idx);
         while (1) {
             tmp_val = rhea_d2d_cfg_readl(RHEA_DIE_SELF,
                             CLCIx_AHB_BASE(clci_idx) + 0x3003c);
             if ((tmp_val & 0x00001c00) == 0x00001c00) break;
-            if (!timeout--) return -ETIMEDOUT;
+            if (!timeout--) {
+                printf("clci%d link timed out\n", clci_idx);
+                goto timeout;
+            }
             udelay(1000);
         }
-        pr_dbg("clci%d link success\n",  clci_idx);
+        pr_dbg("clci%d link success\n", clci_idx);
         rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0xa0,
                             CLCIx_AHB_BASE(clci_idx) + 0x3021c);
         rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0xff0080,
@@ -466,4 +465,14 @@ int rhea_d2d_init(void)
     rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x1, D2D_REG_CFG_DNIU_POSTW);
     printf("D2D configuration done\n");
     return 0;
+
+timeout:
+    printf("reg dump (0x2105c:0x%x, 0x21054:0x%x, 0x30004:0x%x, 0x17c1c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x)\n",
+        rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x2105c),
+        rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x21054),
+        rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x30004),
+        rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c1c),
+        rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c24),
+        rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c30));
+    return -ETIMEDOUT;
 }
