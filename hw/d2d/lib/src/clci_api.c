@@ -3,26 +3,17 @@
 #include "stdio.h"
 #include "log.h"
 #include "mmio.h"
-// #include "firmware.h"
-// #include "main.h"
 #include "clci_api.h"
 #include "mailbox_sys.h"
-// #include "error.h"
-// #include "sys_timer.h"
-// #include "clci_link.h"
-
-static volatile clci_mcu_status g_clci_mcu_status;
 
 inline static void init_sync_msg_reg(void)
 {
-	mmio_write_32(CLCI_MCU_LOCAL_CTRL_MSG3, 0);
+	mmio_write_32(LOCAT_CTRL_REG_ADDR(msg3), 0);
 }
 /*
  * clci_init_firmware()
- * if SUPPORT_DOORBELL_ISR is defined, the doorbell must
- * be initialized by calling dbInit() with clci_doorbell_isr() before clci_init() is called,
+ * Initialization clci firmware before accessing the clci device
  */
-
 int clci_init_firmware()
 {
 	mailbox_sys_init();
@@ -39,11 +30,12 @@ int clci_init_firmware()
 #endif
 	return 0;
 }
-int clci_status_get(void *status)
+/* set the base address of the clci device
+ * This API should be invoked before access the clci device
+ * ctrl_reg_base:
+ * 		the base address of the clci device
+ */
+void clci_device_reg_base_set(uint64_t clci_reg_base)
 {
-	if (status == NULL)
-		return 0;
-	memcpy((char *)status, (char *)&g_clci_mcu_status, sizeof(g_clci_mcu_status));
-
-	return 1;
+	local_ctrl_base_set(clci_reg_base);
 }

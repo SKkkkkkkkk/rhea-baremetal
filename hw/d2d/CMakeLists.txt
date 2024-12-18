@@ -13,6 +13,8 @@ target_sources(${TARGET_NAME}
 		lib/src/commands_common.c
 		lib/src/commands_sys.c
 		lib/src/doorbell.c
+		lib/src/interrupt.c
+		lib/src/local_ctrl.c
 		lib/src/mailbox_drv.c
 		lib/src/mailbox_sys.c
 		lib/src/ring_buf.c

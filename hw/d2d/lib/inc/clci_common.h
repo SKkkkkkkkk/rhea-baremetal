@@ -110,6 +110,7 @@ struct clci_config_t {
 	uint32_t pass_pat_num;
 	uint32_t temp;
 	uint32_t clci_delay_ms;
+	uint32_t error_code;
 
 	struct clci_die_t die[2];
 };

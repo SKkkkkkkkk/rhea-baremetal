@@ -12,8 +12,7 @@
 #define SYS_ERROR_CLASS_DEV_CLCI	 4
 
 uint32_t clci_error_get(void);
-void clci_irq_enable(int32_t dieid);
-void clci_irq_disable(int32_t dieid);
+
 void clci_irq_handler(int32_t dieid);
 
 #endif

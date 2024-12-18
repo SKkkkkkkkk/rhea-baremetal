@@ -9,7 +9,8 @@
 
 	MSG3 is controll register
 		bit31:24	: command type
-		bit23:6		: reserved
+		bit23:16	: error code
+		bit15:6		: reserved
 		bit5		: sys-mcu request bit
 		bit4		: clci-mcu response bit
 		bit3:0		: clci status
@@ -76,4 +77,10 @@ void clci_resp(uint8_t cmd)
 void clci_set_status(int status)
 {
 	mmio_write_32(SYS_CLCI_CTRL_MSG, (mmio_read_32(SYS_CLCI_CTRL_MSG) & 0xfffffff0) | (status & 0xf));
+}
+
+void clci_set_error(int error)
+{
+	unsigned char e = error;
+	mmio_write_32(SYS_CLCI_CTRL_MSG, (mmio_read_32(SYS_CLCI_CTRL_MSG) & 0xff00ffff) | (e << 16));
 }

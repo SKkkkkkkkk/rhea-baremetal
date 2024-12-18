@@ -402,7 +402,7 @@ static void rhea_clci_pinmux_init(void)
 int rhea_d2d_init(void)
 {
     enum clci_idx clci_idx;
-    uint32_t timeout = 1000;
+    uint32_t timeout = 10000;
     uint32_t tmp_val;
 
     d2d_dnoc = (void *) D2D_DNOC_BASE;

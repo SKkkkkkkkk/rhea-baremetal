@@ -13,7 +13,7 @@ int32_t cmd_clci_update_clk_bandrate(int32_t die, int16_t sys_clk, int16_t bandr
 
 int32_t cmd_clci_clk_counter(int16_t die, int16_t lane, uint32_t *txfreq, uint32_t *rxfreq);
 
-int32_t cmd_clci_transfer_temp(int32_t die, int32_t temp);
+int32_t cmd_clci_delayline_tracking(int32_t die, uint32_t temp);
 
 int32_t cmd_clci_common(int32_t die, uint8_t cmd);
 

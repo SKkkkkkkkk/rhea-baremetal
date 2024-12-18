@@ -4,6 +4,7 @@
 #include <clci_error.h>
 #include <commands_sys.h>
 #include <log.h>
+#include <clci_common.h>
 
 /* Read the CLCI device error status
 *  The CLCI device error status register 32-bit, each bit of this register
@@ -363,4 +364,39 @@ void clci_irq_handler(int32_t dieid)
 		INFO(irq, "clci error: pcs0_tx_afifo_ovfl_int_sts\n");
 		cmd_clci_set_reg(dieid, clci_module_base_addr + CLCI_IRQ_STS0, status & (~(1 << 1)));
 	}
+}
+
+void clci_error_dump()
+{
+	uint32_t data = 0;
+
+	data = mmio_read_32(CLCI_DEV_ERROR_REG);
+	INFO(debug, "clci device status %08x\n", data);
+
+	cmd_clci_get_reg(0, 0x30004, &data);
+	INFO(debug, "clci device error code %08x\n", data);
+	cmd_clci_get_reg(1, 0x30004, &data);
+	INFO(debug, "clci device error code %08x\n", data);
+
+	cmd_clci_get_reg(0, 0x17c1c, &data);
+	INFO(debug, "clci link status %08x\n", data);
+	cmd_clci_get_reg(1, 0x17c1c, &data);
+	INFO(debug, "clci link status %08x\n", data);
+
+	for (int lane = 0; lane < 17; lane++) {
+		uint32_t addr = 0x30400 + 0x100 * lane;
+		cmd_clci_get_reg(0, addr, &data);
+		INFO(debug, "clci bitlock lane status %08x\n", data);
+	}
+
+	for (int lane = 0; lane < 17; lane++) {
+		uint32_t addr = 0x30400 + 0x100 * lane;
+		cmd_clci_get_reg(1, addr, &data);
+		INFO(debug, "clci bitlock lane status %08x\n", data);
+	}
+
+	cmd_clci_get_reg(0, 0x3003c, &data);
+	INFO(debug, "clci pcslock status %08x\n", data);
+	cmd_clci_get_reg(1, 0x3003c, &data);
+	INFO(debug, "clci pcslock status %08x\n", data);
 }

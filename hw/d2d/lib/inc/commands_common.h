@@ -26,7 +26,7 @@ enum {
 	CMD_MAC_INIT,
 	CMD_CLCI_LINK,
 	CMD_RESET,
-	CMD_TRANSFER_TEMP
+	CMD_DELAYLINE_TRACKING
 };
 
 struct cmd_common_t {
@@ -56,5 +56,7 @@ uint32_t clci_req(uint8_t cmd);
 void clci_resp(uint8_t cmd);
 
 void clci_set_status(int status);
+
+void clci_set_error(int error);
 
 #endif

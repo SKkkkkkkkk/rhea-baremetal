@@ -14,6 +14,7 @@ enum {
 };
 
 #define LOG_DEFAULT_LEVEL			LOG_INFO
+#define DEBUG
 
 #ifdef DEBUG
 #define clci_print(level, module, fmt, ...)	\

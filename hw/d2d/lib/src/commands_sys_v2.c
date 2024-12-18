@@ -50,18 +50,17 @@ int32_t cmd_clci_clk_counter(int16_t die, int16_t lane, uint32_t *txfreq, uint32
 	*rxfreq = 1024 * default_div * (item->data & 0xffff) / 64;
 	return ret;
 }
-
 int32_t cmd_clci_common(int32_t die, uint8_t cmd)
 {
-	struct cmd_common_t item;
-	item.res = die;
+	struct cmd_common_t *item = (struct cmd_common_t *)SYS_CLCI_CMD_ARG_P;
+	item->res = die;
 	return clci_req(cmd);
 }
 
-int32_t cmd_clci_transfer_temp(int32_t die, int32_t temp)
+int32_t cmd_clci_delayline_tracking(int32_t die, uint32_t temp)
 {
-	struct cmd_common_t item;
-	item.res = die;
-	item.data = temp;
-	return clci_req(CMD_TRANSFER_TEMP);
+	struct cmd_common_t *item = (struct cmd_common_t *)SYS_CLCI_CMD_ARG_P;
+	item->res = die;
+	item->data = temp;
+	return clci_req(CMD_DELAYLINE_TRACKING);
 }

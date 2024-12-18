@@ -2,17 +2,13 @@
 #include <string.h>
 #include <stdio.h>
 #include <log.h>
-// #include <sys_timer.h>
-// #include <platform.h>
 #include <mmio.h>
-// #include <crc.h>
 #include <mailbox_drv.h>
 #include <doorbell.h>
-// #include <error.h>
+#include <local_ctrl.h>
 
-#include "delay.h"
-#include "local_ctrl.h"
 #include "clci_errno.h"
+#include "delay.h"
 
 mailbox_com_st maiblbox_blk;
 mailbox_pkg_st data_pkg;

@@ -7,11 +7,10 @@
 #include <commands_common.h>
 #include <mailbox_sys.h>
 #include <mmio.h>
-// #include <sys_timer.h>
 
 #include "delay.h"
 
-#define MAILBOX_SYS_TIMEOUT_MS 1000
+#define MAILBOX_SYS_TIMEOUT_MS 5000
 /*
 	read register from local/remote die
 
@@ -211,7 +210,7 @@ return:
 	<0	: fail and return error code
 	>=0	: success and the length of this commamd execution
 */
-int32_t cmd_clci_transfer_temp(int32_t die, int32_t temp)
+int32_t cmd_clci_delayline_tracking(int32_t die, uint32_t temp)
 {
 	struct cmd_common_t item;
 	uint8_t in_buf[MAILBOX_SYS_DATA_MAX] = { 0 };
@@ -219,7 +218,7 @@ int32_t cmd_clci_transfer_temp(int32_t die, int32_t temp)
 
 	item.data = temp;
 	item.res = die;
-	in_buf[0] = CMD_TRANSFER_TEMP;
+	in_buf[0] = CMD_DELAYLINE_TRACKING;
 	memcpy(&in_buf[1], &item, sizeof(item));
 	return mailbox_sys_send(in_buf, 1 + sizeof(item), out_buf, MAILBOX_SYS_DATA_MAX, MAILBOX_SYS_TIMEOUT_MS);
 }
@@ -284,7 +283,9 @@ int32_t clci_link_status()
 	uint32_t regdata_1 = 0;
 
 	cmd_clci_get_reg(1, 0x3003c, &regdata_0);
+	printf("===[%d]%s regdata_0 0x%x\n", __LINE__, __func__, regdata_0);
 	cmd_clci_get_reg(0, 0x3003c, &regdata_1);
+	printf("===[%d]%s regdata_1 0x%x\n", __LINE__, __func__, regdata_1);
 
 	if (((regdata_0 >> 12) & 0x1) && ((regdata_1 >> 12) & 1)) {
 		return 0;
