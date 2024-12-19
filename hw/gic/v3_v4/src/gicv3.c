@@ -534,7 +534,7 @@ IRQHandler_t IRQ_GetHandler (uint16_t int_id)
 	return (int_id < IRQ_GIC_LINE_COUNT)? IRQTable[int_id] : (IRQHandler_t)0;
 }
 
-
+#pragma weak fiq_handler
 void fiq_handler(void)
 {
 	uint32_t iar, group = 0;
