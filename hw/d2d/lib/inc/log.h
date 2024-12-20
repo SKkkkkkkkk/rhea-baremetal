@@ -14,9 +14,7 @@ enum {
 };
 
 #define LOG_DEFAULT_LEVEL			LOG_INFO
-#define DEBUG
 
-#ifdef DEBUG
 #define clci_print(level, module, fmt, ...)	\
     do { \
         if (level >= LOG_DEFAULT_LEVEL) { \
@@ -35,10 +33,6 @@ enum {
 				;                                    \
 		}                                                    \
 	} while (0)
-#else
-#define clci_print(level, module, fmt, ...)
-#define ASSERT(_cond)
-#endif
 
 #define VERBOSE(module, ...)			clci_print(LOG_VERBOSE, module, __VA_ARGS__)
 #define INFO(module, ...)			clci_print(LOG_INFO, module, __VA_ARGS__)
