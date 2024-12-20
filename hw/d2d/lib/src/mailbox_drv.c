@@ -63,7 +63,7 @@ static int mailbox_trans_ack_set(uint32_t timeout_ms)
 }
 
 #if DOORBELL_MODE_ISR == 1
-void mailbox_doorbell_isr(void *data)
+void mailbox_doorbell_isr()
 {
 	uint32_t db_data;
 

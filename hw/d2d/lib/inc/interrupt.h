@@ -29,7 +29,5 @@
 
 typedef void(*irq_handler_t)(void *data);
 
-int request_irq(uint32_t irqn, irq_handler_t handler, uint32_t flags, char *name, void *data);
-// int request_irq(void);
-void irq_clear_pending(uint32_t irqn);
+int request_irq(void);
 #endif

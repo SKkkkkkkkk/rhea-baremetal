@@ -1,13 +1,3 @@
-#include <interrupt.h>
-
-int request_irq(uint32_t irqn, irq_handler_t handler, uint32_t flags, char *name, void *data)
-{
-	return 0;
-}
-void irq_clear_pending(uint32_t irqn)
-{
-}
-#if 0
 // GICv3 Physical LPI Example
 //
 // Copyright (C) Arm Limited, 2019 All rights reserved.
@@ -33,8 +23,10 @@ void irq_clear_pending(uint32_t irqn)
 #include "memmap.h"
 #include "gicv3.h"
 #include "common.h"
-#include "dw_apb_timers.h"
+#include "config.h"
+#include "arch_helpers.h"
 
+#if DOORBELL_MODE_ISR == 1
 extern void sendLPI(uint32_t, uint32_t);
 
 extern uint32_t getAffinity(void);
@@ -93,8 +85,10 @@ int request_irq(void)
 {
   uint32_t type, entry_size;
   uint32_t rd, target_rd;
+  static uint8_t is_initialized = 0;
 
-  d2dClciRegTest();
+  if (is_initialized == 1)
+    return 0;
 
   //
   // Configure the interrupt controller
@@ -154,9 +148,13 @@ int request_irq(void)
 
   #define D2D_DID 0x38
   #define D2D_CLCI0_DBG_EID 0x20
+  #define D2D_CLCI1_DBG_EID 0x21
   #define D2D_CLCI2_DBG_EID 0x22
+  #define D2D_CLCI3_DBG_EID 0x23
   #define D2D_CLCI0_MCU_DB2SOC_EID 0x24
+  #define D2D_CLCI1_MCU_DB2SOC_EID 0x25
   #define D2D_CLCI2_MCU_DB2SOC_EID 0x26
+  #define D2D_CLCI3_MCU_DB2SOC_EID 0x27
   #define CID 0
 
   // Set up a mapping
@@ -166,17 +164,37 @@ int request_irq(void)
   itsSYNC(target_rd /* target Redistributor*/);                                // Sync the changes
 
   itsMAPD(D2D_DID /*DeviceID*/, ITT /*addr of ITT*/, 8 /*bit width of ID*/);         // Map a DeviceID to a ITT
-  itsMAPTI(D2D_DID /*DeviceID*/, D2D_CLCI2_DBG_EID /*EventID*/, 8193 /*intid*/, CID /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
+  itsMAPTI(D2D_DID /*DeviceID*/, D2D_CLCI1_DBG_EID /*EventID*/, 8193 /*intid*/, CID /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
   itsMAPC(target_rd /* target Redistributor*/, CID /*collection*/);              // Map a Collection to a Redistributor
   itsSYNC(target_rd /* target Redistributor*/);                                // Sync the changes
 
   itsMAPD(D2D_DID /*DeviceID*/, ITT /*addr of ITT*/, 8 /*bit width of ID*/);         // Map a DeviceID to a ITT
-  itsMAPTI(D2D_DID /*DeviceID*/, D2D_CLCI0_MCU_DB2SOC_EID /*EventID*/, 8194 /*intid*/, CID /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
+  itsMAPTI(D2D_DID /*DeviceID*/, D2D_CLCI2_DBG_EID /*EventID*/, 8194 /*intid*/, CID /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
   itsMAPC(target_rd /* target Redistributor*/, CID /*collection*/);              // Map a Collection to a Redistributor
   itsSYNC(target_rd /* target Redistributor*/);                                // Sync the changes
 
   itsMAPD(D2D_DID /*DeviceID*/, ITT /*addr of ITT*/, 8 /*bit width of ID*/);         // Map a DeviceID to a ITT
-  itsMAPTI(D2D_DID /*DeviceID*/, D2D_CLCI2_MCU_DB2SOC_EID /*EventID*/, 8195 /*intid*/, CID /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
+  itsMAPTI(D2D_DID /*DeviceID*/, D2D_CLCI3_DBG_EID /*EventID*/, 8195 /*intid*/, CID /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
+  itsMAPC(target_rd /* target Redistributor*/, CID /*collection*/);              // Map a Collection to a Redistributor
+  itsSYNC(target_rd /* target Redistributor*/);                                // Sync the changes
+
+  itsMAPD(D2D_DID /*DeviceID*/, ITT /*addr of ITT*/, 8 /*bit width of ID*/);         // Map a DeviceID to a ITT
+  itsMAPTI(D2D_DID /*DeviceID*/, D2D_CLCI0_MCU_DB2SOC_EID /*EventID*/, 8196 /*intid*/, CID /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
+  itsMAPC(target_rd /* target Redistributor*/, CID /*collection*/);              // Map a Collection to a Redistributor
+  itsSYNC(target_rd /* target Redistributor*/);                                // Sync the changes
+
+  itsMAPD(D2D_DID /*DeviceID*/, ITT /*addr of ITT*/, 8 /*bit width of ID*/);         // Map a DeviceID to a ITT
+  itsMAPTI(D2D_DID /*DeviceID*/, D2D_CLCI1_MCU_DB2SOC_EID /*EventID*/, 8197 /*intid*/, CID /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
+  itsMAPC(target_rd /* target Redistributor*/, CID /*collection*/);              // Map a Collection to a Redistributor
+  itsSYNC(target_rd /* target Redistributor*/);                                // Sync the changes
+
+  itsMAPD(D2D_DID /*DeviceID*/, ITT /*addr of ITT*/, 8 /*bit width of ID*/);         // Map a DeviceID to a ITT
+  itsMAPTI(D2D_DID /*DeviceID*/, D2D_CLCI2_MCU_DB2SOC_EID /*EventID*/, 8198 /*intid*/, CID /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
+  itsMAPC(target_rd /* target Redistributor*/, CID /*collection*/);              // Map a Collection to a Redistributor
+  itsSYNC(target_rd /* target Redistributor*/);                                // Sync the changes
+
+  itsMAPD(D2D_DID /*DeviceID*/, ITT /*addr of ITT*/, 8 /*bit width of ID*/);         // Map a DeviceID to a ITT
+  itsMAPTI(D2D_DID /*DeviceID*/, D2D_CLCI3_MCU_DB2SOC_EID /*EventID*/, 8199 /*intid*/, CID /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
   itsMAPC(target_rd /* target Redistributor*/, CID /*collection*/);              // Map a Collection to a Redistributor
   itsSYNC(target_rd /* target Redistributor*/);                                // Sync the changes
 
@@ -185,20 +203,28 @@ int request_irq(void)
   //
 
   configureLPI(rd, 8192 /*INTID*/, GICV3_LPI_ENABLE, 0 /*Priority*/);
-  printf("main(): Sending LPI 8192 (D2D_CLCI0_DBG_IRQ)\n");
   itsINV(D2D_DID /*DeviceID*/, D2D_CLCI0_DBG_EID /*EventID*/);
 
   configureLPI(rd, 8193 /*INTID*/, GICV3_LPI_ENABLE, 0 /*Priority*/);
-  printf("main(): Sending LPI 8193 (D2D_CLCI2_DBG_IRQ)\n");
-  itsINV(D2D_DID /*DeviceID*/, D2D_CLCI2_DBG_EID /*EventID*/);
+  itsINV(D2D_DID /*DeviceID*/, D2D_CLCI1_DBG_EID /*EventID*/);
 
   configureLPI(rd, 8194 /*INTID*/, GICV3_LPI_ENABLE, 0 /*Priority*/);
-  printf("main(): Sending LPI 8194 (D2D_CLCI0_MCU_DB2SOC_IRQ)\n");
-  itsINV(D2D_DID /*DeviceID*/, D2D_CLCI0_MCU_DB2SOC_EID /*EventID*/);
+  itsINV(D2D_DID /*DeviceID*/, D2D_CLCI2_DBG_EID /*EventID*/);
 
   configureLPI(rd, 8195 /*INTID*/, GICV3_LPI_ENABLE, 0 /*Priority*/);
-  printf("main(): Sending LPI 8195 (D2D_CLCI2_MCU_DB2SOC_IRQ)\n");
+  itsINV(D2D_DID /*DeviceID*/, D2D_CLCI3_DBG_EID /*EventID*/);
+
+  configureLPI(rd, 8196 /*INTID*/, GICV3_LPI_ENABLE, 0 /*Priority*/);
+  itsINV(D2D_DID /*DeviceID*/, D2D_CLCI0_MCU_DB2SOC_EID /*EventID*/);
+
+  configureLPI(rd, 8197 /*INTID*/, GICV3_LPI_ENABLE, 0 /*Priority*/);
+  itsINV(D2D_DID /*DeviceID*/, D2D_CLCI1_MCU_DB2SOC_EID /*EventID*/);
+
+  configureLPI(rd, 8198 /*INTID*/, GICV3_LPI_ENABLE, 0 /*Priority*/);
   itsINV(D2D_DID /*DeviceID*/, D2D_CLCI2_MCU_DB2SOC_EID /*EventID*/);
+
+  configureLPI(rd, 8199 /*INTID*/, GICV3_LPI_ENABLE, 0 /*Priority*/);
+  itsINV(D2D_DID /*DeviceID*/, D2D_CLCI3_MCU_DB2SOC_EID /*EventID*/);
 
   // INT
   // itsINT(DID /*DeviceID*/, EID /*EventID*/);
@@ -206,66 +232,63 @@ int request_irq(void)
   // A55 write
   // WRITE_GITS_TRANSLATER(0x00000001);
 
-  printf("====== INTERRUPT ======\n");
   REG32(D2D_MBI_TX_BASE + 0x10) = (uint64_t)0x105f0040;
   REG32(D2D_MBI_TX_BASE + 0x14) = (uint64_t)0x04;
   REG32(D2D_MBI_TX_BASE + 0x40) = 0x0;
   REG32(D2D_MBI_TX_BASE + 0x44) = 0x0;
   REG32(D2D_MBI_TX_BASE + 0x30) = 0x0;
-  REG32(D2D_MBI_TX_BASE + 0x34) = 0x55;
+  REG32(D2D_MBI_TX_BASE + 0x34) = 0xFF;
+  printf("%s config done\n", __func__);
 
-  // NOTE:
-  // This code assumes that the IRQ and FIQ exceptions
-  // have been routed to the appropriate Exception level
-  // and that the PSTATE masks are clear.  In this example
-  // this is done in the startup.s file
-
-  //
-  // Spin until interrupt
-  //
-  while(flag < 1)
-  {}
-  
-  printf("Main(): Test end\n");
-
-  return 1;
+  is_initialized = 1;
+  return 0;
 }
 
 // --------------------------------------------------------
 
-void fiqHandler(void)
+extern void mailbox_doorbell_isr();
+void fiq_handler(void)
 {
-  uint32_t ID;
-  uint32_t group = 0;
+	uint32_t iar, group = 0;
+	IRQHandler_t irq_handler;
+	do {
+		iar = read_icc_iar0_el1();
 
-  // Read the IAR to get the INTID of the interrupt taken
-  ID = readIARGrp0();
+		switch (iar)
+		{
+		case 0 ... 15: // SGIs
+		case 16 ... 31: // PPIs
+		case 32 ... 1019: // SPIs
+			irq_handler = IRQ_GetHandler(iar);
+			if(irq_handler!=(IRQHandler_t)0)
+				irq_handler();
+			break;
+		case 1020:
+		case 1022:
+			printf("FIQ: Received Special INTID.%d\n", iar);
+			break;
+		case 1021:
+			iar = read_icc_iar1_el1();
+      // printf("FIQ: Read INTID %d from IAR1\n", iar);
+      mailbox_doorbell_isr();
+			group = 1;
+			break;
+		case 1023:
+			return;
+		case 1024 ... 8191: // Reserved
+			break;
+		default: // >= 8192 LPIs
+			// Todo: LPIs
+			printf("FIQ: Received LPI INTID.%d\n", iar);
+		}
 
-  printf("FIQ: Received INTID %d\n", ID);
-
-  switch (ID)
-  {
-    case 1021:
-      printf("FIQ: Received Non-secure interrupt from the ITS\n");
-      ID = readIARGrp1();
-      printf("FIQ: Read INTID %d from IAR1\n", ID);
-      group = 1;
-      break;
-    case 1023:
-      printf("FIQ: Interrupt was spurious\n");
-      return;
-    default:
-      printf("FIQ: Panic, unexpected INTID\n");
-  }
-
-  // Write EOIR to deactivate interrupt
-  if (group == 0)
-    writeEOIGrp0(ID);
-  else
-    writeEOIGrp1(ID);
-
-  flag++;
-  return;
+		// Write EOIR to deactivate interrupt
+		if (group == 0)
+			write_icc_eoir0_el1(iar);
+		else
+			write_icc_eoir1_el1(iar);
+		isb();
+	} while(1);
 }
 
 // --------------------------------------------------------

@@ -384,6 +384,7 @@ static void rhea_clci_clk_init(void)
     writel(1, (void *) SYSCTRL_CLCI_MCU_DIV);
 }
 
+#if defined(ENABLE_REAL_CLCI)
 static void rhea_clci_pinmux_init(void)
 {
     uint32_t val;
@@ -398,6 +399,7 @@ static void rhea_clci_pinmux_init(void)
         writel(val, (void *) SYSCTRL_CLCIx_UART_TX(clci_idx));
     }
 }
+#endif
 
 int rhea_d2d_init(void)
 {
@@ -410,7 +412,9 @@ int rhea_d2d_init(void)
 
     /* CLCI configuration */
     rhea_clci_clk_init();
+#if defined(ENABLE_REAL_CLCI)
     rhea_clci_pinmux_init();
+#endif
     for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
         rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0,
                             D2D_REG_CLCIx_APB_MUX(clci_idx));
@@ -426,6 +430,7 @@ int rhea_d2d_init(void)
     /* CLCI auto link */
     printf("CLCI waiting for link\n");
     for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
+#if defined(ENABLE_REAL_CLCI)
         while (1) {
             tmp_val = rhea_d2d_cfg_readl(RHEA_DIE_SELF,
                             CLCIx_AHB_BASE(clci_idx) + 0x2105c);
@@ -437,6 +442,7 @@ int rhea_d2d_init(void)
             udelay(1000);
         }
         pr_dbg("clci%d init done\n", clci_idx);
+#endif
         while (1) {
             tmp_val = rhea_d2d_cfg_readl(RHEA_DIE_SELF,
                             CLCIx_AHB_BASE(clci_idx) + 0x3003c);
@@ -467,12 +473,17 @@ int rhea_d2d_init(void)
     return 0;
 
 timeout:
-    printf("reg dump (0x2105c:0x%x, 0x21054:0x%x, 0x30004:0x%x, 0x17c1c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x)\n",
-        rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x2105c),
-        rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x21054),
-        rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x30004),
-        rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c1c),
-        rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c24),
-        rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c30));
+#if defined(ENABLE_REAL_CLCI)
+    for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
+        printf("clci%d reg dump (0x2105c:0x%x, 0x21054:0x%x, 0x30004:0x%x, 0x17c1c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x)\n",
+            clci_idx,
+            rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x2105c),
+            rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x21054),
+            rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x30004),
+            rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c1c),
+            rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c24),
+            rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c30));
+    }
+#endif
     return -ETIMEDOUT;
 }

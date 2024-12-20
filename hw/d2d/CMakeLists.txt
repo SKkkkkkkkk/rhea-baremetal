@@ -13,6 +13,8 @@ target_sources(${TARGET_NAME}
 		lib/src/commands_common.c
 		lib/src/commands_sys.c
 		lib/src/doorbell.c
+		lib/src/gicv3_basic.c
+		lib/src/gicv3_lpis.c
 		lib/src/interrupt.c
 		lib/src/local_ctrl.c
 		lib/src/mailbox_drv.c
@@ -43,3 +45,4 @@ target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_CMD_ADDR=0x48000010)
 target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_CMD_SIZE=0x960)
 target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_DATA_ADDR=0x48000970)
 target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_DATA_SIZE=0xFF690)
+# target_compile_definitions(d2d PRIVATE ENABLE_REAL_CLCI)
