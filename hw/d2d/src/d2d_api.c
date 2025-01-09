@@ -248,9 +248,8 @@ int rhea_d2d_select_tile(uint8_t die, uint8_t tile_id, uint32_t wait_ms)
         return -EINVAL;
     }
 
-    for (i = 0; i <= die; i++) {
-        /* TODO: Lock each die in the data transfer path */
-        while (i == die && !rhea_d2d_get_lock(i, D2D_LOCK_TILE_SEL)) {
+    for (i = 1; i <= die; i++) {
+        while (!rhea_d2d_get_lock(i, D2D_LOCK_TILE_SEL)) {
             if (wait_ms) {
                 wait_ms--;
                 mdelay(1);
@@ -368,7 +367,7 @@ void *rhea_d2d_get_cnoc_addr(void)
     return d2d_cnoc;
 }
 
-static void rhea_clci_clk_init(void)
+void rhea_clci_clk_init(void)
 {
     uint32_t tmp_val;
 
@@ -411,7 +410,6 @@ int rhea_d2d_init(void)
     d2d_cnoc = (void *) D2D_CNOC_BASE;
 
     /* CLCI configuration */
-    rhea_clci_clk_init();
 #if defined(ENABLE_REAL_CLCI)
     rhea_clci_pinmux_init();
 #endif
@@ -462,7 +460,11 @@ int rhea_d2d_init(void)
     printf("CLCI link finished\n");
 
     /* D2D configuration */
+#if CONFIG_RHEA_DIE_MAX == 4
+    rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x2, D2D_REG_CFG_WORK_MODE);
+#else
     rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x0, D2D_REG_CFG_WORK_MODE);
+#endif
     rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x1, D2D_REG_CFG_POSTW_EN);
     rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x0, D2D_REG_CFG_RX_SEL_GRP0);
     rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x1, D2D_REG_CFG_RX_SEL_GRP1);

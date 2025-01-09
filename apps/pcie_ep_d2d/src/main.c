@@ -9,6 +9,7 @@
 #include "utils_def.h"
 #include "d2d_api.h"
 #include "d2d_sync.h"
+#include "d2d_test.h"
 
 /*                                   This is BAR Define
 ┌────┬─────┬────────────────┬────┬───────────────────┬────────────────┬───────────────┬───────────┐
@@ -33,7 +34,8 @@
 #define SEEHI_C2C_PCIE_TEST			0
 #define SEEHI_TILE14_PCIE_TEST		0
 #define SEEHI_4TILE_PCIE_TEST		0
-#define SEEHI_2DIE_4TILE_PCIE_TEST	1
+#define SEEHI_2DIE_4TILE_PCIE_TEST	(CONFIG_RHEA_DIE_MAX == 2)
+#define SEEHI_4DIE_1TILE_PCIE_TEST	(CONFIG_RHEA_DIE_MAX == 4)
 #define SEEHI_DUAL_PCIE_TEST		0
 
 #define SEEHI_MSIX_ENABLE			0
@@ -1614,6 +1616,8 @@ int main()
 	mc_init(TCM_27_CFG_BASE, 4);
 	mc_init(TCM_36_CFG_BASE, 4);
 	mc_init(TCM_37_CFG_BASE, 4);
+#elif SEEHI_4DIE_1TILE_PCIE_TEST
+	mc_init(TCM_14_CFG_BASE, 4);
 #endif
 	g_c2c_base = get_pcie_base(3);
 	pcie = &s_pcie_03;
@@ -1656,9 +1660,13 @@ int main()
 	printf("SEEHI_DUAL_PCIE_TEST\n");
 #endif
 
+	rhea_clci_clk_init();
+
+#if CONFIG_RHEA_D2D_SELF_ID == 0 || SEEHI_2DIE_4TILE_PCIE_TEST
 	PCIe_EP_Init(pcie);
 
 	PCIe_EP_Link(pcie);
+#endif
 
 #if SEEHI_DUAL_PCIE_TEST
 	g_c2c_base = get_pcie_base(3);

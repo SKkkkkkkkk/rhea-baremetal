@@ -333,6 +333,44 @@ int die0_d2d_switch_test(void)
     return 0;
 }
 
+int run_multi_die_test(uint8_t die_idx)
+{
+#define TEST_DATA_SIZE  512
+    int ret;
+    int i;
+    uint8_t data[TEST_DATA_SIZE] = {0};
+    uint32_t val;
+
+    printf("die%d test start\n", die_idx);
+    ret = rhea_d2d_select_tile(die_idx, 0x14, 0);
+    if (ret) {
+        printf("[%d]%s error %d\n", __LINE__, __func__, ret);
+        return ret;
+    }
+
+    printf("basic w/r test\n");
+	rhea_d2d_readl(&val, 0x40000000);
+	printf("read 0x40000000 = 0x%x\n", val);
+	rhea_d2d_writel(0xaa55aa55, 0x40000000);
+	rhea_d2d_readl(&val, 0x40000000);
+	printf("read 0x40000000 = 0x%x\n", val);
+
+    for (i = 0; i < TEST_DATA_SIZE; i++) {
+        data[i] = i & 0xFF;
+    }
+    printf("data trans test\n");
+    rhea_d2d_write_data(data, 0x40000000, TEST_DATA_SIZE);
+    memset(data, 0, TEST_DATA_SIZE);
+    rhea_d2d_read_data(data, 0x40000000, TEST_DATA_SIZE);
+    ret = verify_data(data, TEST_DATA_SIZE);
+    if (ret) return ret;
+
+    rhea_d2d_release_tile();
+    printf("die%d test success\n", die_idx);
+
+    return 0;
+}
+
 int run_die0_test(void)
 {
     int ret;

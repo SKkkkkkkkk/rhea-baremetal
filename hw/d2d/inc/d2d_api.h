@@ -93,5 +93,6 @@ int rhea_d2d_send_int2pcie(uint32_t timeout_ms, uint32_t cmd,
 void *rhea_d2d_get_dnoc_addr(void);
 void *rhea_d2d_get_cnoc_addr(void);
 int rhea_d2d_init(void);
+void rhea_clci_clk_init(void);
 
 #endif /* __D2D_API_H__ */
