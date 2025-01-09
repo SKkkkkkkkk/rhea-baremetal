@@ -232,15 +232,16 @@ return:
 */
 int32_t clci_relink()
 {
-	cmd_clci_common(2, CMD_RESET);
+	int32_t ret = 0;
+
+	if ((ret = cmd_clci_common(2, CMD_RESET)) < 0)
+		return ret;
 	/*
 		update clci_config info at 0x10017c00
 		refer to clci_config_regs.txt
 	*/
-	cmd_clci_common(2, CMD_CLCI_LINK);
-	if (clci_get_cmd() == CMD_RESP_FAIL) {
-		return 1;
-	}
+	if ((ret = cmd_clci_common(2, CMD_CLCI_LINK)) < 0)
+		return ret;
 
 	return 0;
 }
@@ -252,22 +253,37 @@ return:
 */
 int32_t clci_relink_2()
 {
-	cmd_clci_common(2, CMD_RESET);
-	cmd_clci_common(2, CMD_APHY_PLL_INIT);
-	if (clci_get_cmd() == CMD_RESP_FAIL) {
-		return 1;
-	}
-	cmd_clci_common(2, CMD_APHY_INIT);
-	cmd_clci_common(2, CMD_SPHY_INIT);
-	cmd_clci_common(2, CMD_BITLOCK);
-	if (clci_get_cmd() == CMD_RESP_FAIL) {
-		return 1;
-	}
-	cmd_clci_common(2, CMD_PCSLOCK);
-	if (clci_get_cmd() == CMD_RESP_FAIL) {
-		return 1;
-	}
-	cmd_clci_common(2, CMD_MAC_INIT);
+	int32_t ret = 0;
+
+	if ((ret = cmd_clci_common(2, CMD_RESET)) < 0)
+		return ret;
+
+	if ((ret = cmd_clci_common(2, CMD_APHY_PLL_INIT)) < 0)
+		return ret;
+
+	// if (clci_error_get())
+	// 	return 1;
+
+	if ((ret = cmd_clci_common(2, CMD_APHY_INIT)) < 0)
+		return ret;
+
+	if ((ret = cmd_clci_common(2, CMD_SPHY_INIT)) < 0)
+		return ret;
+
+	if ((ret = cmd_clci_common(2, CMD_BITLOCK)) < 0)
+		return ret;
+
+	// if (clci_error_get())
+	// 	return 1;
+
+	if ((ret = cmd_clci_common(2, CMD_PCSLOCK)) < 0)
+		return ret;
+
+	// if (clci_error_get())
+	// 	return 1;
+
+	if ((ret = cmd_clci_common(2, CMD_MAC_INIT)) < 0)
+		return ret;
 
 	return 0;
 }
@@ -283,9 +299,7 @@ int32_t clci_link_status()
 	uint32_t regdata_1 = 0;
 
 	cmd_clci_get_reg(1, 0x3003c, &regdata_0);
-	printf("===[%d]%s regdata_0 0x%x\n", __LINE__, __func__, regdata_0);
 	cmd_clci_get_reg(0, 0x3003c, &regdata_1);
-	printf("===[%d]%s regdata_1 0x%x\n", __LINE__, __func__, regdata_1);
 
 	if (((regdata_0 >> 12) & 0x1) && ((regdata_1 >> 12) & 1)) {
 		return 0;
