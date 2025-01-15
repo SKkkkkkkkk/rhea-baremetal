@@ -23,9 +23,25 @@
 │BAR4│512MB│  prefetchable  │ 64 │    TCM_MEM_BAR    │    TCM MEM     │0x004_4000_0000│     3     │
 └────┴─────┴────────────────┴────┴───────────────────┴────────────────┴───────────────┴───────────┘
 */
+//宏定义组合说明
+//fpga平台组合比较固定
+//	1、使用03互联连，一个控制器，没有npu，X8 控制器
+//		SEEHI_FPGA_PCIE_TEST && SEEHI_C2C_PCIE_TEST && SEEHI_C2C_X8_TEST
+//	2、使用03链接host，一个控制器，没有npu，X8 控制器
+//		SEEHI_FPGA_PCIE_TEST && SEEHI_C2C_X8_TEST
+//
+//PLD平台会有多种组合，常用的如下
+//	1、使用03互联连，一个控制器，没有npu，X8或者X16 控制器
+//		PLD_Z1 && SEEHI_SINGLE_PCIE_TEST && SEEHI_AP_PCIE_TEST && SEEHI_C2C_PCIE_TEST && SEEHI_C2C_X8_TEST || SEEHI_C2C_X16_TEST
+//	2、使用03链接host，使用73互联，两个控制器，有4个npu，X8或者X16控制器
+//		PLD_Z2 && SEEHI_DUAL_PCIE_TEST && SEEHI_NPU_PCIE_TEST && SEEHI_C2C_PCIE_TEST && SEEHI_C2C_X8_TEST || SEEHI_C2C_X16_TEST
+//	3、使用03连接host，一个控制器，没有npu，没有互联，X8或者X16控制器
+//		PLD_Z1 && SEEHI_SINGLE_PCIE_TEST && SEEHI_AP_PCIE_TEST && SEEHI_C2C_X8_TEST || SEEHI_C2C_X16_TEST
+//	4、使用03连接host，一个控制器，一个14NPU，没有互联，X8或者X16控制器
+//		PLD_Z1 && SEEHI_SINGLE_PCIE_TEST && SEEHI_TILE14_PCIE_TEST && SEEHI_C2C_X8_TEST || SEEHI_C2C_X16_TEST
 //either-or
-#define SEEHI_PLD_PCIE_TEST			1
-#define SEEHI_FPGA_PCIE_TEST		0
+#define SEEHI_PLD_PCIE_TEST			0
+#define SEEHI_FPGA_PCIE_TEST		1
 
 //either-or
 #define PLD_Z1						1
@@ -260,7 +276,7 @@ struct HAL_PCIE_DEV g_pcieDev_73;
 #define A510_APB_PCIE_MSG_SLOT_PWR_CLR		BIT(0)
 #define A510_APB_PCIE_MSG_SLOT_PWR_VLD		BIT(1)
 
-#if SEEHI_C2C_PCIE_TEST && SEEHI_PLD_PCIE_TEST
+#if SEEHI_C2C_PCIE_TEST
 #if SEEHI_C2C_X16_TEST
 #if PLD_Z1
 #define PCIE_C2C_CONFIG_TARGET			0x21000000
@@ -1357,6 +1373,7 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	while(g_c2c_link){
 #if SEEHI_FPGA_PCIE_TEST
 		val = gpio_read_pin(PORTA, 24);
+		break;  //bug  todo
 #elif SEEHI_PLD_PCIE_TEST
 		val = gpio_read_pin(PORTA, 0);
 #endif
@@ -1484,10 +1501,11 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 	}
 
 #elif SEEHI_FPGA_PCIE_TEST
-	dw_pcie_prog_inbound_atu(pcie, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
-	dw_pcie_prog_inbound_atu(pcie, 1, 2, BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS);
-	dw_pcie_prog_inbound_atu(pcie, 2, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);
+	dw_pcie_prog_inbound_atu(pcie, 0, 0, BOOT_USING_PCIE_C2C_BAR0_CPU_ADDRESS);
+	dw_pcie_prog_inbound_atu(pcie, 1, 2, BOOT_USING_PCIE_C2C_BAR2_CPU_ADDRESS);
+	dw_pcie_prog_inbound_atu(pcie, 2, 3, BOOT_USING_PCIE_C2C_BAR3_CPU_ADDRESS);
 
+	dw_pcie_prog_inbound_atu_addr(pcie, 3, 0, BOOT_USING_PCIE_C2C_BAR4_CPU_ADDRESS, PCIE_C2C_64_MEM_BASE, PCIE_C2C_64_MEM_BASE_SIZE);
 #else
 
 #error
@@ -1936,8 +1954,13 @@ struct HAL_PCIE_DEV g_pcieDevX8_03 =
 	.cniuBase = CNIU,
 	.mbitxBase = MBI_TX,
 	.max_lanes = 8,
+#if SEEHI_FPGA_PCIE_TEST
+	.lanes = 1,
+	.gen = 1,
+#elif SEEHI_PLD_PCIE_TEST
 	.lanes = 8,
 	.gen = 5,
+#endif
 	.firstBusNo = 0x30,
 	.ltrIrqNum = 204,
 	.vdmIrqNum = 205,
@@ -2108,7 +2131,7 @@ int main()
 
 	GIC_Init();
 
-#if SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST
+#if SEEHI_C2C_PCIE_TEST
 	IRQ_SetHandler(pcie->dev->vdmIrqNum, pcie_irq_handler);
 	GIC_SetPriority(pcie->dev->vdmIrqNum, 0 << 3);
 	GIC_EnableIRQ(pcie->dev->vdmIrqNum);
@@ -2152,7 +2175,7 @@ int main()
 	printf("seehi_dual_pcie_test c2c\n");
 #endif
 
-#if SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST
+#if SEEHI_C2C_PCIE_TEST
 	g_c2c_link = 1;
 	gpio_sync_init();
 #endif
@@ -2168,7 +2191,11 @@ int main()
 	while(1){
 		printf("BSP_PCIE_EP_LOOP !!! cnt %d\n", cnt);
 		cnt++;
+#if SEEHI_FPGA_PCIE_TEST
+		systimer_delay(5000, IN_MS);
+#else
 		systimer_delay(20, IN_MS);
+#endif
 
 		// dump_regs("vdm int:", pcie->dev->apbBase + A510_APB_PCIE_EN_INT0, 16);
 		// dump_regs("vdm message:", pcie->dev->apbBase + A510_APB_PCIE_MSG_VDM_REG0, 32);

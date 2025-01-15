@@ -23,9 +23,19 @@
 │BAR4│512MB│  prefetchable  │ 64 │    TCM_MEM_BAR    │    TCM MEM     │0x004_4000_0000│     3     │
 └────┴─────┴────────────────┴────┴───────────────────┴────────────────┴───────────────┴───────────┘
 */
+//宏定义组合说明
+//fpga平台组合比较固定
+//	1、使用03互联连，一个控制器，没有npu，X8 控制器
+//		SEEHI_FPGA_PCIE_TEST && SEEHI_C2C_PCIE_TEST && SEEHI_C2C_X8_TEST
+//
+//PLD平台会有多种组合，常用的如下
+//	1、使用03互联连，一个控制器，没有npu，X8或者X16 控制器
+//		PLD_Z1 && SEEHI_SINGLE_PCIE_TEST && SEEHI_AP_PCIE_TEST && SEEHI_C2C_PCIE_TEST && SEEHI_C2C_X8_TEST || SEEHI_C2C_X16_TEST
+//	2、使用03链接host，使用73互联，两个控制器，有4个npu，X8或者X16控制器
+//		PLD_Z2 && SEEHI_DUAL_PCIE_TEST && SEEHI_NPU_PCIE_TEST && SEEHI_C2C_PCIE_TEST && SEEHI_C2C_X8_TEST || SEEHI_C2C_X16_TEST
 //either-or
-#define SEEHI_PLD_PCIE_TEST			1
-#define SEEHI_FPGA_PCIE_TEST		0
+#define SEEHI_PLD_PCIE_TEST			0
+#define SEEHI_FPGA_PCIE_TEST		1
 
 //either-or
 #define PLD_Z1						1
@@ -305,13 +315,14 @@ struct HAL_PCIE_DEV g_pcieDev_73;
 #endif
 #endif
 #else
-#define PCIE_C2C_CONFIG_BASE			0x18000000
+#define PCIE_C2C_CONFIG_TARGET			0x31000000
+#define PCIE_C2C_CONFIG_BASE			0x19000000
 #define PCIE_C2C_CONFIG_BASE_SIZE		0x00080000
-#define PCIE_C2C_IO_BASE				0x18080000
+#define PCIE_C2C_IO_BASE				0x19080000
 #define PCIE_C2C_IO_BASE_SIZE			0x00080000
-#define PCIE_C2C_32_MEM_BASE			0x18100000
+#define PCIE_C2C_32_MEM_BASE			0x19100000
 #define PCIE_C2C_32_MEM_BASE_SIZE		0x00f00000
-#define PCIE_C2C_64_MEM_BASE			0xd100000000
+#define PCIE_C2C_64_MEM_BASE			0xd900000000
 #define PCIE_C2C_64_MEM_BASE_SIZE		0x700000000
 #endif
 
@@ -603,7 +614,7 @@ static void a510_radm_msg_payload_parse(struct HAL_PCIE_HANDLE *pcie, uint32_t *
 					temp0 = *(byte8 + i);
 					temp1 = *(byte12 + i);
 					printf("seehi--> %s line: %d x8 fifo | bayte8 0x%x byte12 0x%x\n", __func__, __LINE__, temp0, temp1);
-					BSP_PCIE_EP_VDM(pcie, cnt++, temp0, temp1);
+					// BSP_PCIE_EP_VDM(pcie, cnt++, temp0, temp1);
 				}
 
 				if((val & A510_APB_PCIE_MSG_VDM_RVLD_MASK) >> 16 == 2){
@@ -644,13 +655,13 @@ static void a510_radm_msg_payload_parse(struct HAL_PCIE_HANDLE *pcie, uint32_t *
 				temp1 = *(byte12 + i);
 				printf("seehi--> %s line: %d x16 fifo | bayte8 0x%x byte12 0x%x\n", __func__, __LINE__, temp0, temp1);
 
-				if(temp0 == 0x1){
-					BSP_PCIE_EP_LTR(pcie, cnt++);
-				}else if(temp0 == 0x2){
-					BSP_PCIE_EP_INTX(pcie, cnt++);
-				}else{
-					BSP_PCIE_EP_VDM(pcie, cnt++, temp0, temp1);
-				}
+				// if(temp0 == 0x1){
+					// BSP_PCIE_EP_LTR(pcie, cnt++);
+				// }else if(temp0 == 0x2){
+					// BSP_PCIE_EP_INTX(pcie, cnt++);
+				// }else{
+					// BSP_PCIE_EP_VDM(pcie, cnt++, temp0, temp1);
+				// }
 
 				i++;
 				if(i >= 10){
@@ -707,13 +718,13 @@ static void a510_radm_msg_payload_parse(struct HAL_PCIE_HANDLE *pcie, uint32_t *
 				temp1 = *byte12;
 				printf("seehi--> %s line: %d x16 no_fifo | bayte8 0x%x byte12 0x%x\n", __func__, __LINE__, temp0, temp1);
 
-				if(temp0 == 0x1){
-					BSP_PCIE_EP_LTR(pcie, cnt++);
-				}else if(temp0 == 0x2){
-					BSP_PCIE_EP_INTX(pcie, cnt++);
-				}else{
-					BSP_PCIE_EP_VDM(pcie, cnt++, temp0, temp1);
-				}
+				// if(temp0 == 0x1){
+					// BSP_PCIE_EP_LTR(pcie, cnt++);
+				// }else if(temp0 == 0x2){
+					// BSP_PCIE_EP_INTX(pcie, cnt++);
+				// }else{
+					// BSP_PCIE_EP_VDM(pcie, cnt++, temp0, temp1);
+				// }
 			}
 
 			pcie_writel_apb(pcie, A510_APB_PCIE_MSG_VDM_CLR, A510_APB_PCIE_MSG_VDM);
@@ -1077,18 +1088,18 @@ void BSP_PCIE_RC_Init(const struct HAL_PCIE_HANDLE *pcie)
 	writel(4, apb_base + 0x104);  //rc mode
 #if SEEHI_C2C_X16_TEST
 #if PLD_Z1
-	writel(0x18000000, ss_base + 0x200);  //config space todo
+	writel(0x18000000, ss_base + 0x200);
 	writel(0x0, ss_base + 0x204);
 #elif PLD_Z2
-	writel(0x1c000000, ss_base + 0x200);  //config space todo
+	writel(0x1c000000, ss_base + 0x200);
 	writel(0x0, ss_base + 0x204);
 #endif
 #elif SEEHI_C2C_X8_TEST
 #if PLD_Z1
-	writel(0x19000000, ss_base + 0x208);  //config space todo
+	writel(0x19000000, ss_base + 0x208);
 	writel(0x8, ss_base + 0x20c);
 #elif PLD_Z2
-	writel(0x1d000000, ss_base + 0x208);  //config space todo
+	writel(0x1d000000, ss_base + 0x208);
 	writel(0x8, ss_base + 0x20c);
 #endif
 #endif
@@ -1117,17 +1128,21 @@ static void rc_init_pre(struct HAL_PCIE_HANDLE *pcie)
 
 	writel(0x1, ss_base + 0x1b8);    //MSI MBI
 	writel(0xffff0000, ss_base + 0x1cc);  //MBI MASK
+#if SEEHI_FPGA_PCIE_TEST
+	writel(0x31000000, ss_base + 0x1d0);
+#elif SEEHI_PLD_PCIE_TEST
 #if SEEHI_C2C_X16_TEST
 #if PLD_Z1
-	writel(0x21000000, ss_base + 0x1d0); //todo
+	writel(0x21000000, ss_base + 0x1d0);
 #elif PLD_Z2
-	writel(0x61000000, ss_base + 0x1d0); //todo
+	writel(0x61000000, ss_base + 0x1d0);
 #endif
 #elif SEEHI_C2C_X8_TEST
 #if PLD_Z1
-	writel(0x31000000, ss_base + 0x1d0); //todo
+	writel(0x31000000, ss_base + 0x1d0);
 #elif PLD_Z2
-	writel(0x71000000, ss_base + 0x1d0); //todo
+	writel(0x71000000, ss_base + 0x1d0);
+#endif
 #endif
 #endif
 
@@ -1168,6 +1183,9 @@ static void rc_init_pre(struct HAL_PCIE_HANDLE *pcie)
 	writel(0x11110000, dbi_base + 0x30d14);
 	writel(0x11110000, dbi_base + 0x30f14);
 
+#if SEEHI_FPGA_PCIE_TEST
+	writel(0x3f3130, dbi_base + 0x18);
+#elif SEEHI_PLD_PCIE_TEST
 #if SEEHI_C2C_X16_TEST
 #if PLD_Z1
 	writel(0x2f2120, dbi_base + 0x18);
@@ -1179,6 +1197,7 @@ static void rc_init_pre(struct HAL_PCIE_HANDLE *pcie)
 	writel(0x3f3130, dbi_base + 0x18);
 #elif PLD_Z2
 	writel(0x7f7170, dbi_base + 0x18);
+#endif
 #endif
 #endif
 
@@ -1200,21 +1219,15 @@ static void rc_init_pre(struct HAL_PCIE_HANDLE *pcie)
 	writel(0x7fffffff, dbi_base + 0x30e14);
 
 #if  SEEHI_PLD_PCIE_TEST
-	HAL_PCIE_OutboundConfig(pcie, 0, PCIE_ATU_TYPE_CFG0, PCIE_C2C_CONFIG_BASE, PCIE_C2C_CONFIG_TARGET, PCIE_C2C_CONFIG_BASE_SIZE);  //todo
+	HAL_PCIE_OutboundConfig(pcie, 0, PCIE_ATU_TYPE_CFG0, PCIE_C2C_CONFIG_BASE, PCIE_C2C_CONFIG_TARGET, PCIE_C2C_CONFIG_BASE_SIZE);
 	HAL_PCIE_OutboundConfig(pcie, 1, PCIE_ATU_TYPE_MEM, PCIE_C2C_32_MEM_BASE, PCIE_C2C_32_MEM_BASE, PCIE_C2C_32_MEM_BASE_SIZE);
 	real_addr = PCIE_C2C_64_MEM_BASE & 0x7ffffffff;
 	printf("seehi--> %s line: %d real_addr 0x%lx\n", __func__, __LINE__, real_addr);
 	HAL_PCIE_OutboundConfig(pcie, 2, PCIE_ATU_TYPE_MEM | 0x2000, real_addr, PCIE_C2C_64_MEM_BASE, PCIE_C2C_64_MEM_BASE_SIZE);
 	HAL_PCIE_OutboundConfig(pcie, 3, PCIE_ATU_TYPE_IO, PCIE_C2C_IO_BASE, PCIE_C2C_IO_BASE, PCIE_C2C_IO_BASE_SIZE);
 
-	// HAL_PCIE_OutboundConfig(pcie, 2, 0, 0x130000000, 0xf130000000, 0x800000);  //todo
-	// HAL_PCIE_OutboundConfig(pcie, 3, 0, 0x130800000, 0xf130800000, 0x20800000);  //todo
-																			  //
-	// writel(0x30000000, ss_base + 0x208);  //config space todo
-	// writel(0x0, ss_base + 0x20c);
-
 #elif SEEHI_FPGA_PCIE_TEST
-	dw_pcie_prog_outbound_atu(pcie, 0, PCIE_ATU_TYPE_CFG0, PCIE_C2C_CONFIG_BASE, PCIE_C2C_CONFIG_TARGET, PCIE_C2C_CONFIG_BASE_SIZE); //todo
+	dw_pcie_prog_outbound_atu(pcie, 0, PCIE_ATU_TYPE_CFG0, PCIE_C2C_CONFIG_BASE, PCIE_C2C_CONFIG_TARGET, PCIE_C2C_CONFIG_BASE_SIZE);
 	dw_pcie_prog_outbound_atu(pcie, 1, PCIE_ATU_TYPE_MEM, PCIE_C2C_32_MEM_BASE, PCIE_C2C_32_MEM_BASE, PCIE_C2C_32_MEM_BASE_SIZE);
 	real_addr = PCIE_C2C_64_MEM_BASE & 0x7ffffffff;
 	printf("seehi--> %s line: %d real_addr 0x%lx\n", __func__, __LINE__, real_addr);
@@ -1308,28 +1321,40 @@ static void rc_rescan(struct HAL_PCIE_HANDLE *pcie)
 
 	writew(0x2, dbi_base + 0x3e);
 
+#if SEEHI_FPGA_PCIE_TEST
+	writel(0x313130, dbi_base + 0x18);
+	writel(0x19100000, dbi_base + 0x14);
+
+	writew(0x0, PCIE_C2C_CONFIG_BASE + 0x4);
+	writel(0x19400000, PCIE_C2C_CONFIG_BASE + 0x10);
+	writel(0x19200000, PCIE_C2C_CONFIG_BASE + 0x14);
+	writel(0x19800000, PCIE_C2C_CONFIG_BASE + 0x18);
+	writel(0x19300000, PCIE_C2C_CONFIG_BASE + 0x1c);
+	writel(0xc, PCIE_C2C_CONFIG_BASE + 0x20);
+	writel(0xdc, PCIE_C2C_CONFIG_BASE + 0x24);
+#elif SEEHI_PLD_PCIE_TEST
 #if SEEHI_C2C_X16_TEST
 #if PLD_Z1
 	writel(0x212120, dbi_base + 0x18);
 	writel(0x18100000, dbi_base + 0x14);
 
 	writew(0x0, PCIE_C2C_CONFIG_BASE + 0x4);
-	writel(0x18400000, PCIE_C2C_CONFIG_BASE + 0x10);  //todo
-	writel(0x18200000, PCIE_C2C_CONFIG_BASE + 0x14);  //todo
+	writel(0x18400000, PCIE_C2C_CONFIG_BASE + 0x10);
+	writel(0x18200000, PCIE_C2C_CONFIG_BASE + 0x14);
 	writel(0x18800000, PCIE_C2C_CONFIG_BASE + 0x18);
-	writel(0x18300000, PCIE_C2C_CONFIG_BASE + 0x1c);  //todo
+	writel(0x18300000, PCIE_C2C_CONFIG_BASE + 0x1c);
 	writel(0xc, PCIE_C2C_CONFIG_BASE + 0x20);
-	writel(0xd4, PCIE_C2C_CONFIG_BASE + 0x24);  //todo
+	writel(0xd4, PCIE_C2C_CONFIG_BASE + 0x24);
 #elif PLD_Z2
 	writel(0x616160, dbi_base + 0x18);
 	writel(0x1c100000, dbi_base + 0x14);
 
-	writel(0x1c400000, PCIE_C2C_CONFIG_BASE + 0x10);  //todo
-	writel(0x1c200000, PCIE_C2C_CONFIG_BASE + 0x14);  //todo
+	writel(0x1c400000, PCIE_C2C_CONFIG_BASE + 0x10);
+	writel(0x1c200000, PCIE_C2C_CONFIG_BASE + 0x14);
 	writel(0x1c800000, PCIE_C2C_CONFIG_BASE + 0x18);
-	writel(0x1c300000, PCIE_C2C_CONFIG_BASE + 0x1c);  //todo
+	writel(0x1c300000, PCIE_C2C_CONFIG_BASE + 0x1c);
 	writel(0xc, PCIE_C2C_CONFIG_BASE + 0x20);
-	writel(0xf4, PCIE_C2C_CONFIG_BASE + 0x24);  //todo
+	writel(0xf4, PCIE_C2C_CONFIG_BASE + 0x24);
 #endif
 #elif SEEHI_C2C_X8_TEST
 #if PLD_Z1
@@ -1337,22 +1362,23 @@ static void rc_rescan(struct HAL_PCIE_HANDLE *pcie)
 	writel(0x19100000, dbi_base + 0x14);
 
 	writew(0x0, PCIE_C2C_CONFIG_BASE + 0x4);
-	writel(0x19400000, PCIE_C2C_CONFIG_BASE + 0x10);  //todo
-	writel(0x19200000, PCIE_C2C_CONFIG_BASE + 0x14);  //todo
+	writel(0x19400000, PCIE_C2C_CONFIG_BASE + 0x10);
+	writel(0x19200000, PCIE_C2C_CONFIG_BASE + 0x14);
 	writel(0x19800000, PCIE_C2C_CONFIG_BASE + 0x18);
-	writel(0x19300000, PCIE_C2C_CONFIG_BASE + 0x1c);  //todo
+	writel(0x19300000, PCIE_C2C_CONFIG_BASE + 0x1c);
 	writel(0xc, PCIE_C2C_CONFIG_BASE + 0x20);
-	writel(0xdc, PCIE_C2C_CONFIG_BASE + 0x24);  //todo
+	writel(0xdc, PCIE_C2C_CONFIG_BASE + 0x24);
 #elif PLD_Z2
 	writel(0x717170, dbi_base + 0x18);
 	writel(0x1d100000, dbi_base + 0x14);
 
-	writel(0x1d400000, PCIE_C2C_CONFIG_BASE + 0x10);  //todo
-	writel(0x1d200000, PCIE_C2C_CONFIG_BASE + 0x14);  //todo
+	writel(0x1d400000, PCIE_C2C_CONFIG_BASE + 0x10);
+	writel(0x1d200000, PCIE_C2C_CONFIG_BASE + 0x14);
 	writel(0x1d800000, PCIE_C2C_CONFIG_BASE + 0x18);
-	writel(0x1d300000, PCIE_C2C_CONFIG_BASE + 0x1c);  //todo
+	writel(0x1d300000, PCIE_C2C_CONFIG_BASE + 0x1c);
 	writel(0xc, PCIE_C2C_CONFIG_BASE + 0x20);
-	writel(0xfc, PCIE_C2C_CONFIG_BASE + 0x24);  //todo
+	writel(0xfc, PCIE_C2C_CONFIG_BASE + 0x24);
+#endif
 #endif
 #endif
 
@@ -1360,6 +1386,12 @@ static void rc_rescan(struct HAL_PCIE_HANDLE *pcie)
 	writew(0xf0, dbi_base + 0x1c);
 	writel(0x0, dbi_base + 0x30);
 
+#if SEEHI_FPGA_PCIE_TEST
+	writel(0x19f01920, dbi_base + 0x20);
+	writel(0xfff10001, dbi_base + 0x24);
+	writel(0xd9, dbi_base + 0x28);
+	writel(0xdf, dbi_base + 0x2c);
+#elif SEEHI_PLD_PCIE_TEST
 #if SEEHI_C2C_X16_TEST
 #if PLD_Z1
 	writel(0x18f01820, dbi_base + 0x20);
@@ -1383,6 +1415,7 @@ static void rc_rescan(struct HAL_PCIE_HANDLE *pcie)
 	writel(0xfff10001, dbi_base + 0x24);
 	writel(0xf9, dbi_base + 0x28);
 	writel(0xff, dbi_base + 0x2c);
+#endif
 #endif
 #endif
 	writew(0x2, dbi_base + 0x3e);
@@ -1486,6 +1519,12 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 	dump_regs("read rc config space 00-ff:", dbi_base, 64);
 	dump_regs("read ep config space 00-ff:", PCIE_C2C_CONFIG_BASE, 64);
 
+#if SEEHI_FPGA_PCIE_TEST
+	dump_regs("bar0:", 0x19400000, 32);
+	dump_regs("bar2:", 0x19800000, 32);
+	dump_regs("bar3:", 0x19300000, 32);
+	dump_regs("bar4:", 0xdc00000000, 32);
+#elif SEEHI_PLD_PCIE_TEST
 #if SEEHI_C2C_X16_TEST
 #if PLD_Z1
 	dump_regs("bar0:", 0x18400000, 32);
@@ -1511,9 +1550,10 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 	dump_regs("bar4:", 0xfc00000000, 32);
 #endif
 #endif
+#endif
 
 #if SEEHI_C2C_PCIE_TEST
-#if 1
+#if SEEHI_PLD_PCIE_TEST
 	printf("rc set hot reset start test:\n");
 	// writel(0x004201ff, dbi_base + 0x3c);  // hot reset
 	// systimer_delay(1, IN_MS);
@@ -1553,6 +1593,12 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 	dump_regs("read rc config space 00-ff:", dbi_base, 64);
 	dump_regs("read ep config space 00-ff:", PCIE_C2C_CONFIG_BASE, 64);
 
+#if SEEHI_FPGA_PCIE_TEST
+	dump_regs("bar0:", 0x19400000, 32);
+	dump_regs("bar2:", 0x19800000, 32);
+	dump_regs("bar3:", 0x19300000, 32);
+	dump_regs("bar4:", 0xdc00000000, 32);
+#elif SEEHI_PLD_PCIE_TEST
 #if SEEHI_C2C_X16_TEST
 #if PLD_Z1
 	dump_regs("bar0:", 0x18400000, 32);
@@ -1578,17 +1624,18 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 	dump_regs("bar4:", 0xfc00000000, 32);
 #endif
 #endif
+#endif
 
 #endif  //hot reset
 
 #if 1
-	dump_regs("vdm before:", apb_base + 0x130, 16);
+	// dump_regs("vdm before:", apb_base + 0x130, 16);
 	writel(0x4d, apb_base + 0x130);
 	writel(0x7e0000, apb_base + 0x134);
 	writel(0x12345678, apb_base + 0x138);
 	writel(0x87654321, apb_base + 0x13c);
 	writel(0x8000004d, apb_base + 0x130);
-	dump_regs("vdm after:", apb_base + 0x130, 16);
+	// dump_regs("vdm after:", apb_base + 0x130, 16);
 #endif  //vdm test
 
 #endif  //SEEHI_C2C_PCIE_TEST
@@ -2352,8 +2399,13 @@ struct HAL_PCIE_DEV g_pcieDevX8_03 =
 	.cniuBase = CNIU,
 	.mbitxBase = MBI_TX,
 	.max_lanes = 8,
+#if SEEHI_FPGA_PCIE_TEST
+	.lanes = 1,
+	.gen = 1,
+#elif SEEHI_PLD_PCIE_TEST
 	.lanes = 8,
 	.gen = 5,
+#endif
 	.firstBusNo = 0x30,
 	.ltrIrqNum = 204,
 	.vdmIrqNum = 205,
@@ -2522,7 +2574,7 @@ int main()
 
 	GIC_Init();
 
-#if SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST
+#if SEEHI_C2C_PCIE_TEST
 	IRQ_SetHandler(pcie->dev->vdmIrqNum, pcie_irq_handler);
 	GIC_SetPriority(pcie->dev->vdmIrqNum, 0 << 3);
 	GIC_EnableIRQ(pcie->dev->vdmIrqNum);
@@ -2558,7 +2610,7 @@ int main()
 	printf("seehi_dual_pcie_test c2c\n");
 #endif
 
-#if SEEHI_PLD_PCIE_TEST && SEEHI_C2C_PCIE_TEST
+#if SEEHI_C2C_PCIE_TEST
 	g_c2c_link = 1;
 	gpio_sync_init();
 #endif
@@ -2573,7 +2625,11 @@ int main()
 	while(1){
 		printf("BSP_PCIE_EP_LOOP !!! cnt %d\n", cnt);
 		cnt++;
+#if SEEHI_FPGA_PCIE_TEST
+		systimer_delay(5000, IN_MS);
+#else
 		systimer_delay(20, IN_MS);
+#endif
 
 		// dump_regs("vdm int:", pcie->dev->apbBase + A510_APB_PCIE_EN_INT0, 16);
 		// dump_regs("vdm message:", pcie->dev->apbBase + A510_APB_PCIE_MSG_VDM_REG0, 32);
