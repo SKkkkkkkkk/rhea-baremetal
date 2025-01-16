@@ -13,6 +13,9 @@ static uint16_t max_spi_id = 0;
 
 #define IRQ_GIC_LINE_COUNT      (1020U)
 static IRQHandler_t IRQTable[IRQ_GIC_LINE_COUNT] = { 0U };
+#define LPI_NUM				   (4096U)
+#define INTID_MAX			   (LPI_NUM + 8192U - 1U)
+static IRQHandler_t LPI_IRQTable[LPI_NUM] = { 0U };
 
 static inline void gic600_wait_group_not_in_transit()
 {
@@ -517,6 +520,8 @@ void GIC_Init()
 {
 	for (uint16_t i = 0U; i < IRQ_GIC_LINE_COUNT; i++)
 		IRQTable[i] = (IRQHandler_t)NULL;
+	for (uint16_t i = 0U; i < LPI_NUM; i++)
+		LPI_IRQTable[i] = (IRQHandler_t)NULL;
 	GIC_Distributor_Init();
 	GIC_Redistributor_Init();
 	GIC_CPUInterfaceInit();
@@ -526,12 +531,22 @@ void GIC_Init()
 void IRQ_SetHandler (uint16_t int_id, IRQHandler_t handler) {
 	if (int_id < IRQ_GIC_LINE_COUNT)
 		IRQTable[int_id] = handler;
+	else if (int_id >= 8192U && int_id <= INTID_MAX)
+		LPI_IRQTable[int_id - 8192U] = handler;
+	else
+		return;
 }
 
 /// Get the registered interrupt handler.
 IRQHandler_t IRQ_GetHandler (uint16_t int_id) 
 {
-	return (int_id < IRQ_GIC_LINE_COUNT)? IRQTable[int_id] : (IRQHandler_t)0;
+	// return (int_id < IRQ_GIC_LINE_COUNT)? IRQTable[int_id] : (IRQHandler_t)0;
+	if (int_id < IRQ_GIC_LINE_COUNT)
+		return IRQTable[int_id];
+	else if (int_id >= 8192U && int_id <= INTID_MAX)
+		return LPI_IRQTable[int_id - 8192U];
+	else
+		return (IRQHandler_t)0;
 }
 
 #pragma weak fiq_handler
@@ -556,18 +571,21 @@ void fiq_handler(void)
 			printf("FIQ: Received Special INTID.%d\n", iar);
 			break;
 		case 1021:
-			printf("An interrupt for the rich OS was signaled while the PE was executing in Secure state.\n");
+			// printf("An interrupt for the rich OS was signaled while the PE was executing in Secure state.\n");
 			iar = read_icc_iar1_el1();
-			printf("FIQ: Read INTID %d from IAR1\n", iar);
+			// printf("FIQ: Read INTID %d from IAR1\n", iar);
+			irq_handler = IRQ_GetHandler(iar);
+			if(irq_handler!=(IRQHandler_t)0)
+				irq_handler();
 			group = 1;
 			break;
 		case 1023:
 			return;
 		case 1024 ... 8191: // Reserved
 			break;
-		default: // >= 8192 LPIs
-			// Todo: LPIs
-			printf("FIQ: Received LPI INTID.%d\n", iar);
+		default:
+			printf("FIQ: Received INTID %d\n", iar);
+			break;
 		}
 
 		// Write EOIR to deactivate interrupt

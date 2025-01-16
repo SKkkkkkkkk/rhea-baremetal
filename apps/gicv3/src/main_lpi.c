@@ -60,6 +60,11 @@ volatile unsigned int flag;
 
 // --------------------------------------------------------
 
+void LPI_8192_Handler(void)
+{
+  printf("LPI_8192_Handler(): LPI 8192 received\n");
+}
+
 int main(void)
 {
   uint32_t type, entry_size;
@@ -153,6 +158,7 @@ int main(void)
 		.int_mask = 0, .loadcount = 25000000, .timer_id = Timerx6_T1, .timer_mode = Mode_User_Defined
 	};
 	timer_init(&timer_init_config);
+  IRQ_SetHandler(8192, LPI_8192_Handler);
   timer_enable(Timerx6_T1);
 
 
@@ -162,15 +168,8 @@ int main(void)
   // and that the PSTATE masks are clear.  In this example
   // this is done in the startup.s file
 
-  //
-  // Spin until interrupt
-  //
-  while(flag < 1)
-  {}
-  
-  printf("Main(): Test end\n");
-
-  return 1;
+  while(1) asm volatile("wfi");
+  __builtin_unreachable();
 }
 
 // --------------------------------------------------------
