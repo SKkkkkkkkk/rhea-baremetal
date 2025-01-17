@@ -1,6 +1,7 @@
 # 添加app sources, 注意必须加上CMAKE_CURRENT_LIST_DIR!
 set(app_src
 	${CMAKE_CURRENT_LIST_DIR}/src/main.c
+	${CMAKE_CURRENT_LIST_DIR}/src/lpi.c
 )
 
 # 添加app include dirs, 注意必须加上CMAKE_CURRENT_LIST_DIR!
@@ -13,4 +14,5 @@ set(app_dep
 	pcie
 	systimer
 	dw_apb_gpio
+	dw_apb_timers
 )

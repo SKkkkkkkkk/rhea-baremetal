@@ -7,6 +7,9 @@
 #include "common.h"
 #include "dw_apb_gpio.h"
 #include "utils_def.h"
+#include "dw_apb_timers.h"
+
+#include "lpi.h"
 
 /*                                   This is BAR Define
 ┌────┬─────┬────────────────┬────┬───────────────────┬────────────────┬───────────────┬───────────┐
@@ -1100,7 +1103,7 @@ static int dw_pcie_ep_set_msix(uint64_t dbi_base, uint32_t interrupts, uint32_t 
 	writel(val, dbi_base + reg);
 
 	reg = offset + PCI_MSIX_PBA;
-	val = (offset + (interrupts * PCI_MSIX_ENTRY_SIZE)) | bir;
+	val = (bar_offset + (2048 * PCI_MSIX_ENTRY_SIZE)) | bir;
 	writel(val, dbi_base + reg);
 
 	return 0;
@@ -1230,6 +1233,24 @@ static void gpio_sync_init(void)
 	};
 	gpio_init(&gpio_init_config);
 #endif
+}
+
+void LPI_8192_Handler(void)
+{
+  printf("LPI 8192 receivedi !!!!\n");
+}
+
+static void dw_timer_init(void)
+{
+	// MBI_TX + timer
+	REG32(MBI_TX_BASE + 0x18) = (uint64_t)(MBI_RX_BASE+0x40) & 0xFFFFFFFF;
+	REG32(MBI_TX_BASE + 0x1c) = (uint64_t)(MBI_RX_BASE+0x40) >> 32;
+	REG32(MBI_TX_BASE + 0x30) = 1;
+	REG32(MBI_TX_BASE + 0x40) = 1;
+	timer_init_config_t timer_init_config = {
+		.int_mask = 0, .loadcount = 25000000, .timer_id = Timerx6_T1, .timer_mode = Mode_User_Defined
+	};
+	timer_init(&timer_init_config);
 }
 
 HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
@@ -1366,7 +1387,7 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 
 	writel(0x4d004071, dbi_base + 0x8a8);  //GEN3_EQ_CONTROL_OFF
 
-	dw_pcie_ep_set_msix(dbi_base, 31, 0x70000, 1);  //有默认值不需要软件配置
+	dw_pcie_ep_set_msix(dbi_base, 31, 0x70000, 1);
 	dw_pcie_ep_set_msi(dbi_base, 5);
 	dw_pcie_ep_msi_32_data(dbi_base); //32 data
 
@@ -1521,7 +1542,7 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 #if SEEHI_MSIX_ENABLE
 	/////////////////////////////////////MSIX//////////////////////////////////////////////////////
 	if(pcie->dev->max_lanes == 16){
-		writel(0x40000, ss_base + 0x94);    // int_mbi_message_for_vector_00
+		// writel(0x40000, ss_base + 0x94);    // int_mbi_message_for_vector_00
 		writel(0x40001, ss_base + 0x98);    // int_mbi_message_for_vector_01
 		writel(0x40002, ss_base + 0x9c);    // int_mbi_message_for_vector_02
 		writel(0x40003, ss_base + 0xa0);    // int_mbi_message_for_vector_03
@@ -1560,7 +1581,7 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 		writel(0x60000001, dbi_base + 0x940);   //MSIX_ADDRESS_MATCH_LOW_OFF  doorbell 只有32位，高位截断
 		writel(0x0, dbi_base + 0x944);              //MSIX_ADDRESS_MATCH_EN  addr = 0x81_c000_000
 	}else if(pcie->dev->max_lanes == 8){
-		writel(0x40000, ss_base + 0x114);    // int_mbi_message_for_vector_00
+		// writel(0x40000, ss_base + 0x114);    // int_mbi_message_for_vector_00
 		writel(0x40001, ss_base + 0x118);    // int_mbi_message_for_vector_01
 		writel(0x40002, ss_base + 0x11c);    // int_mbi_message_for_vector_02
 		writel(0x40003, ss_base + 0x120);    // int_mbi_message_for_vector_03
@@ -1649,7 +1670,7 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 	}else{
 		printf("msi config error !!!\n");
 	}
-	writel(0xffffffff, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
+	writel(0xfffffffe, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
 	writel(0x0, mbitx_ap_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
 
 	// writel(0x0, dbi_base + 0x948);              //0:10 vector
@@ -1657,7 +1678,7 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 #else
 
 	if(pcie->dev->max_lanes == 16){
-		writel(0x40000, ss_base + 0x94);    // int_mbi_message_for_vector_00
+		// writel(0x40000, ss_base + 0x94);    // int_mbi_message_for_vector_00
 #if SEEHI_TILE14_PCIE_TEST
 		writel(0x00140020, ss_base + 0x98);    // int_mbi_message_for_vector_01
 #elif SEEHI_4TILE_PCIE_TEST
@@ -1699,7 +1720,7 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 		writel(0x0 << 0, ss_base + 0x194);    // pcie_x16 outbound bit0
 		writel(0x40000000, ss_base + 0x198);    // pcie_x16 int_tx_msi_doorbell_x16
 	}else if(pcie->dev->max_lanes == 8){
-		writel(0x40000, ss_base + 0x114);    // int_mbi_message_for_vector_00
+		// writel(0x40000, ss_base + 0x114);    // int_mbi_message_for_vector_00
 		writel(0x40001, ss_base + 0x118);    // int_mbi_message_for_vector_01
 		writel(0x40002, ss_base + 0x11c);    // int_mbi_message_for_vector_02
 		writel(0x40003, ss_base + 0x120);    // int_mbi_message_for_vector_03
@@ -1817,7 +1838,7 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 		printf("msi config error !!!\n");
 	}
 
-	writel(0xffffffff, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
+	writel(0xfffffffe, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
 	writel(0x0, mbitx_ap_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
 #endif //SEEHI_TILE14_PCIE_TEST
 
@@ -2184,6 +2205,11 @@ int main()
 	PCIe_EP_Link(pcie);
 
 	printf("PCIe_EP_Init end !!!\n");
+
+	lpi_init();
+	IRQ_SetHandler(8192, LPI_8192_Handler);
+	dw_timer_init();
+	timer_enable(Timerx6_T1);
 
 #if SEEHI_C2C_PCIE_TEST
 	// printf("BSP_PCIE_EP_VDM !!!\n");

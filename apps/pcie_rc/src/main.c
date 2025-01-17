@@ -7,6 +7,9 @@
 #include "common.h"
 #include "dw_apb_gpio.h"
 #include "utils_def.h"
+#include "dw_apb_timers.h"
+
+#include "lpi.h"
 
 /*                                   This is BAR Define
 ┌────┬─────┬────────────────┬────┬───────────────────┬────────────────┬───────────────┬───────────┐
@@ -1426,6 +1429,78 @@ static void rc_rescan(struct HAL_PCIE_HANDLE *pcie)
 
 }
 
+static void rc_init_msi_msg(struct HAL_PCIE_HANDLE *pcie, uint32_t data)
+{
+	uint32_t pos = 0x50;
+	uint32_t msgctl, control;
+
+	msgctl = readw(PCIE_C2C_CONFIG_BASE + pos + PCI_MSI_FLAGS);
+	msgctl &= ~PCI_MSI_FLAGS_QSIZE;
+	msgctl |= 5 << 4;
+	writew(msgctl, PCIE_C2C_CONFIG_BASE + pos + PCI_MSI_FLAGS);
+
+	writel(0x105f0040, PCIE_C2C_CONFIG_BASE + pos + PCI_MSI_ADDRESS_LO);
+	writel(0x104, PCIE_C2C_CONFIG_BASE + pos + PCI_MSI_ADDRESS_HI);
+	writel(data, PCIE_C2C_CONFIG_BASE + pos + PCI_MSI_DATA_64);
+
+	control = readw(PCIE_C2C_CONFIG_BASE + pos + PCI_MSI_FLAGS);
+	control &= ~PCI_MSI_FLAGS_ENABLE;
+	control |= PCI_MSI_FLAGS_ENABLE;
+	writew(control, PCIE_C2C_CONFIG_BASE + pos + PCI_MSI_FLAGS);
+
+	return;
+}
+
+static void pci_msix_clear_and_set_ctrl(uint32_t pos, uint16_t clear, uint16_t set)
+{
+	uint16_t ctrl;
+
+	ctrl = readw(PCIE_C2C_CONFIG_BASE + pos + PCI_MSIX_FLAGS);
+	ctrl &= ~clear;
+	ctrl |= set;
+	writew(ctrl, PCIE_C2C_CONFIG_BASE + pos + PCI_MSIX_FLAGS);
+}
+
+static uint32_t pci_msix_desc_addr(struct HAL_PCIE_HANDLE *pcie)
+{
+#if SEEHI_FPGA_PCIE_TEST
+	printf("fpga no msix Function\n");
+	return 0;
+#elif SEEHI_PLD_PCIE_TEST
+#if SEEHI_C2C_X16_TEST
+#if PLD_Z1
+	return 0x18200000;
+#elif PLD_Z2
+	return 0x1c200000;
+#endif
+#elif SEEHI_C2C_X8_TEST
+#if PLD_Z1
+	return 0x19200000;
+#elif PLD_Z2
+	return 0x1d200000;
+#endif
+#endif
+#endif
+}
+
+static void rc_init_msix_msg(struct HAL_PCIE_HANDLE *pcie, uint32_t offset, uint32_t data)
+{
+	uint32_t pos = 0xb0;
+	uint32_t bar1_base;
+
+	bar1_base = pci_msix_desc_addr(pcie);
+	offset += 0x70000;
+
+	writel(0x105f0040, bar1_base + offset + PCI_MSIX_ENTRY_LOWER_ADDR);
+	writel(0x104, bar1_base + offset + PCI_MSIX_ENTRY_UPPER_ADDR);
+	writel(data, bar1_base + offset + PCI_MSIX_ENTRY_DATA);
+	writel(0, bar1_base + offset + PCI_MSIX_ENTRY_VECTOR_CTRL);
+
+	pci_msix_clear_and_set_ctrl(pos, 0, PCI_MSIX_FLAGS_MASKALL |
+				    PCI_MSIX_FLAGS_ENABLE);
+	return;
+}
+
 HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 {
 	uint32_t val, val_cmp = 0xf55a55aa;
@@ -1647,8 +1722,6 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 	return HAL_OK;
 }
 
-
-
 void BSP_PCIE_EP_Init(const struct HAL_PCIE_HANDLE *pcie)
 {
 	uint64_t phy_base = pcie->dev->phyBase;
@@ -1738,6 +1811,24 @@ static void gpio_sync_init(void)
 	gpio_init(&gpio_init_config);
 	gpio_write_pin(PORTA, 24, GPIO_PIN_SET);
 #endif  //SEEHI_C2C_PCIE_TEST
+}
+
+void LPI_8192_Handler(void)
+{
+  printf("LPI 8192 receivedi !!!!\n");
+}
+
+static void dw_timer_init(void)
+{
+	// MBI_TX + timer
+	REG32(MBI_TX_BASE + 0x18) = (uint64_t)(MBI_RX_BASE+0x40) & 0xFFFFFFFF;
+	REG32(MBI_TX_BASE + 0x1c) = (uint64_t)(MBI_RX_BASE+0x40) >> 32;
+	REG32(MBI_TX_BASE + 0x30) = 1;
+	REG32(MBI_TX_BASE + 0x40) = 1;
+	timer_init_config_t timer_init_config = {
+		.int_mask = 0, .loadcount = 25000000, .timer_id = Timerx6_T1, .timer_mode = Mode_User_Defined
+	};
+	timer_init(&timer_init_config);
 }
 
 HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
@@ -2572,7 +2663,8 @@ int main()
 
 	systimer_init();
 
-	GIC_Init();
+	// GIC_Init();
+	init_gic();
 
 #if SEEHI_C2C_PCIE_TEST
 	IRQ_SetHandler(pcie->dev->vdmIrqNum, pcie_irq_handler);
@@ -2618,6 +2710,11 @@ int main()
 	PCIe_RC_Init(pcie);
 
 	printf("PCIe_RC_Init end !!!\n");
+
+	lpi_init();
+	IRQ_SetHandler(8192, LPI_8192_Handler);
+	dw_timer_init();
+	timer_enable(Timerx6_T1);
 
 #if SEEHI_C2C_PCIE_TEST
 	// printf("BSP_PCIE_EP_VDM !!!\n");
