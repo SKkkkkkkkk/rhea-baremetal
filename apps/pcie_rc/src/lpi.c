@@ -54,10 +54,41 @@ volatile unsigned int flag;
 
 // --------------------------------------------------------
 
+void register_lpi(uint32_t device, uint32_t event, uint32_t hwirq)
+{
+  uint32_t target_rd;
+  //
+  // Create ITS mapping
+  //
+
+  if (getITSPTA() == 1)
+  {
+     printf("main(): GITS_TYPER.PTA==1, this example expects PTA==0\n");
+     return;
+  }
+  target_rd = getRdProcNumber(0);
+
+  // Set up a mapping
+  itsMAPD(device /*DeviceID*/, ITT /*addr of ITT*/, 2 /*bit width of ID*/);         // Map a DeviceID to a ITT
+  itsMAPTI(device /*DeviceID*/, event /*EventID*/, hwirq /*intid*/, 0 /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
+  itsMAPC(target_rd /* target Redistributor*/, 0 /*collection*/);              // Map a Collection to a Redistributor
+  itsSYNC(target_rd /* target Redistributor*/);                                // Sync the changes
+
+  //
+  // Configure and generate an LPI
+  //
+
+  configureLPI(0, hwirq /*INTID*/, GICV3_LPI_ENABLE, 0 /*Priority*/);
+  printf("main(): Sending LPI %d\n", hwirq);
+  itsINV(device /*DeviceID*/, event /*EventID*/);
+
+  return;
+}
+
 int lpi_init(void)
 {
   uint32_t type, entry_size;
-  uint32_t rd = 0, target_rd;
+  uint32_t rd = 0;
 
   //
   // Configure the interrupt controller
@@ -103,35 +134,6 @@ int lpi_init(void)
 
   // Enable the ITS
   enableITS();
-
-  //
-  // Create ITS mapping
-  //
-
-  if (getITSPTA() == 1)
-  {
-     printf("main(): GITS_TYPER.PTA==1, this example expects PTA==0\n");
-     return 1;
-  }
-  target_rd = getRdProcNumber(rd);
-
-  #define DID 4
-  #define EID 0
-  #define CID 0
-
-  // Set up a mapping
-  itsMAPD(DID /*DeviceID*/, ITT /*addr of ITT*/, 2 /*bit width of ID*/);         // Map a DeviceID to a ITT
-  itsMAPTI(DID /*DeviceID*/, EID /*EventID*/, 8192 /*intid*/, CID /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
-  itsMAPC(target_rd /* target Redistributor*/, CID /*collection*/);              // Map a Collection to a Redistributor
-  itsSYNC(target_rd /* target Redistributor*/);                                // Sync the changes
-
-  //
-  // Configure and generate an LPI
-  //
-
-  configureLPI(rd, 8192 /*INTID*/, GICV3_LPI_ENABLE, 0 /*Priority*/);
-  printf("main(): Sending LPI 8192\n");
-  itsINV(DID /*DeviceID*/, EID /*EventID*/);
 
   // INT
   // itsINT(DID /*DeviceID*/, EID /*EventID*/);

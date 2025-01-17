@@ -37,14 +37,14 @@ volatile unsigned int flag;
 
 // These locations are based on the memory map of the Base Platform model
 
-#define CONFIG_TABLE      (0x40020000)
-#define PENDING_TABLE     (0x40030000)
+#define CONFIG_TABLE      (0x42000000)
+#define PENDING_TABLE     (0x43000000)
 
-#define CMD_QUEUE         (0x40040000)
-#define DEVICE_TABLE      (0x40050000)
-#define COLLECTION_TABLE  (0x40060000)
+#define CMD_QUEUE         (0x44000000)
+#define DEVICE_TABLE      (0x45000000)
+#define COLLECTION_TABLE  (0x46000000)
 
-#define ITT               (0x40070000)
+#define ITT               (0x47000000)
 
 #define ITScount 1
 #define RDcount  4
@@ -54,10 +54,41 @@ volatile unsigned int flag;
 
 // --------------------------------------------------------
 
+void register_lpi(uint32_t device, uint32_t event, uint32_t hwirq)
+{
+  uint32_t target_rd;
+  //
+  // Create ITS mapping
+  //
+
+  if (getITSPTA() == 1)
+  {
+     printf("main(): GITS_TYPER.PTA==1, this example expects PTA==0\n");
+     return;
+  }
+  target_rd = getRdProcNumber(0);
+
+  // Set up a mapping
+  itsMAPD(device /*DeviceID*/, ITT /*addr of ITT*/, 16 /*bit width of ID*/);         // Map a DeviceID to a ITT
+  itsMAPTI(device /*DeviceID*/, event /*EventID*/, hwirq /*intid*/, 0 /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
+  itsMAPC(target_rd /* target Redistributor*/, 0 /*collection*/);              // Map a Collection to a Redistributor
+  itsSYNC(target_rd /* target Redistributor*/);                                // Sync the changes
+
+  //
+  // Configure and generate an LPI
+  //
+
+  configureLPI(0, hwirq /*INTID*/, GICV3_LPI_ENABLE, 0 /*Priority*/);
+  printf("main(): Sending LPI %d\n", hwirq);
+  itsINV(device /*DeviceID*/, event /*EventID*/);
+
+  return;
+}
+
 int lpi_init(void)
 {
   uint32_t type, entry_size;
-  uint32_t rd = 0, target_rd;
+  uint32_t rd = 0;
 
   //
   // Configure the interrupt controller
@@ -69,9 +100,9 @@ int lpi_init(void)
   //
 
   setLPIConfigTableAddr(rd, CONFIG_TABLE, GICV3_LPI_DEVICE_nGnRnE /*Attributes*/,   \
-                        14 /* INTID in [0, 16384), Table Size = 8KB(2^14-8192) */);
+                        16 /* INTID in [0, 16384), Table Size = 8KB(2^14-8192) */);
   setLPIPendingTableAddr(rd, PENDING_TABLE, GICV3_LPI_DEVICE_nGnRnE /*Attributes*/, \
-                        14 /* INTID in [0, 16384), Table Size = 2KB(2^14/8) */);
+                        16 /* INTID in [0, 16384), Table Size = 2KB(2^14/8) */);
   enableLPIs(rd);
 
   //
@@ -92,46 +123,17 @@ int lpi_init(void)
                   DEVICE_TABLE /* addr */,
                   (GICV3_ITS_TABLE_PAGE_VALID | GICV3_ITS_TABLE_PAGE_DIRECT | GICV3_ITS_TABLE_PAGE_DEVICE_nGnRnE),
                   GICV3_ITS_TABLE_PAGE_SIZE_4K,
-                  16 /*num_pages*/); // 16*4096/8 = 8192 = 2^13 => deviceID width = 13
+                  128 /*num_pages*/); // 16*4096/8 = 8192 = 2^13 => deviceID width = 13
 
   //Allocate Collection table
   setITSTableAddr(1 /*index*/,
                   COLLECTION_TABLE /* addr */,
                   (GICV3_ITS_TABLE_PAGE_VALID | GICV3_ITS_TABLE_PAGE_DIRECT | GICV3_ITS_TABLE_PAGE_DEVICE_nGnRnE),
                   GICV3_ITS_TABLE_PAGE_SIZE_4K,
-                  16 /*num_pages*/);
+                  128 /*num_pages*/);
 
   // Enable the ITS
   enableITS();
-
-  //
-  // Create ITS mapping
-  //
-
-  if (getITSPTA() == 1)
-  {
-     printf("main(): GITS_TYPER.PTA==1, this example expects PTA==0\n");
-     return 1;
-  }
-  target_rd = getRdProcNumber(rd);
-
-  #define DID 4
-  #define EID 0
-  #define CID 0
-
-  // Set up a mapping
-  itsMAPD(DID /*DeviceID*/, ITT /*addr of ITT*/, 2 /*bit width of ID*/);         // Map a DeviceID to a ITT
-  itsMAPTI(DID /*DeviceID*/, EID /*EventID*/, 8192 /*intid*/, CID /*collection*/);   // Map an EventID to an INTD and collection (DeviceID specific)
-  itsMAPC(target_rd /* target Redistributor*/, CID /*collection*/);              // Map a Collection to a Redistributor
-  itsSYNC(target_rd /* target Redistributor*/);                                // Sync the changes
-
-  //
-  // Configure and generate an LPI
-  //
-
-  configureLPI(rd, 8192 /*INTID*/, GICV3_LPI_ENABLE, 0 /*Priority*/);
-  printf("main(): Sending LPI 8192\n");
-  itsINV(DID /*DeviceID*/, EID /*EventID*/);
 
   // INT
   // itsINT(DID /*DeviceID*/, EID /*EventID*/);

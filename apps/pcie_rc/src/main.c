@@ -37,8 +37,8 @@
 //	2、使用03链接host，使用73互联，两个控制器，有4个npu，X8或者X16控制器
 //		PLD_Z2 && SEEHI_DUAL_PCIE_TEST && SEEHI_NPU_PCIE_TEST && SEEHI_C2C_PCIE_TEST && SEEHI_C2C_X8_TEST || SEEHI_C2C_X16_TEST
 //either-or
-#define SEEHI_PLD_PCIE_TEST			0
-#define SEEHI_FPGA_PCIE_TEST		1
+#define SEEHI_PLD_PCIE_TEST			1
+#define SEEHI_FPGA_PCIE_TEST		0
 
 //either-or
 #define PLD_Z1						1
@@ -55,8 +55,8 @@
 #define SEEHI_C2C_PCIE_TEST			1
 
 //either-or
-#define SEEHI_C2C_X8_TEST			1
-#define SEEHI_C2C_X16_TEST			0
+#define SEEHI_C2C_X8_TEST			0
+#define SEEHI_C2C_X16_TEST			1
 
 #define SEEHI_MSIX_ENABLE			0
 
@@ -805,6 +805,16 @@ void pcie_irq_handler(void)
 	return;
 }
 
+void LPI_8192_Handler(void)
+{
+  printf("LPI 8192 received !!!!\n");
+}
+
+void LPI_8193_Handler(void)
+{
+  printf("LPI 8193 received !!!!\n");
+}
+
 static int seehi_pcie_ep_set_bar_flag(uint64_t dbi_base, uint32_t barno, int flags)
 {
 	uint32_t bar = barno;
@@ -1148,6 +1158,7 @@ static void rc_init_pre(struct HAL_PCIE_HANDLE *pcie)
 #endif
 #endif
 #endif
+	writel(0x0, ss_base + 0x1d0);  //bugs todo
 
 	val = readl(dbi_base + 0x708);
 	val |= 0x400000;
@@ -1590,9 +1601,31 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 	printf("read LinkSta 0x%x\n", val);
 
 	rc_rescan(pcie);
+	rc_init_msi_msg(pcie, 0);
+	systimer_delay(100, IN_MS);
 
-	dump_regs("read rc config space 00-ff:", dbi_base, 64);
-	dump_regs("read ep config space 00-ff:", PCIE_C2C_CONFIG_BASE, 64);
+#if 0
+#if SEEHI_C2C_X16_TEST
+#if PLD_Z1
+	register_lpi(0x2100, 1, 8193);
+#elif PLD_Z2
+	register_lpi(0x6100, 1, 8193);
+#endif
+#elif SEEHI_C2C_X8_TEST
+#if PLD_Z1
+	register_lpi(0x3100, 1, 8193);
+#elif PLD_Z2
+	register_lpi(0x7100, 1, 8193);
+#endif
+#endif
+#else
+	register_lpi(0x0, 1, 8193);  //bugs todo
+#endif
+
+	IRQ_SetHandler(8193, LPI_8193_Handler);
+
+	dump_regs("read rc config space 00-ff:", dbi_base, 128);
+	dump_regs("read ep config space 00-ff:", PCIE_C2C_CONFIG_BASE, 128);
 
 #if SEEHI_FPGA_PCIE_TEST
 	dump_regs("bar0:", 0x19400000, 32);
@@ -1665,8 +1698,8 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 
 	rc_rescan(pcie);
 
-	dump_regs("read rc config space 00-ff:", dbi_base, 64);
-	dump_regs("read ep config space 00-ff:", PCIE_C2C_CONFIG_BASE, 64);
+	dump_regs("read rc config space 00-ff:", dbi_base, 128);
+	dump_regs("read ep config space 00-ff:", PCIE_C2C_CONFIG_BASE, 128);
 
 #if SEEHI_FPGA_PCIE_TEST
 	dump_regs("bar0:", 0x19400000, 32);
@@ -1813,20 +1846,26 @@ static void gpio_sync_init(void)
 #endif  //SEEHI_C2C_PCIE_TEST
 }
 
-void LPI_8192_Handler(void)
+static void dw_timer_mbi_tx(void)
 {
-  printf("LPI 8192 receivedi !!!!\n");
+	uint32_t val;
+
+	writel(((uint64_t)(MBI_RX_BASE+0x40) & 0xFFFFFFFF), MBI_TX_BASE + 0x18);
+	writel(((uint64_t)(MBI_RX_BASE+0x40) >> 32), MBI_TX_BASE + 0x1c);
+
+	val = readl(MBI_TX_BASE + 0x30);
+	val |= 1;
+	writel(val, MBI_TX_BASE + 0x30);
+
+	val = readl(MBI_TX_BASE + 0x40);
+	val |= 1;
+	writel(val, MBI_TX_BASE + 0x40);
 }
 
 static void dw_timer_init(void)
 {
-	// MBI_TX + timer
-	REG32(MBI_TX_BASE + 0x18) = (uint64_t)(MBI_RX_BASE+0x40) & 0xFFFFFFFF;
-	REG32(MBI_TX_BASE + 0x1c) = (uint64_t)(MBI_RX_BASE+0x40) >> 32;
-	REG32(MBI_TX_BASE + 0x30) = 1;
-	REG32(MBI_TX_BASE + 0x40) = 1;
 	timer_init_config_t timer_init_config = {
-		.int_mask = 0, .loadcount = 25000000, .timer_id = Timerx6_T1, .timer_mode = Mode_User_Defined
+		.int_mask = 0, .loadcount = 25000000, .timer_id = Timerx6_T2, .timer_mode = Mode_User_Defined
 	};
 	timer_init(&timer_init_config);
 }
@@ -2665,6 +2704,7 @@ int main()
 
 	// GIC_Init();
 	init_gic();
+	lpi_init();
 
 #if SEEHI_C2C_PCIE_TEST
 	IRQ_SetHandler(pcie->dev->vdmIrqNum, pcie_irq_handler);
@@ -2711,16 +2751,17 @@ int main()
 
 	printf("PCIe_RC_Init end !!!\n");
 
-	lpi_init();
+	register_lpi(4, 0, 8192);
 	IRQ_SetHandler(8192, LPI_8192_Handler);
+	dw_timer_mbi_tx();
 	dw_timer_init();
-	timer_enable(Timerx6_T1);
+	timer_enable(Timerx6_T2);
 
 #if SEEHI_C2C_PCIE_TEST
 	// printf("BSP_PCIE_EP_VDM !!!\n");
 	systimer_delay(10, IN_MS);
 	while(1){
-		printf("BSP_PCIE_EP_LOOP !!! cnt %d\n", cnt);
+		printf("BSP_PCIE_RC_LOOP !!! cnt %d\n", cnt);
 		cnt++;
 #if SEEHI_FPGA_PCIE_TEST
 		systimer_delay(5000, IN_MS);
