@@ -3,7 +3,7 @@ cmake -S ../.. -B build -G Ninja \
 --graphviz=build/graph/dep.dot \
 -DPROJECT_NAME=clci \
 -DCMAKE_BUILD_TYPE=Release \
--DPROJECT_PATH=. \
+-DAPP_CMAKE=app.cmake \
 -DBOARD=PLD \
 -DSELF_DIE_ID=0
 cmake --build build -t hex && \
@@ -15,7 +15,7 @@ cmake -S ../.. -B build -G Ninja \
 --graphviz=build/graph/dep.dot \
 -DPROJECT_NAME=clci \
 -DCMAKE_BUILD_TYPE=Release \
--DPROJECT_PATH=. \
+-DAPP_CMAKE=app.cmake \
 -DBOARD=PLD \
 -DSELF_DIE_ID=1
 cmake --build build -t hex && \

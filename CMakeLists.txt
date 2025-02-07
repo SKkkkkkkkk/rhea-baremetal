@@ -8,9 +8,9 @@ set(SDK_PATH ${CMAKE_SOURCE_DIR})
 
 set(PROJECT_NAME "a" CACHE STRING "Project Name")
 
-set(PROJECT_PATH "" CACHE PATH "Project Path") # since the type is PATH, set comman will convert it to absolute automatically.
-if("$CACHE{PROJECT_PATH}" STREQUAL "")
-	message(FATAL_ERROR "PROJECT_PATH must be set!")
+set(APP_CMAKE "" CACHE FILEPATH "Path to the app.cmake") # since the type is PATH, set comman will convert it to absolute automatically.
+if("$CACHE{APP_CMAKE}" STREQUAL "")
+	message(FATAL_ERROR "APP_CMAKE must be set!")
 endif()
 
 set(BOARD "FPGA" CACHE STRING "QEMU, RTL, FPGA, EVB, PLD")
@@ -117,9 +117,7 @@ endif()
 add_compile_options(${compile_options_arch} ${compile_options_common})
 
 # targets
-if(NOT $CACHE{PROJECT_PATH} STREQUAL "")
-	include($CACHE{PROJECT_PATH}/app.cmake)
-endif()
+include($CACHE{APP_CMAKE}) # APP_CMAKE cannot be empty
 add_executable($CACHE{PROJECT_NAME}.elf)
 include(targets.cmake)
 

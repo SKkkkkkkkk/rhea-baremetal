@@ -1,2 +1,2 @@
-CC=aarch64-none-elf-gcc cmake -S ../.. -B build -G Ninja --graphviz=build/graph/dep.dot -DPROJECT_PATH=. -DPROJECT_NAME=gicv3
+CC=aarch64-none-elf-gcc cmake -S ../.. -B build -G Ninja --graphviz=build/graph/dep.dot -DAPP_CMAKE=app.cmake -DPROJECT_NAME=gicv3
 cmake --build build

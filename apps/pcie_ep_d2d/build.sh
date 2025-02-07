@@ -18,7 +18,7 @@ do
     --graphviz=build/graph/dep.dot \
     -DPROJECT_NAME=pcie_ep_d2d \
     -DCMAKE_BUILD_TYPE=Release \
-    -DPROJECT_PATH=. \
+    -DAPP_CMAKE=app.cmake \
     -DBOARD=PLD \
     -DDIE_MAX_NUM=${DIE_MAX_NUM} \
     -DSELF_DIE_ID=${die_id} > /dev/null
