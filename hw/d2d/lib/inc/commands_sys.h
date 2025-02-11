@@ -17,6 +17,10 @@ int32_t cmd_clci_delayline_tracking(int32_t die, uint32_t temp);
 
 int32_t cmd_clci_common(int32_t die, uint8_t cmd);
 
+int32_t cmd_clci_cmd_send_nonblock(int32_t die, uint8_t cmd);
+
+int32_t cmd_clci_cmd_rev_nonblock();
+
 int32_t clci_relink();
 
 int32_t clci_relink_2();

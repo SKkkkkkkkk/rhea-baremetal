@@ -196,6 +196,7 @@ static int32_t mailbox_pop_send_pkg(uint8_t *data_buff, uint8_t data_len, uint8_
 
 	return (data_len + 2);
 }
+
 int32_t mailbox_rev(uint8_t *out_buff, uint8_t len, uint32_t timeout_ms)
 {
 	int res;
@@ -212,7 +213,7 @@ int32_t mailbox_rev(uint8_t *out_buff, uint8_t len, uint32_t timeout_ms)
 		return CLCI_E_DEVICE;
 	} else if (res == CLCI_E_SIZE) {
 		if (timeout_ms == 0)
-			return CLCI_SUCCESS;
+			return CLCI_E_SIZE;
 
 		while (res == CLCI_E_SIZE) {
 			time_count += 10;
@@ -324,4 +325,13 @@ int32_t mailbox_init(uint8_t role)
 #endif
 
 	return CLCI_SUCCESS;
+}
+
+void mailbox_dev_addr_refresh()
+{
+	maiblbox_blk.reg.reg_doorbell_rev = CLCI_MCU_LOCAL_CTRL_DOORBELL_TO_SOC;
+	maiblbox_blk.reg.reg_doorbell_send = CLCI_MCU_LOCAL_CTRL_DOORBELL_TO_MCU;
+
+	maiblbox_blk.reg.reg_send = CLCI_MCU_LOCAL_CTRL_MSG2;
+	maiblbox_blk.reg.reg_rev = CLCI_MCU_LOCAL_CTRL_MSG0;
 }

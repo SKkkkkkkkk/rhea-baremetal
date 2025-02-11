@@ -6,34 +6,35 @@
 #include <stddef.h>
 
 typedef struct {
-	uint32_t vender_id;  //0x0
-	uint32_t reserv0;    //0x4
-	uint32_t device_id;  //0x8
-	uint32_t reserv1;    //0xc
-	uint32_t status0;    //0x10
-	uint32_t reserv3;    //0x14
-	uint32_t reserv4;    //0x18
-	uint32_t reserv5;    //0x1c
-	uint32_t status1;   //0x20
-	uint32_t reserv6;    //0x24
-	uint32_t reserv7;    //0x28
-	uint32_t reserv8;    //0x2c
-	uint32_t boot_sel;   //0x30
-	uint32_t reserv9;    //0x34
-	uint32_t reserv10;    //0x38
-	uint32_t reserv11;    //0x3c
-	uint32_t ctrl0;      //0x40
+	uint32_t vender_id; //0x0
+	uint32_t reserv0; //0x4
+	uint32_t device_id; //0x8
+	uint32_t reserv1; //0xc
+	uint32_t status0; //0x10
+	uint32_t reserv3; //0x14
+	uint32_t reserv4; //0x18
+	uint32_t reserv5; //0x1c
+	uint32_t status1; //0x20
+	uint32_t reserv6; //0x24
+	uint32_t reserv7; //0x28
+	uint32_t reserv8; //0x2c
+	uint32_t boot_sel; //0x30
+	uint32_t reserv9; //0x34
+	uint32_t reserv10; //0x38
+	uint32_t reserv11; //0x3c
+	uint32_t ctrl0; //0x40
 	uint32_t addr_remap; //0x44
-	uint32_t reserv12;    //0x48
-	uint32_t reserv13;    //0x4c
-	uint32_t msg0;       //0x50
-	uint32_t msg1;       //0x54
-	uint32_t msg2;       //0x58
-	uint32_t msg3;       //0x5c
+	uint32_t reserv12; //0x48
+	uint32_t reserv13; //0x4c
+	uint32_t msg0; //0x50
+	uint32_t msg1; //0x54
+	uint32_t msg2; //0x58
+	uint32_t msg3; //0x5c
 	uint32_t cpu_reboot_addr; //0x60
-	uint32_t nmi_addr;  //0x64
-	uint32_t db_mcu;    //0x68
-	uint32_t db_soc;    //0x6c
+	uint32_t nmi_addr; //0x64
+	uint32_t db_mcu; //0x68
+	uint32_t db_soc; //0x6c
+	uint32_t chiplet_id; //0x70
 } mcu_local_reg_st;
 
 extern uint64_t local_ctrl_base;
@@ -51,6 +52,7 @@ extern uint64_t local_ctrl_base;
 #define CLCI_MCU_LOCAL_CTRL_DOORBELL_TO_SOC (LOCAT_CTRL_REG_ADDR(db_soc))
 
 #define CLCI_MCU_CPU_BOOT_ADDR (LOCAT_CTRL_REG_ADDR(cpu_reboot_addr))
+#define CLCI_MCU_CPU_CHIPLET_ID (LOCAT_CTRL_REG_ADDR(chiplet_id))
 
 #define BIT_CPU_SOFT_RSTN			(1)
 #define BIT_CPU_RUN_REQ				(1 << 1)

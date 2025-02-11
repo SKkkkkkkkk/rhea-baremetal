@@ -32,6 +32,25 @@ int mailbox_sys_send(uint8_t *in_buff, uint8_t in_len, uint8_t *out_buff, uint8_
 
 	return ret;
 }
+
+int mailbox_sys_send_nonblock(uint8_t *in_buff, uint8_t in_len, uint32_t timeout_ms)
+{
+	int ret;
+
+	ret = mailbox_send((uint8_t *)in_buff, in_len, timeout_ms);
+
+	return ret;
+}
+
+int mailbox_sys_rev_nonblock(uint8_t *out_buff, uint8_t out_len)
+{
+	int ret;
+
+	ret = mailbox_rev(out_buff, out_len, 0);
+
+	return ret;
+}
+
 /*Init the mailbox as master*/
 void mailbox_sys_init(void)
 {

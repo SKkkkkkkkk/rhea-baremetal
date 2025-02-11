@@ -21,6 +21,8 @@
 * CLCI_E_DEVICE: the mailbox device is error
 */
 int mailbox_sys_send(uint8_t *in_buff, uint8_t in_len, uint8_t *out_buff, uint8_t out_len, uint32_t timeout_ms);
+int mailbox_sys_send_nonblock(uint8_t *in_buff, uint8_t in_len, uint32_t timeout_ms);
+int mailbox_sys_rev_nonblock(uint8_t *out_buff, uint8_t out_len);
 /*Init the mailbox as master*/
 void mailbox_sys_init(void);
 #endif

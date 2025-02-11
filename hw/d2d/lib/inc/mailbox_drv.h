@@ -88,5 +88,6 @@ typedef struct {
 int32_t mailbox_rev(uint8_t *out_buff, uint8_t len, uint32_t timeout_ms);
 int32_t mailbox_send(uint8_t *in_buff, uint8_t len, uint32_t timeout_ms);
 int32_t mailbox_init(uint8_t role);
+void mailbox_dev_addr_refresh();
 
 #endif

@@ -9,6 +9,11 @@
 #include "memmap.h"
 #include "gicv3.h"
 #include "io.h"
+#include "mailbox_sys.h"
+#include "commands_sys.h"
+#include "commands_common.h"
+#include "clci_api.h"
+#include "clci_error.h"
 
 #define D2D_DNOC_BASE           (0x3800000000)
 #define D2D_CNOC_BASE           (0x9C00000000)
@@ -400,11 +405,36 @@ static void rhea_clci_pinmux_init(void)
 }
 #endif
 
+void clci_dump(void)
+{
+	for (int id = 0; id < 2; id++) {
+		uint32_t val = 0;
+
+		printf("DUMP DIE %d INFO\n", id);
+
+		cmd_clci_get_reg(id, CLCI_MCU_LOCAL_CTRL_ADDR + 0x54, &val);
+		printf("%08x %08x\n", CLCI_MCU_LOCAL_CTRL_ADDR + 0x54, val);
+		cmd_clci_get_reg(id, CLCI_MCU_LOCAL_CTRL_ADDR + 0x5C, &val);
+		printf("%08x %08x\n", CLCI_MCU_LOCAL_CTRL_ADDR + 0x5C, val);
+		for (int offset = 0; offset <= 0x34; offset += 4) {
+			cmd_clci_get_reg(id, RAM_CONFIG_START_ADDRESS + offset, &val);
+            printf("%08x %08x\n", RAM_CONFIG_START_ADDRESS + offset, val);
+		}
+		for (int lane = 0; lane <= 16; lane++) {
+			cmd_clci_get_reg(id, CLCI_MCU_BIU_ADDR + 0x400 + lane * 0x100, &val);
+			printf("%08x %08x\n", CLCI_MCU_BIU_ADDR + 0x400 + lane * 0x100, val);
+		}
+		cmd_clci_get_reg(id, CLCI_MCU_BIU_ADDR + 0x3c, &val);
+		printf("%08x %08x\n", CLCI_MCU_BIU_ADDR + 0x3c, val);
+	}
+}
+
 int rhea_d2d_init(void)
 {
     enum clci_idx clci_idx;
     uint32_t timeout = 10000;
     uint32_t tmp_val;
+    int ret;
 
     d2d_dnoc = (void *) D2D_DNOC_BASE;
     d2d_cnoc = (void *) D2D_CNOC_BASE;
@@ -423,24 +453,98 @@ int rhea_d2d_init(void)
         rhea_d2d_cfg_writel(RHEA_DIE_SELF, CLCI_BOOT_SEL_UART,
                             D2D_REG_CLCIx_BOOT_SEL(clci_idx));
     }
+    mailbox_sys_init();
     printf("CLCI configuration done\n");
 
-    /* CLCI auto link */
-    printf("CLCI waiting for link\n");
+#if ENABLE_REAL_CLCI && CONFIG_RHEA_D2D_SELF_ID == 1
+    printf("CLCI waiting for init\n");
+    mdelay(10);
     for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
-#if defined(ENABLE_REAL_CLCI)
+        clci_device_reg_base_set(0x9c00000000 + 0x20200000 + (clci_idx * 0x200000) + 0x21000);
+        mailbox_dev_addr_refresh();
+        mdelay(10);
         while (1) {
-            tmp_val = rhea_d2d_cfg_readl(RHEA_DIE_SELF,
-                            CLCIx_AHB_BASE(clci_idx) + 0x2105c);
+            cmd_clci_get_reg(0, 0x2105c, &tmp_val);
             if ((tmp_val & 0xf) == 0x2) break;
             if (!timeout--) {
-                printf("clci%d init timed out\n", clci_idx);
+                printf("self clci%d init timed out\n", clci_idx);
                 goto timeout;
             }
             udelay(1000);
         }
-        pr_dbg("clci%d init done\n", clci_idx);
+        printf("clci%d self init done\n", clci_idx);
+        while (1) {
+            cmd_clci_get_reg(1, 0x2105c, &tmp_val);
+            if ((tmp_val & 0xf) == 0x2) break;
+            if (!timeout--) {
+                printf("peer clci%d init timed out\n", clci_idx);
+                goto timeout;
+            }
+            udelay(1000);
+        }
+        printf("clci%d peer init done\n", clci_idx);
+
+        printf("clci%d link start\n", clci_idx);
+#if defined(ENABLE_BLOCKING_MODE)
+        ret = cmd_clci_common(2, CMD_CLCI_LINK);
+#else
+        ret = cmd_clci_cmd_send_nonblock(2, CMD_CLCI_LINK);
 #endif
+        if (ret < 0) {
+            printf("failed with status %d\n", ret);
+            return ret;
+        }
+    }
+
+    printf("CLCI waiting for link\n");
+#if !defined(ENABLE_BLOCKING_MODE)
+    tmp_val = 0;
+    while (1) {
+        for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
+            if ((tmp_val & (0x1 << clci_idx)) == 0) {
+                clci_device_reg_base_set(0x9c00000000 + 0x20200000 + (clci_idx * 0x200000) + 0x21000);
+                mailbox_dev_addr_refresh();
+                ret = cmd_clci_cmd_rev_nonblock();
+                printf("clci%d, ret %d, tmp_val 0x%x, 0x3003c 0x%x, 0x21054 0x%x\n", clci_idx, ret, tmp_val,
+                        readl((void *) (0x9c00000000 + 0x20200000 + (clci_idx * 0x200000) + 0x3003c)),
+                        readl((void *) (0x9c00000000 + 0x20200000 + (clci_idx * 0x200000) + 0x21054)));
+                if (ret >= 0) {
+                    tmp_val |= 0x1 << clci_idx;
+                    printf("clci%d link success\n", clci_idx);
+                }
+            }
+        }
+        if (tmp_val == 0xf) break;
+        if (!timeout--) {
+            printf("CLCI link timed out (0x%x)\n", tmp_val);
+            goto timeout;
+        }
+        udelay(1000);
+    }
+#endif
+
+    for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
+        clci_device_reg_base_set(0x9c00000000 + 0x20200000 + (clci_idx * 0x200000) + 0x21000);
+        mailbox_dev_addr_refresh();
+        while (1) {
+            tmp_val =  clci_link_status();
+            if (tmp_val == 0) break;
+            if (!timeout--) {
+                printf("clci%d link timed out\n", clci_idx);
+                goto timeout;
+            }
+            udelay(1000);
+        }
+        printf("clci%d link success\n", clci_idx);
+        rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0xa0,
+                            CLCIx_AHB_BASE(clci_idx) + 0x3021c);
+        rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0xff0080,
+                            CLCIx_AHB_BASE(clci_idx) + 0x30304);
+    }
+#endif
+#if !defined(ENABLE_REAL_CLCI)
+    printf("CLCI waiting for link\n");
+    for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
         while (1) {
             tmp_val = rhea_d2d_cfg_readl(RHEA_DIE_SELF,
                             CLCIx_AHB_BASE(clci_idx) + 0x3003c);
@@ -457,6 +561,7 @@ int rhea_d2d_init(void)
         rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0xff0080,
                             CLCIx_AHB_BASE(clci_idx) + 0x30304);
     }
+#endif
     printf("CLCI link finished\n");
 
     /* D2D configuration */
@@ -472,6 +577,7 @@ int rhea_d2d_init(void)
     rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x1, D2D_REG_CFG_TX_SEL_GRP1);
     rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0x1, D2D_REG_CFG_DNIU_POSTW);
     printf("D2D configuration done\n");
+    if (0) goto timeout; // Solve the problem that the label of die0 is not used when compiling
     return 0;
 
 timeout:
@@ -485,6 +591,9 @@ timeout:
             rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c1c),
             rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c24),
             rhea_d2d_cfg_readl(RHEA_DIE_SELF, CLCIx_AHB_BASE(clci_idx) + 0x17c30));
+        clci_device_reg_base_set(0x9c00000000 + 0x20200000 + (clci_idx * 0x200000) + 0x21000);
+        mailbox_dev_addr_refresh();
+        clci_dump();
     }
 #endif
     return -ETIMEDOUT;

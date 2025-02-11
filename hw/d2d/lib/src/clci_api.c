@@ -8,7 +8,7 @@
 
 inline static void init_sync_msg_reg(void)
 {
-	mmio_write_32(LOCAT_CTRL_REG_ADDR(msg3), 0);
+	mmio_write_32(CLCI_MCU_LOCAL_CTRL_MSG3, 0);
 }
 /*
  * clci_init_firmware()

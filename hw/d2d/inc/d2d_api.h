@@ -94,5 +94,6 @@ void *rhea_d2d_get_dnoc_addr(void);
 void *rhea_d2d_get_cnoc_addr(void);
 int rhea_d2d_init(void);
 void rhea_clci_clk_init(void);
+void clci_dump(void);
 
 #endif /* __D2D_API_H__ */

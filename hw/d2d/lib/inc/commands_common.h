@@ -17,7 +17,7 @@ enum {
 	CMD_UPDATE_SYS_CLK_BAUDRATE,
 	CMD_IDDQ,
 	CMD_PLL_CLK_CNT,
-	CMD_CFG_INIT,
+	CMD_BIST,
 	CMD_APHY_INIT,
 	CMD_SPHY_INIT,
 	CMD_APHY_PLL_INIT,
@@ -55,8 +55,8 @@ uint32_t clci_req(uint8_t cmd);
 
 void clci_resp(uint8_t cmd);
 
-void clci_set_status(int status);
+void clci_set_status(int32_t status);
 
-void clci_set_error(int error);
+void clci_set_error(int32_t error);
 
 #endif

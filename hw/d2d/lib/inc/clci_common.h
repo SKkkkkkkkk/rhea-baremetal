@@ -102,7 +102,7 @@ struct clci_config_t {
 	uint8_t diff_mode;
 	uint8_t lane_mode;
 
-	uint8_t early_quit;
+	uint8_t aphy_pll_mode;
 	uint8_t min_dl_width;
 	uint8_t rx_lane_rev;
 	uint8_t pcs_async_bypass;

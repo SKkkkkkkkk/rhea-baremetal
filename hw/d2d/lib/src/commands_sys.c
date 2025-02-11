@@ -7,6 +7,7 @@
 #include <commands_common.h>
 #include <mailbox_sys.h>
 #include <mmio.h>
+#include <clci_common.h>
 
 #include "delay.h"
 
@@ -197,6 +198,23 @@ int32_t cmd_clci_common(int32_t die, uint8_t cmd)
 	return mailbox_sys_send(in_buf, 1 + sizeof(item), out_buf, MAILBOX_SYS_DATA_MAX, MAILBOX_SYS_TIMEOUT_MS + 5);
 }
 
+int32_t cmd_clci_cmd_send_nonblock(int32_t die, uint8_t cmd)
+{
+	struct cmd_common_t item;
+	uint8_t in_buf[MAILBOX_SYS_DATA_MAX] = { 0 };
+
+	item.res = die;
+	in_buf[0] = cmd;
+	memcpy(&in_buf[1], &item, sizeof(item));
+	return mailbox_sys_send_nonblock(in_buf, 1 + sizeof(item), MAILBOX_SYS_TIMEOUT_MS);
+}
+
+int32_t cmd_clci_cmd_rev_nonblock()
+{
+	uint8_t out_buf[MAILBOX_SYS_DATA_MAX] = { 0 };
+	return mailbox_sys_rev_nonblock(out_buf, MAILBOX_SYS_DATA_MAX);
+}
+
 /*
 	update temp to CLCI module
 
@@ -258,6 +276,13 @@ int32_t clci_relink_2()
 	if ((ret = cmd_clci_common(2, CMD_RESET)) < 0)
 		return ret;
 
+	// set clci_tx_en here
+	for (int id = 0; id < 2; id++) {
+		uint32_t val = 0;
+		cmd_clci_get_reg(id, 0x3003c, &val);
+		cmd_clci_set_reg(id, 0x3003c, val | (1 << 2));
+	}
+
 	if ((ret = cmd_clci_common(2, CMD_APHY_PLL_INIT)) < 0)
 		return ret;
 
@@ -298,12 +323,32 @@ int32_t clci_link_status()
 	uint32_t regdata_0 = 0;
 	uint32_t regdata_1 = 0;
 
-	cmd_clci_get_reg(1, 0x3003c, &regdata_0);
-	cmd_clci_get_reg(0, 0x3003c, &regdata_1);
+	cmd_clci_get_reg(1, CLCI_MCU_BIU_ADDR + 0x3c, &regdata_0);
+	cmd_clci_get_reg(0, CLCI_MCU_BIU_ADDR + 0x3c, &regdata_1);
 
 	if (((regdata_0 >> 12) & 0x1) && ((regdata_1 >> 12) & 1)) {
 		return 0;
 	}
 
 	return 1;
+}
+
+int32_t clci_bist_loop(int32_t loop_type)
+{
+	int32_t ret = 0;
+
+	if ((ret = cmd_clci_common(2, CMD_RESET)) < 0)
+		return ret;
+
+	// default freq is 3.6Ghz, set div1/div2 to change freq
+	uint32_t data = loop_type << 8;
+	if (loop_type == LOOPBACK_DIE2DIE) {
+		data |= 2;
+	}
+
+	// for sh, addr=0x17c04
+	if ((ret = cmd_clci_set_reg(0, CLCI_MCU_RAM_ADDR + 0x7c04, data)) < 0)
+		return ret;
+
+	return cmd_clci_common(0, CMD_BIST);
 }
