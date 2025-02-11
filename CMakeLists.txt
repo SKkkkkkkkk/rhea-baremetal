@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15...3.28)
 include(cmake_helper/common/out_of_source.cmake)
-include(cmake_helper/cross_compile/toolchian_file.cmake)
+include(cmake_helper/cross_compile/toolchain_file.cmake)
 include(cmake_helper/common/custom_build_type.cmake)
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install CACHE INTERNAL "Install path")
 
