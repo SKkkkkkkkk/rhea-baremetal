@@ -29,9 +29,6 @@ else()
 endif()
 
 set(ENABLE_LTO "OFF" CACHE BOOL "Enable Link Time Optimization")
-if($CACHE{ENABLE_LTO})
-	set(LTO_FLAG "-flto")
-endif()
 
 set(ENABLE_MMU "OFF" CACHE BOOL "Enable MMU")
 
@@ -50,8 +47,9 @@ set(compile_options_common
 	-Wall -Werror -Wno-unused-variable -Wno-unused-function
 	-ffunction-sections -fdata-sections
 	-mstrict-align
-	${LTO_FLAG}
+	$<$<BOOL:${ENABLE_LTO}>:-flto>
 	-DA55 -D$CACHE{BOARD} -DPRIMARY_CORE=$CACHE{PRIMARY_CORE}
+	$<$<BOOL:${ENABLE_MMU}>:-DENABLE_MMU>
 	-I${SDK_PATH}/common/inc
 	-I${SDK_PATH}/hw/cpu/aarch64/inc # aarch64 helper
 )
@@ -59,22 +57,14 @@ set(compile_options_common
 set(link_options_common
 	-static
 	-nostdlib # we will explicitly link libc.a, libm.a and libgcc.a later
-	${LTO_FLAG}
+	$<$<BOOL:${ENABLE_LTO}>:-flto>
 	-Wl,--fatal-warnings
 	-Wl,--gc-sections
 	-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/$CACHE{PROJECT_NAME}.map
 	-Wl,--print-memory-usage
 	-Wl,--wrap=memcpy -Wl,--wrap=memmove -Wl,--wrap=memset -Wl,--wrap=memcmp -Wl,--wrap=strlen
+	$<$<NOT:$<CONFIG:Debug,RelWithDebInfo>>:-Wl,--strip-all>
 )
-
-if($CACHE{ENABLE_MMU})
-	list(APPEND compile_options_common -DENABLE_MMU)
-endif()
-
-## if CMAKE_BUILD_TYPE is not Debug or RelWithDebInfo, strip all symbols
-if(NOT $CACHE{CMAKE_BUILD_TYPE} STREQUAL "Debug" AND NOT $CACHE{CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
-	list(APPEND link_options_common -Wl,--strip-all)
-endif()
 
 ## architecture specific
 set(compile_options_arch -mlittle-endian -mcpu=cortex-a55 -mtune=cortex-a55)
