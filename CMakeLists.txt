@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.15...3.28)
 include(cmake_helper/common/out_of_source.cmake)
+include(cmake_helper/common/helper_func.cmake)
 include(cmake_helper/cross_compile/toolchain_file.cmake)
 include(cmake_helper/common/custom_build_type.cmake)
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install CACHE INTERNAL "Install path")
@@ -7,39 +8,33 @@ set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install CACHE INTERNAL "Install pat
 set(SDK_PATH ${CMAKE_SOURCE_DIR})
 
 set(PROJECT_NAME "a" CACHE STRING "Project Name")
+project($CACHE{PROJECT_NAME}
+	VERSION 0.1.0
+	DESCRIPTION $CACHE{PROJECT_NAME}
+	LANGUAGES C ASM
+)
 
-set(APP_CMAKE "" CACHE FILEPATH "Path to the app.cmake") # since the type is PATH, set comman will convert it to absolute automatically.
-if("$CACHE{APP_CMAKE}" STREQUAL "")
-	message(FATAL_ERROR "APP_CMAKE must be set!")
-endif()
-
+# board specific
 set(BOARD "FPGA" CACHE STRING "QEMU, RTL, FPGA, EVB, PLD")
 set_property(CACHE BOARD PROPERTY STRINGS "QEMU" "RTL" "FPGA" "EVB" "PLD")
 
 set(MEM_SCHEME "ROM" CACHE STRING "ROM, SRAM, DRAM, CUSTOM")
 set_property(CACHE MEM_SCHEME PROPERTY STRINGS "ROM" "SRAM" "DRAM" "CUSTOM")
 if($CACHE{MEM_SCHEME} STREQUAL "CUSTOM")
-	set(CUSTOM_LINKER_SCRIPT "" CACHE FILEPATH "Custom Linker Script file")
-	if("$CACHE{CUSTOM_LINKER_SCRIPT}" STREQUAL "")
-		message(FATAL_ERROR "CUSTOM_LINKER_SCRIPT must be set, with MEM_SCHEME=CUSTOM")
-	endif()
+	unset(STACK_SIZE CACHE)
+	unset(HEAP_SIZE CACHE)
+	set(CUSTOM_LINKER_SCRIPT "" CACHE FILEPATH "Custom Linker Script file, Cannot be empty!")
 else()
+	unset(CUSTOM_LINKER_SCRIPT CACHE)
 	set(STACK_SIZE "0x4000" CACHE STRING "Stack Size(In Bytes)")
 	set(HEAP_SIZE  "0x4000" CACHE STRING "Heap Size(In Bytes)")
 endif()
 
+set(CPU_ARCH "A55" CACHE STRING "A55 C920")
+set_property(CACHE CPU_ARCH PROPERTY STRINGS "A55" "C920")
+
 set(ENABLE_LTO "OFF" CACHE BOOL "Enable Link Time Optimization")
 
-set(ENABLE_MMU "OFF" CACHE BOOL "Enable MMU")
-
-set(PRIMARY_CORE "0" CACHE STRING "Primary Core: 0, 1, 2, 3")
-set_property(CACHE PRIMARY_CORE PROPERTY STRINGS  0 1 2 3)
-
-project("${PROJECT_NAME}"
-	VERSION 0.1.0
-	DESCRIPTION "${PROJECT_NAME}"
-	LANGUAGES C ASM
-)
 # for all targets
 
 ## common
@@ -47,9 +42,9 @@ set(compile_options_common
 	-Wall -Werror -Wno-unused-variable -Wno-unused-function
 	-ffunction-sections -fdata-sections
 	-mstrict-align
-	$<$<BOOL:${ENABLE_LTO}>:-flto>
-	-DA55 -D$CACHE{BOARD} -DPRIMARY_CORE=$CACHE{PRIMARY_CORE}
-	$<$<BOOL:${ENABLE_MMU}>:-DENABLE_MMU>
+	$<$<BOOL:$CACHE{ENABLE_LTO}>:-flto>
+	-D$CACHE{BOARD}
+	$<$<BOOL:$CACHE{ENABLE_MMU}>:-DENABLE_MMU>
 	-I${SDK_PATH}/common/inc
 	-I${SDK_PATH}/hw/cpu/aarch64/inc # aarch64 helper
 )
@@ -57,7 +52,7 @@ set(compile_options_common
 set(link_options_common
 	-static
 	-nostdlib # we will explicitly link libc.a, libm.a and libgcc.a later
-	$<$<BOOL:${ENABLE_LTO}>:-flto>
+	$<$<BOOL:$CACHE{ENABLE_LTO}>:-flto>
 	-Wl,--fatal-warnings
 	-Wl,--gc-sections
 	-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/$CACHE{PROJECT_NAME}.map
@@ -66,8 +61,15 @@ set(link_options_common
 	$<$<NOT:$<CONFIG:Debug,RelWithDebInfo>>:-Wl,--strip-all>
 )
 
-## architecture specific
-set(compile_options_arch -mlittle-endian -mcpu=cortex-a55 -mtune=cortex-a55)
+## cpu arch specific
+set(ENABLE_MMU "OFF" CACHE BOOL "Enable MMU")
+if($CACHE{CPU_ARCH} STREQUAL "A55")
+	set(PRIMARY_CORE "0" CACHE STRING "Primary Core: 0, 1, 2, 3")
+	set_property(CACHE PRIMARY_CORE PROPERTY STRINGS  0 1 2 3)
+	set(compile_options_arch -D$CACHE{CPU_ARCH} -mlittle-endian -mcpu=cortex-a55 -mtune=cortex-a55 -DPRIMARY_CORE=$CACHE{PRIMARY_CORE})
+else()
+	set(compile_options_arch -D$CACHE{CPU_ARCH} -march=rv64gc -mabi=lp64d)
+endif()
 
 ## compiler specific
 
@@ -107,7 +109,8 @@ endif()
 add_compile_options(${compile_options_arch} ${compile_options_common})
 
 # targets
-include($CACHE{APP_CMAKE}) # APP_CMAKE cannot be empty
+set_non_empty_cache(APP_CMAKE "" FILEPATH "Path to the app.cmake") # set APP_CMAKE default value to empty string, so that it must be provided by the user
+include($CACHE{APP_CMAKE})
 add_executable($CACHE{PROJECT_NAME}.elf)
 include(targets.cmake)
 
@@ -146,7 +149,7 @@ target_link_libraries($CACHE{PROJECT_NAME}.elf
 if("$CACHE{MEM_SCHEME}" STREQUAL "CUSTOM")
 	target_link_options($CACHE{PROJECT_NAME}.elf 
 		PRIVATE
-			-T $CACHE{CUSTOM_LINKER_SCRIPT}
+			$<$<BOOL:$CACHE{CUSTOM_LINKER_SCRIPT}>:-T $CACHE{CUSTOM_LINKER_SCRIPT}> # CUSTOM_LINKER_SCRIPT should not be empty
 	)
 else()
 	target_link_libraries($CACHE{PROJECT_NAME}.elf 
