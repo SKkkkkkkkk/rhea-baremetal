@@ -2,7 +2,7 @@
 #define __COMMANDS_COMMON_H__
 
 #include <stdint.h>
-#include <local_ctrl.h>
+#include "local_ctrl.h"
 
 #define SYS_CLCI_CTRL_MSG  CLCI_MCU_LOCAL_CTRL_MSG3
 #define SYS_CLCI_CMD_ARG_P CLCI_MCU_LOCAL_CTRL_MSG0

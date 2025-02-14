@@ -1,10 +1,10 @@
 #include <stdint.h>
 #include <stdio.h>
-#include <mmio.h>
-#include <clci_error.h>
-#include <commands_sys.h>
-#include <log.h>
-#include <clci_common.h>
+#include "mmio.h"
+#include "clci_error.h"
+#include "commands_sys.h"
+#include "log.h"
+#include "clci_common.h"
 
 /* Read the CLCI device error status
 *  The CLCI device error status register 32-bit, each bit of this register

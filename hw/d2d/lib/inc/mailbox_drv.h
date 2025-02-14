@@ -25,11 +25,12 @@
 
 #define MAILBOX_DATA_MAX    32
 #define MAILBOX_REV_BUFF    40
-#define MAILBOX_PKG_LEN_MIN 2 //the pkg len is bigger or equal than 4 bytes
+#define MAILBOX_PKG_LEN_MIN 3 //the pkg len is bigger or equal than 4 bytes
 
 #define MAILBOX_PKG_HEADER_OFFSET 0 //BYTE[0]  1
-#define MAILBOX_PKG_LEN_OFFSET	  1 //BYTE[1]
-#define MAILBOX_PKG_DATA_OFFSET	  2
+#define MAILBOX_PKG_REPLY_OFFSET	  1 //BYTE[1]
+#define MAILBOX_PKG_LEN_OFFSET	  2 //BYTE[2]
+#define MAILBOX_PKG_DATA_OFFSET	  3
 
 #define MAILBOX_PKG_CRC_OFFSET(len) (len + 2)
 
@@ -54,6 +55,9 @@
 
 #define MAILBOX_STATUS_NORMAL 1
 #define MAILBOX_STATUS_ERROR  0
+
+#define MAILBOX_MSG_NEED_REPLY    1
+#define MAILBOX_MSG_N0_REPLY     0
 
 typedef enum {
 	MAILBOX_DB_STATUS_NONE = 0,
@@ -85,9 +89,9 @@ typedef struct {
 	uint8_t buff[MAILBOX_REV_BUFF];
 } mailbox_pkg_st;
 
-int32_t mailbox_rev(uint8_t *out_buff, uint8_t len, uint32_t timeout_ms);
-int32_t mailbox_send(uint8_t *in_buff, uint8_t len, uint32_t timeout_ms);
+int32_t mailbox_rev(uint8_t *out_buff, uint8_t len, uint8_t *replay, uint32_t timeout_ms);
+int32_t mailbox_send(uint8_t *in_buff, uint8_t len, uint8_t reply, uint32_t timeout_ms);
+void mailbox_reg_address_refresh(void);
 int32_t mailbox_init(uint8_t role);
-void mailbox_dev_addr_refresh();
 
 #endif

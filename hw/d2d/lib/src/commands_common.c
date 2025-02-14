@@ -17,8 +17,8 @@
 		bit4		: clci-mcu response bit
 		bit3:0		: clci status
 */
-#include <commands_common.h>
-#include <mmio.h>
+#include "commands_common.h"
+#include "mmio.h"
 
 void clci_set_resp()
 {

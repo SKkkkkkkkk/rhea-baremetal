@@ -1,9 +1,9 @@
 #ifndef __LOCAL_CTRL_H__
 #define __LOCAL_CTRL_H__
 
-#include <reg_map.h>
 #include <stdint.h>
 #include <stddef.h>
+#include "reg_map.h"
 
 typedef struct {
 	uint32_t vender_id; //0x0
@@ -39,28 +39,28 @@ typedef struct {
 
 extern uint64_t local_ctrl_base;
 
-#define LOCAT_CTRL_REG_ADDR(MEMBER) ((uint64_t)local_ctrl_base + offsetof(mcu_local_reg_st, MEMBER))
+#define LOCAL_CTRL_REG_ADDR(MEMBER) ((uint64_t)local_ctrl_base + offsetof(mcu_local_reg_st, MEMBER))
 
-#define CLCI_MCU_LOCAL_CTRL_CTRL0    (LOCAT_CTRL_REG_ADDR(ctrl0))
-#define CLCI_MCU_LOCAL_CTRL_MSG0     (LOCAT_CTRL_REG_ADDR(msg0))
-#define CLCI_MCU_LOCAL_CTRL_MSG1     (LOCAT_CTRL_REG_ADDR(msg1))
-#define CLCI_MCU_LOCAL_CTRL_MSG2     (LOCAT_CTRL_REG_ADDR(msg2))
-#define CLCI_MCU_LOCAL_CTRL_MSG3     (LOCAT_CTRL_REG_ADDR(msg3))
-#define CLCI_MCU_LOCAL_CTRL_NMI_ADDR (LOCAT_CTRL_REG_ADDR(nmi_addr))
+#define CLCI_MCU_LOCAL_CTRL_CTRL0    (LOCAL_CTRL_REG_ADDR(ctrl0))
+#define CLCI_MCU_LOCAL_CTRL_MSG0     (LOCAL_CTRL_REG_ADDR(msg0))
+#define CLCI_MCU_LOCAL_CTRL_MSG1     (LOCAL_CTRL_REG_ADDR(msg1))
+#define CLCI_MCU_LOCAL_CTRL_MSG2     (LOCAL_CTRL_REG_ADDR(msg2))
+#define CLCI_MCU_LOCAL_CTRL_MSG3     (LOCAL_CTRL_REG_ADDR(msg3))
+#define CLCI_MCU_LOCAL_CTRL_NMI_ADDR (LOCAL_CTRL_REG_ADDR(nmi_addr))
 
-#define CLCI_MCU_LOCAL_CTRL_DOORBELL_TO_MCU (LOCAT_CTRL_REG_ADDR(db_mcu))
-#define CLCI_MCU_LOCAL_CTRL_DOORBELL_TO_SOC (LOCAT_CTRL_REG_ADDR(db_soc))
+#define CLCI_MCU_LOCAL_CTRL_DOORBELL_TO_MCU (LOCAL_CTRL_REG_ADDR(db_mcu))
+#define CLCI_MCU_LOCAL_CTRL_DOORBELL_TO_SOC (LOCAL_CTRL_REG_ADDR(db_soc))
 
-#define CLCI_MCU_CPU_BOOT_ADDR (LOCAT_CTRL_REG_ADDR(cpu_reboot_addr))
-#define CLCI_MCU_CPU_CHIPLET_ID (LOCAT_CTRL_REG_ADDR(chiplet_id))
+#define CLCI_MCU_CPU_BOOT_ADDR	(LOCAL_CTRL_REG_ADDR(cpu_reboot_addr))
+#define CLCI_MCU_CPU_CHIPLET_ID (LOCAL_CTRL_REG_ADDR(chiplet_id))
 
-#define BIT_CPU_SOFT_RSTN			(1)
-#define BIT_CPU_RUN_REQ				(1 << 1)
-#define BIT_CPU_HALT_REG			(1 << 2)
-#define BIT_BIU_RSTN				(1 << 3)
-#define BIT_WDT_RSTN				(1 << 4)
-#define BIT_TEST_NMI				(1 << 8)
-#define BIT_TEST_SOFT_INT			(1 << 9)
+#define BIT_CPU_SOFT_RSTN (1)
+#define BIT_CPU_RUN_REQ	  (1 << 1)
+#define BIT_CPU_HALT_REG  (1 << 2)
+#define BIT_BIU_RSTN	  (1 << 3)
+#define BIT_WDT_RSTN	  (1 << 4)
+#define BIT_TEST_NMI	  (1 << 8)
+#define BIT_TEST_SOFT_INT (1 << 9)
 
 void local_ctrl_base_set(uint64_t reg_base);
 #endif

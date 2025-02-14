@@ -1,7 +1,7 @@
 #ifndef __CLCI_ERROR_H__
 #define __CLCI_ERROR_H__
 
-#include <local_ctrl.h>
+#include "local_ctrl.h"
 
 #define CLCI_DEV_ERROR_REG CLCI_MCU_LOCAL_CTRL_MSG1
 

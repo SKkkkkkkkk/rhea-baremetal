@@ -1,11 +1,12 @@
 #!/bin/bash
 
 BLOCKING_MODE=ON    # ON or OFF
-SUFFIX=$([[ "$BLOCKING_MODE" == "OFF" ]] && echo "nonblock" || echo "block")
+ISR_MODE=ON
+SUFFIX=$([[ "$BLOCKING_MODE" == "OFF" ]] && echo "nonblock" || echo "block")$([[ "$ISR_MODE" == "ON" ]] && echo "_isr")
 DIE_MAX_NUM=2
 echo "DIE_MAX_NUM 设置为 ${DIE_MAX_NUM}"
 
-rm ./build/boot_rom_die*.hex
+rm ./build/die*_rom.hex.*
 
 for (( die_id=0; die_id<DIE_MAX_NUM; die_id++ ))
 do
@@ -20,6 +21,7 @@ do
     -DBOARD=PLD \
     -DREAL_CLCI=ON \
     -DBLOCKING_MODE=${BLOCKING_MODE} \
+    -DISR_MODE=${ISR_MODE} \
     -DSELF_DIE_ID=${die_id} > /dev/null
 
     if [[ $? -ne 0 ]]; then

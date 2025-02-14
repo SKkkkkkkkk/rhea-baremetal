@@ -3,8 +3,8 @@
 	Some features need to be combined sequentially with the following APIs.
 	This file do the same thing as commands_sys.c
 */
-#include <commands_sys.h>
-#include <commands_common.h>
+#include "commands_sys.h"
+#include "commands_common.h"
 
 int32_t cmd_clci_get_reg(int32_t die, uint32_t addr, uint32_t *data)
 {

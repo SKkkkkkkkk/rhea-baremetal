@@ -17,14 +17,18 @@ int32_t cmd_clci_delayline_tracking(int32_t die, uint32_t temp);
 
 int32_t cmd_clci_common(int32_t die, uint8_t cmd);
 
-int32_t cmd_clci_cmd_send_nonblock(int32_t die, uint8_t cmd);
-
-int32_t cmd_clci_cmd_rev_nonblock();
+int32_t cmd_clci_common_noack(int32_t die, uint8_t cmd);
 
 int32_t clci_relink();
 
 int32_t clci_relink_2();
 
 int32_t clci_link_status();
+
+int32_t clci_bist_loop(int32_t loop_type);
+
+int32_t clci_enable_steam_mode(void);
+
+void clci_dump(int id);
 
 #endif

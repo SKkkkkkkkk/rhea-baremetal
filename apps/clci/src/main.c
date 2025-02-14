@@ -162,8 +162,7 @@ int main(void)
         for (i = 0; i < 4; i++) {
             printf("=== clci%d relink test\n", i);
             clci_device_reg_base_set(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x21000);
-            mailbox_dev_addr_refresh();
-            printf("=== mailbox_dev_addr_refresh\n");
+            printf("=== clci_device_reg_base_set\n");
             ret = clci_relink();
             printf("=== clci_relink (%d)\n", ret);
             if (ret) goto stop;
@@ -223,7 +222,8 @@ int main(void)
 stop:
     printf("===[%d] stop, ret=%d\n", __LINE__, ret);
 #if CONFIG_RHEA_D2D_SELF_ID == 1
-    clci_dump();
+    clci_dump(0);
+    clci_dump(1);
     ret = 100;
 	while (i < 4 && ret--) {
         printf("=== clci%d 0x3003c: 0x%x, 0x21054:0x%x, 0x2105c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x\n",
