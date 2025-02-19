@@ -661,7 +661,6 @@ size_t mmc_write_blocks(int lba, const uintptr_t buf, size_t size)
 	assert((ops != NULL) &&
 	       (ops->write != NULL) &&
 	       (size != 0U) &&
-	       ((buf & MMC_BLOCK_MASK) == 0U) &&
 	       ((size & MMC_BLOCK_MASK) == 0U));
 
 	ret = ops->prepare(lba, buf, size);
