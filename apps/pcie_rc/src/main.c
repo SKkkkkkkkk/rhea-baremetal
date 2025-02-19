@@ -60,6 +60,8 @@
 
 #define SEEHI_MSIX_ENABLE			0
 
+#define SEEHI_RC_TEST_HOT_RESET		0
+
 #define TCM_04_CFG_BASE         0x0015000000
 #define TCM_14_CFG_BASE			0x8a22000000
 #define TCM_15_CFG_BASE			0x8aa2000000
@@ -1602,7 +1604,11 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 
 	rc_rescan(pcie);
 	rc_init_msi_msg(pcie, 0);
+#if SEEHI_FPGA_PCIE_TEST
 	systimer_delay(100, IN_MS);
+#else
+	systimer_delay(1, IN_MS);
+#endif
 
 #if 0
 #if SEEHI_C2C_X16_TEST
@@ -1661,7 +1667,7 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 #endif
 
 #if SEEHI_C2C_PCIE_TEST
-#if SEEHI_PLD_PCIE_TEST
+#if SEEHI_PLD_PCIE_TEST && SEEHI_RC_TEST_HOT_RESET
 	printf("rc set hot reset start test:\n");
 	// writel(0x004201ff, dbi_base + 0x3c);  // hot reset
 	// systimer_delay(1, IN_MS);

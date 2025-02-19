@@ -66,7 +66,7 @@
 #define SEEHI_C2C_X8_TEST			0
 #define SEEHI_C2C_X16_TEST			1
 
-#define SEEHI_C2C_ENGINE_TEST		1
+#define SEEHI_C2C_ENGINE_TEST		0
 
 #define SEEHI_MSIX_ENABLE			0
 
@@ -2355,7 +2355,9 @@ int main()
 
 	// GIC_Init();
 	init_gic();
+#if SEEHI_PLD_PCIE_TEST && SEEHI_C2C_ENGINE_TEST
 	lpi_init();
+#endif
 
 #if SEEHI_C2C_PCIE_TEST
 	IRQ_SetHandler(pcie->dev->vdmIrqNum, pcie_irq_handler);
