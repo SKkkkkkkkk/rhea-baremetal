@@ -341,7 +341,7 @@ int d2d_sync_obtain_cmd(void)
     const size_t cmd_len = sizeof(struct d2d_sync_cmd);
 
     used_len = d2d_ring_get_used_len(&sync_priv->lcmd);
-    pr_dbg("Got 0x%x bytes in cmd buffer\n", used_len);
+    if (used_len) pr_dbg("Got 0x%x bytes in cmd buffer\n", used_len);
     while (used_len >= cmd_len) {
         cmd = (struct d2d_sync_cmd *) 
                 ((uintptr_t) sync_priv->lcmd.local_addr + *sync_priv->lcmd.head);
@@ -388,7 +388,7 @@ int d2d_sync_obtain_cmd(void)
         printf("The remaining %d bytes in the command queue are discarded",
                 used_len);
     }
-    pr_dbg("A total of %d commands ware obtained\n", cmd_cnt);
+    if (cmd_cnt) pr_dbg("A total of %d commands ware obtained\n", cmd_cnt);
 
     return cmd_cnt;
 }

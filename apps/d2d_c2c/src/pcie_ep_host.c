@@ -1587,6 +1587,7 @@ int main()
 	int ret;
 	printf("chip%d die%d\n",
 		D2D_C2C_CHIP, CONFIG_RHEA_D2D_SELF_ID);
+	rhea_clci_clk_init();
 
 #if SEEHI_FPGA_PCIE_TEST
 	s_pcie.dev = &g_pcieDevX8;
@@ -1656,8 +1657,6 @@ int main()
 
 	printf("SEEHI_DUAL_PCIE_TEST\n");
 #endif
-
-	// rhea_clci_clk_init();
 
 #if CONFIG_RHEA_D2D_SELF_ID == 0
 	PCIe_EP_Init(pcie);

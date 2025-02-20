@@ -418,6 +418,7 @@ int rhea_d2d_init(void)
     /* CLCI configuration */
 #if defined(ENABLE_REAL_CLCI)
     rhea_clci_pinmux_init();
+    mailbox_sys_init();
 #endif
     for (clci_idx = CLCI0; clci_idx < CLCI_MAX; clci_idx++) {
         rhea_d2d_cfg_writel(RHEA_DIE_SELF, 0,
@@ -429,7 +430,6 @@ int rhea_d2d_init(void)
         rhea_d2d_cfg_writel(RHEA_DIE_SELF, CLCI_BOOT_SEL_UART,
                             D2D_REG_CLCIx_BOOT_SEL(clci_idx));
     }
-    mailbox_sys_init();
     printf("CLCI configuration done\n");
 
 #if ENABLE_REAL_CLCI && CONFIG_RHEA_D2D_SELF_ID == 1
