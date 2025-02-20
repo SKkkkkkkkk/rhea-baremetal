@@ -18,4 +18,6 @@ set(app_dep
 	d2d
 )
 
-add_definitions(-DD2D_C2C_CHIP=${CHIP_ID})
+set(app_compile_options
+	-DD2D_C2C_CHIP=${CHIP_ID}
+)
