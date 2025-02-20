@@ -137,12 +137,13 @@ target_link_options($CACHE{PROJECT_NAME}.elf
 
 target_link_libraries($CACHE{PROJECT_NAME}.elf
 	PRIVATE
-		aarch64_startup
-		newlib_stubs
-		gicv3
+		$<$<STREQUAL:$CACHE{CPU_ARCH},A55>:aarch64_startup>
+		$<$<STREQUAL:$CACHE{CPU_ARCH},A55>:newlib_stubs>
+		$<$<STREQUAL:$CACHE{CPU_ARCH},A55>:gicv3>
+		$<$<STREQUAL:$CACHE{CPU_ARCH},C920>:c920_startup>
 		${app_dep}
 		-lc
-		-lm 
+		-lm
 		${LIBGCC}
 )
 
