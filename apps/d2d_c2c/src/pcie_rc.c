@@ -1635,6 +1635,7 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 	dump_regs("read rc config space 00-ff:", dbi_base, 128);
 	dump_regs("read ep config space 00-ff:", PCIE_C2C_CONFIG_BASE, 128);
 
+#if 0
 #if SEEHI_FPGA_PCIE_TEST
 	dump_regs("bar0:", 0x19400000, 32);
 	dump_regs("bar2:", 0x19800000, 32);
@@ -1664,6 +1665,7 @@ HAL_Status PCIe_RC_Init(struct HAL_PCIE_HANDLE *pcie)
 	dump_regs("bar2:", 0x1d800000, 32);
 	dump_regs("bar3:", 0x1d300000, 32);
 	dump_regs("bar4:", 0xfc00000000, 32);
+#endif
 #endif
 #endif
 #endif

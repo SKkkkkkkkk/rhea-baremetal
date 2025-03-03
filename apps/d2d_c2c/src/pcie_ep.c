@@ -1807,9 +1807,9 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 
 #if SEEHI_TILE14_PCIE_TEST
 	if(pcie->dev->max_lanes == 16){
-		writel(0xc0000000, mbitx_14tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
+		writel(0x40000000, mbitx_14tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
 	}else if(pcie->dev->max_lanes == 8){
-		writel(0xd0000000, mbitx_14tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+		writel(0x50000000, mbitx_14tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
 	}else{
 		printf("msi config error !!!\n");
 	}
