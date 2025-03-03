@@ -1546,8 +1546,13 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 
 		HAL_PCIE_OutboundConfig(pcie, 0, 0, 0x430000000, 0x16330000000, 0x800000);
 		HAL_PCIE_OutboundConfig(pcie, 1, 0, 0x430800000, 0x6330800000, 0x20800000);
-		// writel(0x30000000, ss_base + 0x208);
-		// writel(0x0, ss_base + 0x20c);
+#elif SEEHI_TILE14_PCIE_TEST
+		HAL_PCIE_InboundConfig_addr(pcie, 0, 0, 0x10410000000, 0x18800000, 0x400000);
+		HAL_PCIE_InboundConfig_addr(pcie, 1, 0, 0x11430000000, 0xd430000000, 0x800000);
+		HAL_PCIE_InboundConfig_addr(pcie, 2, 0, 0x1430800000, 0xd430800000, 0x20800000);
+
+		HAL_PCIE_OutboundConfig(pcie, 0, 0, 0x430000000, 0x11430000000, 0x800000);
+		HAL_PCIE_OutboundConfig(pcie, 1, 0, 0x430800000, 0x1430800000, 0x20800000);
 #else
 		HAL_PCIE_InboundConfig(pcie, 0, 0, BOOT_USING_PCIE_C2C_BAR0_CPU_ADDRESS);
 		HAL_PCIE_InboundConfig(pcie, 1, 2, BOOT_USING_PCIE_C2C_BAR2_CPU_ADDRESS);
@@ -1802,9 +1807,9 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 
 #if SEEHI_TILE14_PCIE_TEST
 	if(pcie->dev->max_lanes == 16){
-		writel(0x40000000, mbitx_14tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
+		writel(0xc0000000, mbitx_14tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
 	}else if(pcie->dev->max_lanes == 8){
-		writel(0x50000000, mbitx_14tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+		writel(0xd0000000, mbitx_14tile_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
 	}else{
 		printf("msi config error !!!\n");
 	}
