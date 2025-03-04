@@ -32,6 +32,7 @@ static uint64_t g_c2c_base;		// select c2c control
 static uint64_t g_bar4_base;		// real bar4
 static uint64_t g_bar4_size;		// real bar4
 static uint8_t g_c2c_link;			// select link c2c 1: c2c  0: host
+static struct c2c_ranges g_c2c_ranges;
 
 /********************* Private Structure Definition **************************/
 
@@ -510,6 +511,106 @@ static uint64_t get_real_bar4(struct HAL_PCIE_DEV *dev, HAL_TileSelect tile, HAL
 	return 0;
 }
 
+static uint32_t get_doorbell_l_info(HAL_TileSelect tile, HAL_ControlType control, HAL_MbiSelect mbi)
+{
+
+	if(control == HAL_X8 && mbi != MBI_AP)
+		return 0x50000000;
+	else if(control == HAL_X16 && mbi != MBI_AP)
+		return 0x40000000;
+	else{
+		switch(tile){
+		case TILE_02:
+		case TILE_72:
+			if(control == HAL_X8){
+				return 0x50000000;
+			}else{
+				return 0x40000000;
+			}
+			break;
+		case TILE_03:
+		case TILE_73:
+			if(control == HAL_X8){
+				return 0xd0000000;
+			}else{
+				return 0xc0000000;
+			}
+			break;
+		default:
+			return -1;
+		}
+	}
+}
+
+static uint32_t get_doorbell_h_info(HAL_TileSelect tile, HAL_ControlType control, HAL_MbiSelect mbi)
+{
+
+	if(mbi != MBI_AP){
+		switch(tile){
+		case TILE_02:
+			return 0x02;
+			break;
+		case TILE_03:
+			return 0x03;
+			break;
+		case TILE_72:
+			return 0x72;
+			break;
+		case TILE_73:
+			return 0x73;
+			break;
+		default:
+			return -1;
+		}
+	}else{
+		switch(tile){
+		case TILE_02:
+		case TILE_03:
+			return 0x81;
+			break;
+		case TILE_72:
+		case TILE_73:
+			return 0xb9;
+			break;
+		default:
+			return -1;
+		}
+	}
+}
+
+static uint64_t get_msi_rangs_info(struct c2c_ranges *c2c_ranges, HAL_TileSelect tile, HAL_ControlType control, HAL_MbiSelect mbi)
+{
+	c2c_ranges->tile = tile;
+	c2c_ranges->control = control;
+
+	c2c_ranges->doorbell_base_l = get_doorbell_l_info(tile, control, mbi);
+	c2c_ranges->doorbell_base_h = get_doorbell_h_info(tile, control, mbi);
+
+	if(mbi == MBI_AP){
+		c2c_ranges->mbitx_base = 0x10050000;
+	}else if(mbi == MBI_14){
+		c2c_ranges->mbitx_base = 0x8a20000000;
+	}else if(mbi == MBI_15){
+		printf("seehi--> %s line: %d  mbi select error\n", __func__, __LINE__);
+	}else if(mbi == MBI_24){
+		c2c_ranges->mbitx_base = 0x9220000000;
+	}else if(mbi == MBI_25){
+		printf("seehi--> %s line: %d  mbi select error\n", __func__, __LINE__);
+	}else if(mbi == MBI_53){
+		printf("seehi--> %s line: %d  mbi select error\n", __func__, __LINE__);
+	}else if(mbi == MBI_54){
+		printf("seehi--> %s line: %d  mbi select error\n", __func__, __LINE__);
+	}else if(mbi == MBI_63){
+		printf("seehi--> %s line: %d  mbi select error\n", __func__, __LINE__);
+	}else if(mbi == MBI_64){
+		printf("seehi--> %s line: %d  mbi select error\n", __func__, __LINE__);
+	}else{
+		printf("seehi--> %s line: %d  mbi select error\n", __func__, __LINE__);
+	}
+
+	return 0;
+}
+
 static int seehi_pcie_ep_set_bar_flag(uint64_t dbi_base, uint32_t barno, int flags)
 {
 	uint32_t bar = barno;
@@ -798,8 +899,6 @@ static HAL_Status PCIe_EP_Init(struct HAL_PCIE_DEV *dev)
 
 	dw_pcie_dbi_ro_wr_en(dbi_base);
 
-	// printf("seehi--> %s line: %d dbi_base 0x%lx\n", __func__, __LINE__, dbi_base);
-	// printf("seehi--> %s line: %d apb_base 0x%lx\n", __func__, __LINE__, apb_base);
 	BSP_PCIE_EP_Init(dev);    //时钟同步，链路稳定，状态机进入polling，ltssm可以继续
 
 	bar = 0;
@@ -1034,7 +1133,7 @@ static HAL_Status PCIe_EP_Link(struct HAL_PCIE_DEV *dev)
 		HAL_PCIE_InboundConfig2(dev, 0, 0, BOOT_USING_PCIE_EP_BAR0_CPU_ADDRESS);
 		HAL_PCIE_InboundConfig2(dev, 1, 2, BOOT_USING_PCIE_EP_BAR2_CPU_ADDRESS);
 		HAL_PCIE_InboundConfig2(dev, 2, 3, BOOT_USING_PCIE_EP_BAR3_CPU_ADDRESS);
-		HAL_PCIE_InboundConfig2(dev, 3, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);
+		HAL_PCIE_InboundConfig2(dev, 3, 4, BOOT_USING_PCIE_EP_BAR4_CPU_ADDRESS);  // addr > bar size
 	}
 
 #elif SEEHI_FPGA_PCIE_TEST
@@ -1139,62 +1238,7 @@ static HAL_Status PCIe_EP_Link(struct HAL_PCIE_DEV *dev)
 		printf("msi config error !!!\n");
 		return HAL_ERROR;
 	}
-
-	if(g_c2c_base == C2C_SYS_CFG_02){
-		//配置AP SYS MBI_TX 0x1005_0000
-		if(dev->max_lanes == 16){
-			writel(0x60000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
-		}else if(dev->max_lanes == 8){
-			writel(0x70000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
-		}else{
-			printf("msi config error !!!\n");
-			return HAL_ERROR;
-		}
-
-		writel(0x81, mbitx_ap_base + 0x14);
-	}else if(g_c2c_base == C2C_SYS_CFG_03){
-		//配置AP SYS MBI_TX 0x1005_0000
-		if(dev->max_lanes == 16){
-			writel(0xe0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
-		}else if(dev->max_lanes == 8){
-			writel(0xf0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
-		}else{
-			printf("msi config error !!!\n");
-			return HAL_ERROR;
-		}
-
-		writel(0x81, mbitx_ap_base + 0x14);
-	}else if(g_c2c_base == C2C_SYS_CFG_72){
-		//配置AP SYS MBI_TX 0x1005_0000
-		if(dev->max_lanes == 16){
-			writel(0x60000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
-		}else if(dev->max_lanes == 8){
-			writel(0x70000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
-		}else{
-			printf("msi config error !!!\n");
-			return HAL_ERROR;
-		}
-
-		writel(0xb9, mbitx_ap_base + 0x14);
-	}else if(g_c2c_base == C2C_SYS_CFG_73){
-		//配置AP SYS MBI_TX 0x1005_0000
-		if(dev->max_lanes == 16){
-			writel(0xe0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
-		}else if(dev->max_lanes == 8){
-			writel(0xf0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
-		}else{
-			printf("msi config error !!!\n");
-			return HAL_ERROR;
-		}
-
-		writel(0xb9, mbitx_ap_base + 0x14);
-	}else{
-		printf("msi config error !!!\n");
-		return HAL_ERROR;
-	}
-	writel(0xfffffffe, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
-	writel(0x0, mbitx_ap_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
-
+													//
 	// writel(0x0, dbi_base + 0x948);              //0:10 vector
 
 #else
@@ -1278,63 +1322,14 @@ static HAL_Status PCIe_EP_Link(struct HAL_PCIE_DEV *dev)
 
 	// writel((0 << 4), apb_base + 0x70);    //4:8  产生msi对应中断 bit0=1
 
-	if(g_c2c_base == C2C_SYS_CFG_02){
-		//配置AP SYS MBI_TX 0x1005_0000
-		if(dev->max_lanes == 16){
-			writel(0x40000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
-		}else if(dev->max_lanes == 8){
-			writel(0x50000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
-		}else{
-			printf("msi config error !!!\n");
-			return HAL_ERROR;
-		}
-
-		writel(0x81, mbitx_ap_base + 0x14);
-	}else if(g_c2c_base == C2C_SYS_CFG_03){
-		//配置AP SYS MBI_TX 0x1005_0000
-		if(dev->max_lanes == 16){
-			writel(0xc0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
-		}else if(dev->max_lanes == 8){
-			writel(0xd0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
-		}else{
-			printf("msi config error !!!\n");
-			return HAL_ERROR;
-		}
-
-		writel(0x81, mbitx_ap_base + 0x14);
-	}else if(g_c2c_base == C2C_SYS_CFG_72){
-		//配置AP SYS MBI_TX 0x1005_0000
-		if(dev->max_lanes == 16){
-			writel(0x40000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
-		}else if(dev->max_lanes == 8){
-			writel(0x50000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
-		}else{
-			printf("msi config error !!!\n");
-			return HAL_ERROR;
-		}
-
-		writel(0xb9, mbitx_ap_base + 0x14);
-	}else if(g_c2c_base == C2C_SYS_CFG_73){
-		//配置AP SYS MBI_TX 0x1005_0000
-		if(dev->max_lanes == 16){
-			writel(0xc0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x16
-		}else if(dev->max_lanes == 8){
-			writel(0xd0000000, mbitx_ap_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
-		}else{
-			printf("msi config error !!!\n");
-			return HAL_ERROR;
-		}
-
-		writel(0xb9, mbitx_ap_base + 0x14);
-	}else{
-		printf("msi config error !!!\n");
-		return HAL_ERROR;
-	}
-
-	writel(0xfffffffe, mbitx_ap_base + 0x30);    //时能对应bit中断，总共32个bit
-	writel(0x0, mbitx_ap_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
-
 #endif //SEEHI_MSIX_ENABLE
+
+	writel(g_c2c_ranges.doorbell_base_l, g_c2c_ranges.mbitx_base + 0x10);    //AP 这边需要和doorbell地址能匹配上 x8
+	writel(g_c2c_ranges.doorbell_base_h, g_c2c_ranges.mbitx_base + 0x14);    //AP 这边需要和doorbell地址能匹配上 x8
+
+	writel(0xfffffffe, g_c2c_ranges.mbitx_base + 0x30);    //时能对应bit中断，总共32个bit
+	writel(0x0, g_c2c_ranges.mbitx_base + 0x40);    //时能对应bit目标remote|local，总共32个bit
+
 	   /////////////////////////////////////END//////////////////////////////////////////////////////
 	dw_pcie_dbi_ro_wr_dis(dbi_base);
 
@@ -1402,21 +1397,21 @@ static int pcie_addr_resolution(struct HAL_PCIE_DEV *dev, HAL_TileSelect tile, H
 	return 0;
 }
 
-int rhea_pcie_ep_init(struct HAL_PCIE_DEV *dev, HAL_TileSelect tile, HAL_ControlType control, HAL_ModeSelect select)
+int rhea_pcie_ep_init(struct HAL_PCIE_DEV *dev, HAL_TileSelect tile, HAL_ControlType control, HAL_ModeSelect select, HAL_MbiSelect mbi)
 {
 	int ret = 0;
 
 	if(select == C2C_RC){
-		printf("C2C_RC control X%x\n", control);
+		printf("C2C_RC control X%x tile 0x%x\n", control, tile);
 		return -1;
 	}
 
 	if(select == C2C_EP){
 		g_c2c_link = 1;
-		printf("C2C_EP control X%x\n", control);
+		printf("C2C_EP control X%x tile 0x%x\n", control, tile);
 	}else{
 		g_c2c_link = 0;
-		printf("X86_EP control X%x\n", control);
+		printf("X86_EP control X%x tile 0x%x\n", control, tile);
 	}
 
 	ret = pcie_addr_resolution(dev, tile, control);
@@ -1424,6 +1419,10 @@ int rhea_pcie_ep_init(struct HAL_PCIE_DEV *dev, HAL_TileSelect tile, HAL_Control
 		return -1;
 
 	ret = get_real_bar4(dev, tile, control);
+	if(ret < 0)
+		return -1;
+
+	ret = get_msi_rangs_info(&g_c2c_ranges, tile, control, mbi);
 	if(ret < 0)
 		return -1;
 

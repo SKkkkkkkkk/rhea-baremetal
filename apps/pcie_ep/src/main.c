@@ -12,6 +12,12 @@
 
 #include "lpi.h"
 
+#define PCIE_X86_LINK_FOR_03		1
+
+#define PCIE_C2C_LINK_FOR_03		0
+
+#define PCIE_C2C_LINK_FOR_73		1
+
 struct HAL_PCIE_DEV g_pcieDev_02_x16;
 struct HAL_PCIE_DEV g_pcieDev_02_x8;
 struct HAL_PCIE_DEV g_pcieDev_03_x16;
@@ -825,8 +831,9 @@ int main()
 	int ret = 0;
 	int cnt = 0;
 	struct HAL_PCIE_DEV dev;
-	HAL_TileSelect tile = TILE_03;
-	HAL_ControlType control = HAL_X16;
+	HAL_TileSelect tile;
+	HAL_ControlType control;
+	HAL_MbiSelect mbi = MBI_AP;
 
 #if SEEHI_PLD_PCIE_TEST
 	mc_init(TCM_04_CFG_BASE, 4);
@@ -852,43 +859,75 @@ int main()
 	printf("t64:0x%08x\n", REG32(0x6440000000 + 536870912 + 0xc0));
 #endif
 
+#if(PCIE_X86_LINK_FOR_03 == 0) && (PCIE_C2C_LINK_FOR_03 == 0) && (PCIE_C2C_LINK_FOR_73 == 0)
+#error
+#endif
+#if(PCIE_X86_LINK_FOR_03 == 1) && (PCIE_C2C_LINK_FOR_03 == 1)
+#error
+#endif
+#if(PCIE_C2C_LINK_FOR_73 == 1) && (PCIE_C2C_LINK_FOR_03 == 1)
+#error
+#endif
+
+#if (PCIE_X86_LINK_FOR_03 == 1)
+	rhea_pcie_ep_init(&dev, TILE_03, HAL_X16, X86_EP, mbi);  //x86 ep
+		if(ret != 0)
+			printf("rhea_pcie_ep_init error\n");
+	tile = 0;
+	control = 0;
+	mbi = MBI_AP;
+#endif
+
+#if (PCIE_C2C_LINK_FOR_03 == 1)
+	tile = TILE_03;
+	control = HAL_X16;
+	// control = HAL_X16toX8;
+	// control = HAL_X8;
+	mbi = MBI_AP;
+#endif
+
+#if (PCIE_C2C_LINK_FOR_73 == 1)
+	tile = TILE_73;
+	control = HAL_X16;
+	mbi = MBI_AP;
+#endif
+
 	if(tile == TILE_03 && control == HAL_X16){
-		rhea_pcie_ep_init(&dev, TILE_03, HAL_X16, C2C_EP);  //c2c ep
-		// rhea_pcie_ep_init(&dev, TILE_03, HAL_X16, X86_EP);  //x86 ep
+		rhea_pcie_ep_init(&dev, tile, control, C2C_EP, mbi);  //c2c ep
 		if(ret != 0)
 			printf("rhea_pcie_ep_init error\n");
 		memcpy(&g_pcieDev_03_x16, &dev, sizeof(struct HAL_PCIE_DEV));
-		IRQ_SetHandler(dev.vdmIrqNum, get_pcie_irq_func(&dev, TILE_03, HAL_X16));
+		IRQ_SetHandler(dev.vdmIrqNum, get_pcie_irq_func(&dev, tile, control));
 		GIC_SetPriority(dev.vdmIrqNum, 0 << 3);
 		GIC_EnableIRQ(dev.vdmIrqNum);
 	}
 
 	if(tile == TILE_03 && control == HAL_X8){
-		rhea_pcie_ep_init(&dev, TILE_03, HAL_X8, C2C_EP);
+		rhea_pcie_ep_init(&dev, tile, control, C2C_EP, mbi);  //c2c ep
 		if(ret != 0)
 			printf("rhea_pcie_ep_init error\n");
 		memcpy(&g_pcieDev_03_x8, &dev, sizeof(struct HAL_PCIE_DEV));
-		IRQ_SetHandler(dev.vdmIrqNum, get_pcie_irq_func(&dev, TILE_03, HAL_X8));
+		IRQ_SetHandler(dev.vdmIrqNum, get_pcie_irq_func(&dev, tile, control));
 		GIC_SetPriority(dev.vdmIrqNum, 0 << 3);
 		GIC_EnableIRQ(dev.vdmIrqNum);
 	}
 
 	if(tile == TILE_03 && control == HAL_X16toX8){
-		rhea_pcie_ep_init(&dev, TILE_03, HAL_X16toX8, C2C_EP);
+		rhea_pcie_ep_init(&dev, tile, control, C2C_EP, mbi);  //c2c ep
 		if(ret != 0)
 			printf("rhea_pcie_ep_init error\n");
 		memcpy(&g_pcieDev_03_x16, &dev, sizeof(struct HAL_PCIE_DEV));
-		IRQ_SetHandler(dev.vdmIrqNum, get_pcie_irq_func(&dev, TILE_03, HAL_X16toX8));
+		IRQ_SetHandler(dev.vdmIrqNum, get_pcie_irq_func(&dev, tile, control));
 		GIC_SetPriority(dev.vdmIrqNum, 0 << 3);
 		GIC_EnableIRQ(dev.vdmIrqNum);
 	}
 
 	if(tile == TILE_73 && control == HAL_X16){
-		rhea_pcie_ep_init(&dev, TILE_73, HAL_X16, C2C_EP);
+		rhea_pcie_ep_init(&dev, tile, control, C2C_EP, mbi);  //c2c ep
 		if(ret != 0)
 			printf("rhea_pcie_ep_init error\n");
 		memcpy(&g_pcieDev_73_x16, &dev, sizeof(struct HAL_PCIE_DEV));
-		IRQ_SetHandler(dev.vdmIrqNum, get_pcie_irq_func(&dev, TILE_73, HAL_X16));
+		IRQ_SetHandler(dev.vdmIrqNum, get_pcie_irq_func(&dev, tile, control));
 		GIC_SetPriority(dev.vdmIrqNum, 0 << 3);
 		GIC_EnableIRQ(dev.vdmIrqNum);
 	}

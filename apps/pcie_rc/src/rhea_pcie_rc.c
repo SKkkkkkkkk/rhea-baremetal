@@ -1479,16 +1479,16 @@ int rhea_pcie_rc_init(struct HAL_PCIE_DEV *dev, HAL_TileSelect tile, HAL_Control
 	int ret = 0;
 
 	if(select == C2C_EP){
-		printf("C2C_EP control X%x\n", control);
+		printf("C2C_EP control X%x tile 0x%x\n", control, tile);
 		return -1;
 	}
 
 	if(select == C2C_RC){
 		g_c2c_link = 1;
-		printf("C2C_RC control X%x\n", control);
+		printf("C2C_RC control X%x tile 0x%x\n", control, tile);
 	}else{
 		g_c2c_link = 0;
-		printf("X86_EP control X%x\n", control);
+		printf("X86_EP control X%x tile 0x%x\n", control, tile);
 	}
 
 	ret = pcie_addr_resolution(dev, tile, control);

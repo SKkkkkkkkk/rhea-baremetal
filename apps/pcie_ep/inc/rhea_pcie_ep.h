@@ -19,7 +19,7 @@
 
 #define SEEHI_MSIX_ENABLE			0
 
-#define SEEHI_RC_TEST_HOT_RESET		1
+#define SEEHI_RC_TEST_HOT_RESET		0
 
 #define TCM_04_CFG_BASE         0x0015000000
 #define TCM_14_CFG_BASE			0x8a22000000
@@ -233,6 +233,9 @@ struct c2c_ranges{
 	uint32_t mem32_base_size;
 	uint64_t mem64_base;
 	uint64_t mem64_base_size;
+	uint32_t doorbell_base_l;
+	uint32_t doorbell_base_h;
+	uint64_t mbitx_base;
 };
 
 /***************************** Structure Definition **************************/
@@ -321,6 +324,18 @@ typedef enum {
 	C2C_EP = 0x01U,
 	C2C_RC = 0x02U,
 } HAL_ModeSelect;
+
+typedef enum {
+	MBI_AP = 0x00U,
+	MBI_14 = 0x01U,
+	MBI_15 = 0x02U,
+	MBI_24 = 0x03U,
+	MBI_25 = 0x04U,
+	MBI_53 = 0x05U,
+	MBI_54 = 0x06U,
+	MBI_63 = 0x07U,
+	MBI_64 = 0x08U,
+} HAL_MbiSelect;
 
 struct HAL_PHY_SNPS_PCIE3_DEV {
 	uint32_t phyMode;
@@ -448,6 +463,6 @@ inline uint32_t pcie_readl_apb(struct HAL_PCIE_DEV *dev, uint64_t address)
 // HAL_Status dw_pcie_prog_inbound_atu_addr(struct HAL_PCIE_DEV *dev, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint64_t size);
 // HAL_Status dw_pcie_prog_outbound_atu(struct HAL_PCIE_DEV *dev, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint64_t size);
 
-int rhea_pcie_ep_init(struct HAL_PCIE_DEV *dev, HAL_TileSelect tile, HAL_ControlType control, HAL_ModeSelect select);
+int rhea_pcie_ep_init(struct HAL_PCIE_DEV *dev, HAL_TileSelect tile, HAL_ControlType control, HAL_ModeSelect select, HAL_MbiSelect mbi);
 int rhea_pcie_rc_init(struct HAL_PCIE_DEV *dev, HAL_TileSelect tile, HAL_ControlType control, HAL_ModeSelect select);
 #endif // __PCIE_H__
