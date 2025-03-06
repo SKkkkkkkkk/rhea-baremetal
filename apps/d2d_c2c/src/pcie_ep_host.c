@@ -3,13 +3,12 @@
 
 #include "gicv3.h"
 #include "pcie.h"
-#include "delay.h"
+#include "systimer.h"
 #include "common.h"
 #include "dw_apb_gpio.h"
 #include "utils_def.h"
 #include "d2d_api.h"
 #include "d2d_sync.h"
-#include "d2d_test.h"
 
 /*                                   This is BAR Define
 ┌────┬─────┬────────────────┬────┬───────────────────┬────────────────┬───────────────┬───────────┐
@@ -34,8 +33,9 @@
 #define SEEHI_C2C_PCIE_TEST			0
 #define SEEHI_TILE14_PCIE_TEST		0
 #define SEEHI_4TILE_PCIE_TEST		0
-#define SEEHI_2DIE_4TILE_PCIE_TEST	(CONFIG_RHEA_DIE_MAX == 2)
-#define SEEHI_4DIE_1TILE_PCIE_TEST	(CONFIG_RHEA_DIE_MAX == 4)
+#define SEEHI_2DIE_4TILE_PCIE_TEST	0
+#define SEEHI_4DIE_1TILE_PCIE_TEST	0
+#define SEEHI_2DIE_1TILE_PCIE_TEST	1
 #define SEEHI_DUAL_PCIE_TEST		0
 
 #define SEEHI_MSIX_ENABLE			0
@@ -302,6 +302,14 @@ uint64_t get_pcie_base(uint32_t pcie_sel) {
 		printf("pcie_sel error !!!\n");
 		return 0;
 	}
+}
+
+static inline void delay(uint32_t value)
+{
+	volatile uint32_t i, j;
+
+	for(i = 0; i < value; i++)
+		for(j = 0; j < 1000; j++);
 }
 
 static inline void writel(uint32_t value, uint32_t address)
@@ -939,13 +947,8 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	seehi_pcie_ep_set_bar_flag(dbi_base, bar, PCI_BASE_ADDRESS_MEM_TYPE_64 | PCI_BASE_ADDRESS_MEM_PREFETCH);
 	/* BAR Config End */
 
-#if CONFIG_RHEA_D2D_SELF_ID == 0
 	vid = 0x5348;    //SH
 	did = 0xa510;    //a510
-#else
-	vid = 0x3333;    //SH
-	did = 0x8888;    //a510
-#endif
 
 	writeq(did << 16 | vid, dbi_base + 0x00);  //vendor id & device id
 
@@ -992,7 +995,7 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	}
 	dw_pcie_link_set_lanes(dbi_base, pcie->dev->lanes);  //lanes
 
-	mdelay(1);
+	systimer_delay(1, IN_MS);
 
 	writeq(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
 	writeq(0x01402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
@@ -1063,7 +1066,7 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 			// break;
 		}
 
-		mdelay(1);
+		systimer_delay(1, IN_MS);
 		timeout++;
 
 		if (val != val_cmp) {
@@ -1582,6 +1585,9 @@ int main()
 	uint32_t cnt = 0;
 	struct HAL_PCIE_HANDLE *pcie = &s_pcie;
 	int ret;
+	printf("chip%d die%d\n",
+		D2D_C2C_CHIP, CONFIG_RHEA_D2D_SELF_ID);
+	rhea_clci_clk_init();
 
 #if SEEHI_FPGA_PCIE_TEST
 	s_pcie.dev = &g_pcieDevX8;
@@ -1608,7 +1614,7 @@ int main()
 	mc_init(TCM_27_CFG_BASE, 4);
 	mc_init(TCM_36_CFG_BASE, 4);
 	mc_init(TCM_37_CFG_BASE, 4);
-#elif SEEHI_4DIE_1TILE_PCIE_TEST
+#elif SEEHI_4DIE_1TILE_PCIE_TEST || SEEHI_2DIE_1TILE_PCIE_TEST
 	mc_init(TCM_14_CFG_BASE, 4);
 #endif
 	g_c2c_base = get_pcie_base(3);
@@ -1616,6 +1622,8 @@ int main()
 	s_pcie_03.dev = &g_pcieDevX16_03;
 	// init_g_pcie(pcie, 3, 16, 16, 5);
 #endif
+
+	systimer_init();
 
 	GIC_Init();
 
@@ -1625,6 +1633,14 @@ int main()
 
 #if SEEHI_FPGA_PCIE_TEST
 	printf("PCIe_EP_Init start !!!\n");
+#endif
+
+#if SEEHI_2DIE_4TILE_PCIE_TEST
+	/* when print start, please power on x86 pc */
+	printf("t26:0x%08x\n", REG32(0x2640000000 + 536870912 + 0xc0));
+	printf("t27:0x%08x\n", REG32(0x2740000000 + 536870912 + 0xc0));
+	printf("t36:0x%08x\n", REG32(0x3640000000 + 536870912 + 0xc0));
+	printf("t37:0x%08x\n", REG32(0x3740000000 + 536870912 + 0xc0));
 #endif
 
 #if SEEHI_DUAL_PCIE_TEST
@@ -1641,8 +1657,6 @@ int main()
 
 	printf("SEEHI_DUAL_PCIE_TEST\n");
 #endif
-
-	rhea_clci_clk_init();
 
 #if CONFIG_RHEA_D2D_SELF_ID == 0
 	PCIe_EP_Init(pcie);
@@ -1672,6 +1686,7 @@ int main()
 		systimer_delay(10, IN_S);
 	}
 #endif
+	printf("Host link finished\n");
 
 	ret = rhea_d2d_init();
     if (ret) return ret;
