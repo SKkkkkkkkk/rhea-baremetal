@@ -323,8 +323,8 @@ int vendor_storage_write(uint16_t id, void *pbuf, uint16_t size)
 
 		*(vendor_info.hash) = cal_check_sum((uint8_t *) vendor_info.hdr,
 									EMMC_VENDOR_INFO_SIZE - 8);
-		cnt = vendor_ops((uintptr_t) vendor_info.hdr, part_size * next_index, part_size, 1);
-		return (cnt == part_size) ? size : -EIO;
+		cnt = vendor_ops((uintptr_t) vendor_info.hdr, part_size * next_index, info_size, 1);
+		return (cnt == info_size) ? size : -EIO;
 	}
 	printf("[Vendor]:Vendor has no space left!\n");
 

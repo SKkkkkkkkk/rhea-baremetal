@@ -17,11 +17,8 @@ static unsigned int vendor_action(unsigned char *buf, int buflen)
 {
     int ret_size;
     
-    if (buflen == 0) {
+    if (buflen != 0) {
         memcpy(&vendor_ops, (void *) buf, sizeof(vendor_ops_t));
-        pr_dbg("[Vendor]: receive %s request for item %d with %d bytes\n",
-                vendor_ops.dir ? "read" : "write",
-                vendor_ops.id, vendor_ops.len);
     }
     return 0;
 }
@@ -48,24 +45,26 @@ int main(void)
         while( (ret = xmodemReceiveWithAction(vendor_action, VENDOR_OPS_MAX_LEN)) < 0)
             printf("[Vendor]: Failed to receive request with status %d, retrying ...\n", ret);
 
-        // if (vendor_ops.dir) {
-        //     ret = vendor_storage_read(vendor_ops.id, vendor_ops.data, vendor_ops.len);
-        // } else {
-        //     ret = vendor_storage_write(vendor_ops.id, vendor_ops.data, vendor_ops.len);
-        // }
-        // if (ret != vendor_ops.len) {
-        //     pr_dbg("[Vendor]: The %s data size 0x%x(%d) does not meet expectations 0x%x.\n",
-        //             vendor_ops.dir ? "read" : "write", ret, vendor_ops.len, vendor_ops.len);
-        //     vendor_ops.len = -1;
-        // } else {
-        //     vendor_ops.len = ret;
-        //     pr_dbg("[Vendor]: 0x%x bytes %s ( ", ret, vendor_ops.dir ? "read" : "written");
-        //     for (i = 0; i < ret; i++) {
-        //         pr_dbg("%02x ", vendor_ops.data[i]);
-        //     }
-        //     pr_dbg(" \n");
-        // }
-        ret = xmodemTransmit((void *) &vendor_ops, ret + 4);
+        if (vendor_ops.dir) {
+            ret = vendor_storage_read(vendor_ops.id, vendor_ops.data, vendor_ops.len);
+        } else {
+            ret = vendor_storage_write(vendor_ops.id, vendor_ops.data, vendor_ops.len);
+        }
+
+        if (ret != vendor_ops.len) {
+            pr_dbg("[Vendor]: The %s data size 0x%x(%d) does not meet expectations 0x%x.\n",
+                    vendor_ops.dir ? "read" : "write", ret, vendor_ops.len, vendor_ops.len);
+            vendor_ops.len = -1;
+        } else {
+            vendor_ops.len = ret;
+            pr_dbg("[Vendor]: 0x%x bytes %s ( ", ret, vendor_ops.dir ? "read" : "written");
+            for (i = 0; i < ret; i++) {
+                pr_dbg("%02x ", vendor_ops.data[i]);
+            }
+            pr_dbg(" \n");
+        }
+
+        ret = xmodemTransmit((void *) &vendor_ops, VENDOR_OPS_MAX_LEN);
         if (ret < 0) {
             printf("[Vendor]: Write back failed with status %d\n", ret);
         }
