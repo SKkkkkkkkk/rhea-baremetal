@@ -1645,6 +1645,9 @@ int main()
 	rhea_clci_clk_init();
 
 #if CONFIG_RHEA_D2D_SELF_ID == 0
+	/* Write the number of dies in the current chip */
+	writel(0x4147a510 | CONFIG_RHEA_DIE_MAX, 0x46Cff000);
+
 	PCIe_EP_Init(pcie);
 
 	PCIe_EP_Link(pcie);
