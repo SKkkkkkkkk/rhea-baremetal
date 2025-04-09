@@ -6,8 +6,8 @@
 
 #define VENDOR_OPS_MAX_LEN	128
 typedef struct {
-    unsigned short dir : 1; // 0: write, 1: read
     unsigned short id : 15;
+    unsigned short dir : 1; // 0: write, 1: read
 	unsigned short len;
     char data[VENDOR_OPS_MAX_LEN - 4];
 } vendor_ops_t;
@@ -38,13 +38,7 @@ int main(void)
         } else {
             ret = vendor_storage_write(vendor_ops.id, vendor_ops.data, vendor_ops.len);
         }
-
-        if (ret != vendor_ops.len) {
-            vendor_ops.len = -1;
-        } else {
-            vendor_ops.len = ret;
-        }
-
+        vendor_ops.len = ret;
         ret = xmodemTransmit((void *) &vendor_ops, VENDOR_OPS_MAX_LEN);
         if (ret < 0) {
             printf("[Vendor]: Write back failed with status %d\n", ret);

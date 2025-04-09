@@ -3,6 +3,7 @@ CC=aarch64-none-elf-gcc cmake -S ../.. -B build -G Ninja \
 -DPROJECT_NAME=vendor \
 -DAPP_CMAKE=app.cmake \
 -DPROJECT_PATH=. \
--DMEM_SCHEME=SRAM \
+-DMEM_SCHEME=CUSTOM \
+-DCUSTOM_LINKER_SCRIPT=linker.ld \
 -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
