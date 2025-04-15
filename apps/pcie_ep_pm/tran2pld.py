@@ -19,4 +19,4 @@ def reorganize_data(input_file, output_file):#{{{
 # 计算需要添加的空行数，确保行数��
 
 if __name__ == '__main__':
-    reorganize_data(sys.argv[1],"boot_rom.hex")
+    reorganize_data(sys.argv[1],"build/boot_rom.hex")

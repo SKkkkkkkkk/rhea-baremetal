@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rm ./build/boot_rom*.hex
+rm ./build/boot_rom*.hex 2>/dev/null
 
 for (( chip_id=0; chip_id<2; chip_id++ ))
 do
@@ -14,7 +14,6 @@ do
         -DPROJECT_NAME=d2d_c2c \
         -DAPP_CMAKE=app.cmake \
         -DCMAKE_BUILD_TYPE=Release \
-        -DPROJECT_PATH=. \
         -DBOARD=PLD \
         -DCHIP_ID=${chip_id} \
         -DDIE_MAX_NUM=2 \

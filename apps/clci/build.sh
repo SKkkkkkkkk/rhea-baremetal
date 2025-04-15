@@ -6,7 +6,7 @@ SUFFIX=$([[ "$BLOCKING_MODE" == "OFF" ]] && echo "nonblock" || echo "block")$([[
 DIE_MAX_NUM=2
 echo "DIE_MAX_NUM 设置为 ${DIE_MAX_NUM}"
 
-rm ./build/die*_rom.hex.*
+rm ./build/die*_rom.hex.* 2>/dev/null
 
 for (( die_id=0; die_id<DIE_MAX_NUM; die_id++ ))
 do

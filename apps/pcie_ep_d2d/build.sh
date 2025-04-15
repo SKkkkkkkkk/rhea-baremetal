@@ -7,7 +7,7 @@ else
 fi
 echo "DIE_MAX_NUM 设置为 ${DIE_MAX_NUM}"
 
-rm ./build/boot_rom_die*.hex
+rm ./build/boot_rom_die*.hex 2>/dev/null
 
 for (( die_id=0; die_id<DIE_MAX_NUM; die_id++ ))
 do
