@@ -1,9 +1,9 @@
-#include <config.h>
-#include <platform.h>
 #include <stdio.h>
-#include <mmio.h>
-#include <interrupt.h>
-#include <doorbell.h>
+#include "config.h"
+#include "platform.h"
+#include "mmio.h"
+#include "interrupt.h"
+#include "doorbell.h"
 #include "arch_helpers.h"
 
 void db_clear_ext_interrupt(uint64_t db_reg)

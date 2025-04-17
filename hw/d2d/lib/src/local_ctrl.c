@@ -1,5 +1,5 @@
-#include <platform.h>
-#include <local_ctrl.h>
+#include "platform.h"
+#include "local_ctrl.h"
 
 uint64_t local_ctrl_base = CLCI_MCU_LOCAL_CTRL_ADDR;
 

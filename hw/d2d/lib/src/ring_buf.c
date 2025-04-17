@@ -1,5 +1,5 @@
 #include <string.h>
-#include <ring_buf.h>
+#include "ring_buf.h"
 
 int ring_buf_size(ring_buf *rb)
 {

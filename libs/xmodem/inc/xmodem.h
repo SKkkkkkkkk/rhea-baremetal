@@ -13,4 +13,8 @@ typedef unsigned int (*action_t)(unsigned char *buf, int buflen);
 // @return: < 0 on error, size of the received data otherwise
 int xmodemReceiveWithAction(action_t action, int maxsz);
 
+#ifndef XMODEM_RECEIVE_ONLY
+int xmodemTransmit(unsigned char *src, int srcsz);
+#endif
+
 #endif

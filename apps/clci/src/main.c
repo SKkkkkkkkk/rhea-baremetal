@@ -121,48 +121,20 @@ int main(void)
 {
     int link_status;
 	int ret;
-    uint32_t addr, val, i;
+    uint32_t addr, val, i = 0, j = 0;
 
     printf("die%d test start\n", CONFIG_RHEA_D2D_SELF_ID);
 
 	mc_init(TCM_04_CFG_BASE, 4);
     printf("mc_init finished\n");
 
+    rhea_clci_clk_init();
+
     ret = rhea_d2d_init();
     printf("rhea_d2d_init finished (%d)\n", ret);
 	if (ret) goto stop;
 
-#if CONFIG_RHEA_D2D_SELF_ID == 0
-    clci_device_reg_base_set(0x9c00000000 + 0x20200000 + 0x21000);
-    mailbox_sys_init();
-    printf("===[%d]mailbox_sys_init (%d)\n", __LINE__, ret);
-	if (ret) goto stop;
-
-    // ret = rhea_d2d_select_tile(1, 0x04, 0);
-    // printf("===[%d]rhea_d2d_select_tile (%d)\n", __LINE__, ret);
-	// if (ret) goto stop;
-    // for (i = 0; i <= 5; i++) {
-    //     udelay(1000);
-    //     rhea_d2d_writel(i, 0x45000000);
-    //     val = 0;
-    //     rhea_d2d_readl(&val, 0x45000000);
-    //     printf("===[%d] i: %d, val:%d\n", __LINE__, i, val);
-    // }
-    // rhea_d2d_release_tile();
-
-    // do {
-    //     link_status = clci_link_status();
-    //     printf("===[%d]%s  link_status:0x%x, 0x3003c: 0x%x, 0x21054:0x%x, 0x30004:0x%x, 0x17c1c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x\n",
-    //         __LINE__, __func__, link_status,
-    //         mmio_read_32(0x9c00000000 + 0x20200000 + 0x3003c),
-    //         mmio_read_32(0x9c00000000 + 0x20200000 + 0x21054),
-    //         mmio_read_32(0x9c00000000 + 0x20200000 + 0x30004),
-    //         mmio_read_32(0x9c00000000 + 0x20200000 + 0x17c1c),
-    //         mmio_read_32(0x9c00000000 + 0x20200000 + 0x17c24),
-    //         mmio_read_32(0x9c00000000 + 0x20200000 + 0x17c30));
-    // } while (link_status);
-
-#else
+#if CONFIG_RHEA_D2D_SELF_ID == 1
 
     // ret = rhea_d2d_select_tile(1, 0x04, 0);
     // printf("===[%d]rhea_d2d_select_tile (%d)\n", __LINE__, ret);
@@ -185,66 +157,84 @@ int main(void)
     ret = data_trans_test();
 	if (ret) goto stop;
 
-    for (i = 0; i < 4; i++) {
-        printf("=== clci%d relink test\n", i);
-        clci_device_reg_base_set(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x21000);
-        mailbox_sys_init();
-        printf("=== mailbox_sys_init\n");
-        ret = clci_relink();
-        printf("=== clci_relink (%d)\n", ret);
-        if (ret) goto stop;
-        printf("===[%d]%s clc0 0x%x, clci1 0x%x, clci2 0x%x, clci3 0x%x\n", __LINE__, __func__,
-            mmio_read_32(0x9c00000000 + 0x20200000 + 0x3003c),
-            mmio_read_32(0x9c00000000 + 0x20400000 + 0x3003c),
-            mmio_read_32(0x9c00000000 + 0x20600000 + 0x3003c),
-            mmio_read_32(0x9c00000000 + 0x20800000 + 0x3003c));
-        link_status = clci_link_status();
-        printf("=== clci%d link_status:0x%x, 0x3003c: 0x%x, 0x21054:0x%x, 0x30004:0x%x, 0x17c1c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x\n",
-            i, link_status,
-            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x3003c),
-            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x21054),
-            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x30004),
-            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c1c),
-            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c24),
-            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c30));
-        ret = data_trans_test();
-        if (ret) goto stop;
-        ret = clci_relink_2();
-        printf("[%d]clci_relink_2 (%d)\n", __LINE__, ret);
-        if (ret) goto stop;
-        printf("===[%d]%s clc0 0x%x, clci1 0x%x, clci2 0x%x, clci3 0x%x\n", __LINE__, __func__,
-            mmio_read_32(0x9c00000000 + 0x20200000 + 0x3003c),
-            mmio_read_32(0x9c00000000 + 0x20400000 + 0x3003c),
-            mmio_read_32(0x9c00000000 + 0x20600000 + 0x3003c),
-            mmio_read_32(0x9c00000000 + 0x20800000 + 0x3003c));
-        link_status = clci_link_status();
-        printf("=== clci%d link_status:0x%x, 0x3003c: 0x%x, 0x21054:0x%x, 0x30004:0x%x, 0x17c1c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x\n",
-            i, link_status,
-            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x3003c),
-            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x21054),
-            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x30004),
-            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c1c),
-            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c24),
-            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c30));
-        ret = data_trans_test();
-        if (ret) goto stop;
+    for (j = 0; j < 2; j++) {
+        printf("test cnt %d\n", j);
+        for (i = 0; i < 4; i++) {
+            printf("=== clci%d relink test\n", i);
+            clci_device_reg_base_set(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x21000);
+            printf("=== clci_device_reg_base_set\n");
+            ret = clci_relink();
+            printf("=== clci_relink (%d)\n", ret);
+            if (ret) goto stop;
+            printf("===[%d]%s clc0 0x%x, clci1 0x%x, clci2 0x%x, clci3 0x%x\n", __LINE__, __func__,
+                mmio_read_32(0x9c00000000 + 0x20200000 + 0x3003c),
+                mmio_read_32(0x9c00000000 + 0x20400000 + 0x3003c),
+                mmio_read_32(0x9c00000000 + 0x20600000 + 0x3003c),
+                mmio_read_32(0x9c00000000 + 0x20800000 + 0x3003c));
+            link_status = clci_link_status();
+            printf("=== clci%d link_status:0x%x, 0x3003c: 0x%x, 0x21054:0x%x, 0x30004:0x%x, 0x17c1c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x\n",
+                i, link_status,
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x3003c),
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x21054),
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x30004),
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c1c),
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c24),
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c30));
+            printf("=== clci%d reg dump (0x30400:0x%x, 0x30500:0x%x, 0x30600:0x%x, 0x30014:0x%x)\n",
+                i,
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x30400),
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x30500),
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x30600),
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x30014));
+            if (link_status) {
+                ret = link_status;
+                goto stop;
+            }
+            ret = data_trans_test();
+            if (ret) goto stop;
+            ret = clci_relink_2();
+            printf("[%d]clci_relink_2 (%d)\n", __LINE__, ret);
+            if (ret) goto stop;
+            printf("===[%d]%s clci0 0x%x, clci1 0x%x, clci2 0x%x, clci3 0x%x\n", __LINE__, __func__,
+                mmio_read_32(0x9c00000000 + 0x20200000 + 0x3003c),
+                mmio_read_32(0x9c00000000 + 0x20400000 + 0x3003c),
+                mmio_read_32(0x9c00000000 + 0x20600000 + 0x3003c),
+                mmio_read_32(0x9c00000000 + 0x20800000 + 0x3003c));
+            link_status = clci_link_status();
+            printf("=== clci%d link_status:0x%x, 0x3003c: 0x%x, 0x21054:0x%x, 0x30004:0x%x, 0x17c1c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x\n",
+                i, link_status,
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x3003c),
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x21054),
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x30004),
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c1c),
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c24),
+                mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c30));
+            if (link_status) {
+                ret = link_status;
+                goto stop;
+            }
+            ret = data_trans_test();
+            if (ret) goto stop;
+        }
     }
-
-
 #endif
+
 stop:
-    printf("===[%d] stop\n", __LINE__);
-	while (1) {
-        // for (i = 0; i < 4; i++) {
-        //     printf("=== clci%d 0x3003c: 0x%x, 0x21054:0x%x, 0x30004:0x%x, 0x17c1c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x\n",
-        //         i,
-        //         mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x3003c),
-        //         mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x21054),
-        //         mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x30004),
-        //         mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c1c),
-        //         mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c24),
-        //         mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c30));
-        // }
+    printf("===[%d] stop, ret=%d\n", __LINE__, ret);
+#if CONFIG_RHEA_D2D_SELF_ID == 1
+    clci_dump(0);
+    clci_dump(1);
+    ret = 100;
+	while (i < 4 && ret--) {
+        printf("=== clci%d 0x3003c: 0x%x, 0x21054:0x%x, 0x2105c:0x%x, 0x17c24:0x%x, 0x17c30:0x%x\n",
+            i,
+            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x3003c),
+            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x21054),
+            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x2105c),
+            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c24),
+            mmio_read_32(0x9c00000000 + 0x20200000 + (i * 0x200000) + 0x17c30));
     }
+#endif
+    while (1);
     return 0;
 }

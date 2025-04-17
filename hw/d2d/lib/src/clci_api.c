@@ -1,4 +1,4 @@
-#include "string.h"
+#include <string.h>
 #include "local_ctrl.h"
 #include "stdio.h"
 #include "log.h"
@@ -8,7 +8,7 @@
 
 inline static void init_sync_msg_reg(void)
 {
-	mmio_write_32(LOCAT_CTRL_REG_ADDR(msg3), 0);
+	mmio_write_32(LOCAL_CTRL_REG_ADDR(msg3), 0);
 }
 /*
  * clci_init_firmware()
@@ -38,4 +38,5 @@ int clci_init_firmware()
 void clci_device_reg_base_set(uint64_t clci_reg_base)
 {
 	local_ctrl_base_set(clci_reg_base);
+	mailbox_reg_address_refresh();
 }

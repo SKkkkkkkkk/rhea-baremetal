@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include "clci_mcu_reg.h"
+#include "commands_sys.h"
 
 #if defined(DEBUG)
 #define pr_dbg(fmt, ...)    printf(fmt, __VA_ARGS__)

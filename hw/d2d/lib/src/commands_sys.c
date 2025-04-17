@@ -3,14 +3,16 @@
 	Some features need to be combined sequentially with the following APIs.
 */
 #include <string.h>
-#include <commands_sys.h>
-#include <commands_common.h>
-#include <mailbox_sys.h>
-#include <mmio.h>
+#include "commands_sys.h"
+#include "commands_common.h"
+#include "mailbox_sys.h"
+#include "mmio.h"
+#include "clci_common.h"
+#include "log.h"
 
 #include "delay.h"
 
-#define MAILBOX_SYS_TIMEOUT_MS 5000
+#define MAILBOX_SYS_TIMEOUT_MS 1000
 /*
 	read register from local/remote die
 
@@ -194,7 +196,33 @@ int32_t cmd_clci_common(int32_t die, uint8_t cmd)
 	item.res = die;
 	in_buf[0] = cmd;
 	memcpy(&in_buf[1], &item, sizeof(item));
-	return mailbox_sys_send(in_buf, 1 + sizeof(item), out_buf, MAILBOX_SYS_DATA_MAX, MAILBOX_SYS_TIMEOUT_MS + 5);
+
+	return mailbox_sys_send(in_buf, 1 + sizeof(item), out_buf, MAILBOX_SYS_DATA_MAX, MAILBOX_SYS_TIMEOUT_MS + 4000);
+}
+/*
+ *send a cmd to the firmware with no ACK mode, in this mode, the firmware receive the cmd, execute the cmd, and
+ *do not send any message back, after sending the cmd, this function return back immediately
+ *
+ * input:
+ *	 die
+ *		0 : local die
+ *		1 : remote die
+ *	cmd
+ *		reference command name
+ *return:
+ *	<0	: fail and return error code
+ *	=0	: success
+ */
+int32_t cmd_clci_common_noack(int32_t die, uint8_t cmd)
+{
+	struct cmd_common_t item;
+	uint8_t in_buf[MAILBOX_SYS_DATA_MAX] = { 0 };
+
+	item.res = die;
+	in_buf[0] = cmd;
+	memcpy(&in_buf[1], &item, sizeof(item));
+
+	return mailbox_sys_send_noack(in_buf, 1 + sizeof(item), MAILBOX_SYS_TIMEOUT_MS + 5);
 }
 
 /*
@@ -224,12 +252,34 @@ int32_t cmd_clci_delayline_tracking(int32_t die, uint32_t temp)
 }
 
 /*
-	a simple clci relink api
+ * enable steam mode
+ *
+ * return:
+ *	0 : success
+ *	1 : fail
+ */
+int32_t clci_enable_steam_mode(void)
+{
+	uint32_t val = 0;
 
-return:
-	0	: success
-	1 	: fail
-*/
+	for (int id = 0; id < 2; id++) {
+		if (cmd_clci_get_reg(id, CLCI_MCU_BIU_ADDR + 0x3c, &val) < 0)
+			return 1;
+
+		if (cmd_clci_set_reg(id, CLCI_MCU_BIU_ADDR + 0x3c, val | (1 << 23)))
+			return 1;
+	}
+
+	return 0;
+}
+
+/*
+ * a simple clci relink api
+ *
+ * return:
+ *	0 : success
+ *	1 : fail
+ */
 int32_t clci_relink()
 {
 	int32_t ret = 0;
@@ -257,6 +307,13 @@ int32_t clci_relink_2()
 
 	if ((ret = cmd_clci_common(2, CMD_RESET)) < 0)
 		return ret;
+
+	for (int id = 0; id < 2; id++) {
+		uint32_t val = 0;
+
+		cmd_clci_get_reg(id, 0x3003c, &val);
+		cmd_clci_set_reg(id, 0x3003c, val | (1 << 2));
+	}
 
 	if ((ret = cmd_clci_common(2, CMD_APHY_PLL_INIT)) < 0)
 		return ret;
@@ -298,12 +355,56 @@ int32_t clci_link_status()
 	uint32_t regdata_0 = 0;
 	uint32_t regdata_1 = 0;
 
-	cmd_clci_get_reg(1, 0x3003c, &regdata_0);
-	cmd_clci_get_reg(0, 0x3003c, &regdata_1);
+	cmd_clci_get_reg(1, CLCI_MCU_BIU_ADDR + 0x3c, &regdata_0);
+	cmd_clci_get_reg(0, CLCI_MCU_BIU_ADDR + 0x3c, &regdata_1);
 
 	if (((regdata_0 >> 12) & 0x1) && ((regdata_1 >> 12) & 1)) {
 		return 0;
 	}
 
 	return 1;
+}
+
+int32_t clci_bist_loop(int32_t loop_type)
+{
+	int32_t ret = 0;
+
+	if ((ret = cmd_clci_common(2, CMD_RESET)) < 0)
+		return ret;
+
+	// default freq is 3.6Ghz, set div1/div2 to change freq
+	uint32_t data = loop_type << 8;
+	if (loop_type == LOOPBACK_DIE2DIE) {
+		data |= 2;
+	}
+
+	// depend on CLCI_MCU_RAM_ADDR in reg_map.h
+	// for sh, CLCI_MCU_RAM_ADDR=0x10000
+	// for yl, CLCI_MCU_RAM_ADDR=0x10010000
+	if ((ret = cmd_clci_set_reg(0, CLCI_MCU_RAM_ADDR + 0x7c04, data)) < 0)
+		return ret;
+
+	return cmd_clci_common(0, CMD_BIST);
+}
+
+void clci_dump(int id)
+{
+	uint32_t val = 0;
+
+	printf("CLCI DUMP DIE %d INFO\n", id);
+
+	cmd_clci_get_reg(id, CLCI_MCU_LOCAL_CTRL_ADDR + 0x54, &val);
+	printf("clci dump %08x %08x\n", CLCI_MCU_LOCAL_CTRL_ADDR + 0x54, val);
+	cmd_clci_get_reg(id, CLCI_MCU_LOCAL_CTRL_ADDR + 0x5c, &val);
+	printf("clci dump %08x %08x\n", CLCI_MCU_LOCAL_CTRL_ADDR + 0x5c, val);
+	for (int offset = 0; offset <= 0x34; offset += 4) {
+		cmd_clci_get_reg(id, CLCI_MCU_RAM_ADDR + 0x7c00 + offset, &val);
+		printf("clci dump %08x %08x\n", CLCI_MCU_RAM_ADDR + 0x7c00 + offset, val);
+	}
+	for (int lane = 0; lane <= 16; lane++) {
+		cmd_clci_get_reg(id, CLCI_MCU_BIU_ADDR + 0x400 + lane * 0x100, &val);
+		printf("clci dump %08x %08x\n", CLCI_MCU_BIU_ADDR + 0x400 + lane * 0x100, val);
+	}
+	cmd_clci_get_reg(id, CLCI_MCU_BIU_ADDR + 0x3c, &val);
+	printf("clci dump %08x %08x\n", CLCI_MCU_BIU_ADDR + 0x3c, val);
 }

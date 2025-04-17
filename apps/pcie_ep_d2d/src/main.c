@@ -3,7 +3,7 @@
 
 #include "gicv3.h"
 #include "pcie.h"
-#include "systimer.h"
+#include "delay.h"
 #include "common.h"
 #include "dw_apb_gpio.h"
 #include "utils_def.h"
@@ -302,14 +302,6 @@ uint64_t get_pcie_base(uint32_t pcie_sel) {
 		printf("pcie_sel error !!!\n");
 		return 0;
 	}
-}
-
-static inline void delay(uint32_t value)
-{
-	volatile uint32_t i, j;
-
-	for(i = 0; i < value; i++)
-		for(j = 0; j < 1000; j++);
 }
 
 static inline void writel(uint32_t value, uint32_t address)
@@ -1000,7 +992,7 @@ HAL_Status PCIe_EP_Init(struct HAL_PCIE_HANDLE *pcie)
 	}
 	dw_pcie_link_set_lanes(dbi_base, pcie->dev->lanes);  //lanes
 
-	systimer_delay(1, IN_MS);
+	mdelay(1);
 
 	writeq(0x00402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
 	writeq(0x01402200, dbi_base + 0x890);  //GEN3_RELATED_OFF.EQ_PHASE_2_3=0
@@ -1071,7 +1063,7 @@ HAL_Status PCIe_EP_Link(struct HAL_PCIE_HANDLE *pcie)
 			// break;
 		}
 
-		systimer_delay(1, IN_MS);
+		mdelay(1);
 		timeout++;
 
 		if (val != val_cmp) {
@@ -1625,8 +1617,6 @@ int main()
 	// init_g_pcie(pcie, 3, 16, 16, 5);
 #endif
 
-	systimer_init();
-
 	GIC_Init();
 
     IRQ_SetHandler(pcie->dev->vdmIrqNum, pcie_03_irq_handler);
@@ -1635,14 +1625,6 @@ int main()
 
 #if SEEHI_FPGA_PCIE_TEST
 	printf("PCIe_EP_Init start !!!\n");
-#endif
-
-#if SEEHI_2DIE_4TILE_PCIE_TEST
-	/* when print start, please power on x86 pc */
-	printf("t26:0x%08x\n", REG32(0x2640000000 + 536870912 + 0xc0));
-	printf("t27:0x%08x\n", REG32(0x2740000000 + 536870912 + 0xc0));
-	printf("t36:0x%08x\n", REG32(0x3640000000 + 536870912 + 0xc0));
-	printf("t37:0x%08x\n", REG32(0x3740000000 + 536870912 + 0xc0));
 #endif
 
 #if SEEHI_DUAL_PCIE_TEST
@@ -1662,7 +1644,10 @@ int main()
 
 	rhea_clci_clk_init();
 
-#if CONFIG_RHEA_D2D_SELF_ID == 0 || SEEHI_2DIE_4TILE_PCIE_TEST
+#if CONFIG_RHEA_D2D_SELF_ID == 0
+	/* Write the number of dies in the current chip */
+	writel(0x4147a510 | CONFIG_RHEA_DIE_MAX, 0x46Cff000);
+
 	PCIe_EP_Init(pcie);
 
 	PCIe_EP_Link(pcie);

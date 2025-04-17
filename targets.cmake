@@ -18,6 +18,8 @@ add_subdirectory(hw/cru EXCLUDE_FROM_ALL)
 add_subdirectory(hw/d2d EXCLUDE_FROM_ALL)
 add_subdirectory(hw/dma/dw_axi_dma EXCLUDE_FROM_ALL)
 add_subdirectory(hw/pwm EXCLUDE_FROM_ALL)
+add_subdirectory(hw/vendor EXCLUDE_FROM_ALL)
+add_subdirectory(hw/wdt/dw_apb_wdt EXCLUDE_FROM_ALL)
 
 #-------------------------------------------------------------------------------
 # Libraries

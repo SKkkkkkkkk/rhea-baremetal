@@ -10,13 +10,15 @@
 	MSG3 is controll register
 		bit31:24	: command type
 		bit23:16	: error code
-		bit15:6		: reserved
+		bit15		: error die
+		bit14:8		: error lane
+		bit7:6		: reserved
 		bit5		: sys-mcu request bit
 		bit4		: clci-mcu response bit
 		bit3:0		: clci status
 */
-#include <commands_common.h>
-#include <mmio.h>
+#include "commands_common.h"
+#include "mmio.h"
 
 void clci_set_resp()
 {
@@ -74,13 +76,15 @@ void clci_resp(uint8_t cmd)
 	clci_set_resp();
 }
 
-void clci_set_status(int status)
+void clci_set_status(int32_t status)
 {
 	mmio_write_32(SYS_CLCI_CTRL_MSG, (mmio_read_32(SYS_CLCI_CTRL_MSG) & 0xfffffff0) | (status & 0xf));
 }
 
-void clci_set_error(int error)
+/*
+	error include bit23:8 of MSG3
+*/
+void clci_set_error(int32_t error)
 {
-	unsigned char e = error;
-	mmio_write_32(SYS_CLCI_CTRL_MSG, (mmio_read_32(SYS_CLCI_CTRL_MSG) & 0xff00ffff) | (e << 16));
+	mmio_write_32(SYS_CLCI_CTRL_MSG, (mmio_read_32(SYS_CLCI_CTRL_MSG) & 0xff0000ff) | (error << 8));
 }

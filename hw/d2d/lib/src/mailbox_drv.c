@@ -1,11 +1,11 @@
-#include <config.h>
 #include <string.h>
 #include <stdio.h>
-#include <log.h>
-#include <mmio.h>
-#include <mailbox_drv.h>
-#include <doorbell.h>
-#include <local_ctrl.h>
+#include "config.h"
+#include "log.h"
+#include "mmio.h"
+#include "mailbox_drv.h"
+#include "doorbell.h"
+#include "local_ctrl.h"
 
 #include "clci_errno.h"
 #include "delay.h"
@@ -63,7 +63,7 @@ static int mailbox_trans_ack_set(uint32_t timeout_ms)
 }
 
 #if DOORBELL_MODE_ISR == 1
-void mailbox_doorbell_isr()
+void mailbox_doorbell_isr(void *data)
 {
 	uint32_t db_data;
 
@@ -109,11 +109,11 @@ static int mailbox_pkg_data_check(uint8_t *pkg_buff, uint8_t len)
 	payload_len = *(pkg_buff + MAILBOX_PKG_LEN_OFFSET);
 
 	/*data is too short*/
-	if (len < payload_len + 2)
+	if (len < payload_len + MAILBOX_PKG_LEN_MIN)
 		return CLCI_E_SIZE;
 
 	/*data is too long*/
-	if (len > payload_len + 2)
+	if (len > payload_len + MAILBOX_PKG_LEN_MIN)
 		return CLCI_E_DATA;
 
 	if (maiblbox_blk.role == MAILBOX_ROLE_MASTER)
@@ -184,19 +184,22 @@ static int mailbox_db_trans_start(uint8_t len, uint32_t time_out_ms)
 	return CLCI_SUCCESS;
 }
 /*populate the data package*/
-static int32_t mailbox_pop_send_pkg(uint8_t *data_buff, uint8_t data_len, uint8_t *pkg_buff)
+static int32_t mailbox_pop_send_pkg(uint8_t *data_buff, uint8_t data_len, uint8_t reply, uint8_t *pkg_buff)
 {
 	if (maiblbox_blk.role == MAILBOX_ROLE_MASTER)
 		pkg_buff[MAILBOX_PKG_HEADER_OFFSET] = MAILBOX_PKG_HEADER_TO_MCU;
 	else
 		pkg_buff[MAILBOX_PKG_HEADER_OFFSET] = MAILBOX_PKG_HEADER_TO_SOC;
 
+	pkg_buff[MAILBOX_PKG_REPLY_OFFSET] = reply;
+
 	pkg_buff[MAILBOX_PKG_LEN_OFFSET] = data_len;
+
 	memcpy(&pkg_buff[MAILBOX_PKG_LEN_OFFSET + 1], data_buff, data_len);
 
-	return (data_len + 2);
+	return (data_len + MAILBOX_PKG_LEN_MIN);
 }
-int32_t mailbox_rev(uint8_t *out_buff, uint8_t len, uint32_t timeout_ms)
+int32_t mailbox_rev(uint8_t *out_buff, uint8_t len, uint8_t *replay, uint32_t timeout_ms)
 {
 	int res;
 	uint32_t content_len = 0;
@@ -212,7 +215,7 @@ int32_t mailbox_rev(uint8_t *out_buff, uint8_t len, uint32_t timeout_ms)
 		return CLCI_E_DEVICE;
 	} else if (res == CLCI_E_SIZE) {
 		if (timeout_ms == 0)
-			return CLCI_SUCCESS;
+			return CLCI_E_SIZE;
 
 		while (res == CLCI_E_SIZE) {
 			time_count += 10;
@@ -234,6 +237,8 @@ int32_t mailbox_rev(uint8_t *out_buff, uint8_t len, uint32_t timeout_ms)
 	}
 
 	content_len = data_pkg.buff[MAILBOX_PKG_LEN_OFFSET];
+	*replay = data_pkg.buff[MAILBOX_PKG_REPLY_OFFSET];
+
 	if (content_len > len) {
 		res = len;
 	} else {
@@ -246,18 +251,18 @@ int32_t mailbox_rev(uint8_t *out_buff, uint8_t len, uint32_t timeout_ms)
 	return res;
 }
 
-int32_t mailbox_send(uint8_t *in_buff, uint8_t len, uint32_t timeout_ms)
+int32_t mailbox_send(uint8_t *in_buff, uint8_t len, uint8_t reply, uint32_t timeout_ms)
 {
 	int32_t i_pos = 0;
 	int32_t res = CLCI_SUCCESS;
 	uint32_t send_data = 0;
 	int32_t remain_len = len;
-	uint8_t send_buff[MAILBOX_DATA_MAX + 2] = { 0 };
+	uint8_t send_buff[MAILBOX_DATA_MAX + MAILBOX_PKG_LEN_MIN] = { 0 };
 
 	if (maiblbox_blk.mailbox_status == MAILBOX_STATUS_ERROR)
 		return CLCI_E_DEVICE;
 
-	remain_len = mailbox_pop_send_pkg(in_buff, len, send_buff);
+	remain_len = mailbox_pop_send_pkg(in_buff, len, reply, send_buff);
 
 	while (remain_len > DB_TRANS_ONE_FRAM_LEN) {
 		memcpy(&send_data, (send_buff + i_pos), sizeof(uint32_t));
@@ -295,6 +300,22 @@ SEND_ERR:
 	ERROR(mailbox, "db communication fail\n");
 
 	return res;
+}
+void mailbox_reg_address_refresh(void)
+{
+	if (maiblbox_blk.role == MAILBOX_ROLE_MASTER) {
+		maiblbox_blk.reg.reg_doorbell_rev = CLCI_MCU_LOCAL_CTRL_DOORBELL_TO_SOC;
+		maiblbox_blk.reg.reg_doorbell_send = CLCI_MCU_LOCAL_CTRL_DOORBELL_TO_MCU;
+
+		maiblbox_blk.reg.reg_send = CLCI_MCU_LOCAL_CTRL_MSG2;
+		maiblbox_blk.reg.reg_rev = CLCI_MCU_LOCAL_CTRL_MSG0;
+	} else {
+		maiblbox_blk.reg.reg_doorbell_rev = CLCI_MCU_LOCAL_CTRL_DOORBELL_TO_MCU;
+		maiblbox_blk.reg.reg_doorbell_send = CLCI_MCU_LOCAL_CTRL_DOORBELL_TO_SOC;
+
+		maiblbox_blk.reg.reg_send = CLCI_MCU_LOCAL_CTRL_MSG0;
+		maiblbox_blk.reg.reg_rev = CLCI_MCU_LOCAL_CTRL_MSG2;
+	}
 }
 
 int32_t mailbox_init(uint8_t role)
