@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.15...3.28)
-include(cmake_helper/common/out_of_source.cmake)
-include(cmake_helper/common/helper_func.cmake)
-include(cmake_helper/cross_compile/toolchain_file.cmake)
-include(cmake_helper/common/custom_build_type.cmake)
+include(cmake_helper/out_of_source.cmake)
+include(cmake_helper/helper_func.cmake)
+include(cmake_helper/toolchain_file.cmake)
+include(cmake_helper/custom_build_type.cmake)
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install CACHE INTERNAL "Install path")
 
 set(SDK_PATH ${CMAKE_SOURCE_DIR})
@@ -30,8 +30,8 @@ else()
 	set(HEAP_SIZE  "0x4000" CACHE STRING "Heap Size(In Bytes)")
 endif()
 
-set(CPU_ARCH "A55" CACHE STRING "A55 C920")
-set_property(CACHE CPU_ARCH PROPERTY STRINGS "A55" "C920")
+set(CPU_ARCH "A55" CACHE STRING "A55 AX65")
+set_property(CACHE CPU_ARCH PROPERTY STRINGS "A55" "AX65")
 
 set(ENABLE_LTO "OFF" CACHE BOOL "Enable Link Time Optimization")
 
@@ -140,7 +140,7 @@ target_link_libraries($CACHE{PROJECT_NAME}.elf
 		$<$<STREQUAL:$CACHE{CPU_ARCH},A55>:aarch64_startup>
 		$<$<STREQUAL:$CACHE{CPU_ARCH},A55>:newlib_stubs>
 		$<$<STREQUAL:$CACHE{CPU_ARCH},A55>:gicv3>
-		$<$<STREQUAL:$CACHE{CPU_ARCH},C920>:c920_startup>
+		$<$<STREQUAL:$CACHE{CPU_ARCH},AX65>:ax65_startup>
 		${app_dep}
 		-lc
 		-lm
@@ -199,4 +199,4 @@ set_property(TARGET $CACHE{PROJECT_NAME}.elf
 )
 
 # compile database
-include(cmake_helper/common/compile_database.cmake)
+include(cmake_helper/compile_database.cmake)

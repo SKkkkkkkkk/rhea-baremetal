@@ -1,4 +1,4 @@
-set(TARGET_NAME c920_startup)
+set(TARGET_NAME ax65_startup)
 
 add_library(${TARGET_NAME} OBJECT)
 
