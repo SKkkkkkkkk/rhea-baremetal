@@ -1,0 +1,7 @@
+if($CACHE{CPU_ARCH} STREQUAL "A55")
+    include(${CMAKE_CURRENT_LIST_DIR}/aarch64/aarch64.cmake)
+elseif($CACHE{CPU_ARCH} STREQUAL "AX65")
+    include(${CMAKE_CURRENT_LIST_DIR}/ax65/ax65.cmake)
+else()
+    message(FATAL_ERROR "Unsupported CPU architecture: $CACHE{CPU_ARCH}")
+endif()
