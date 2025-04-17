@@ -44,12 +44,10 @@ set(compile_options_common
 	-mstrict-align
 	$<$<BOOL:$CACHE{ENABLE_LTO}>:-flto>
 	-D$CACHE{BOARD}
-	$<$<BOOL:$CACHE{ENABLE_MMU}>:-DENABLE_MMU>
 	-I${SDK_PATH}/common/inc
-	-I${SDK_PATH}/hw/cpu/aarch64/inc # aarch64 helper
 )
 
-set(link_options_common
+set(link_options
 	-static
 	-nostdlib # we will explicitly link libc.a, libm.a and libgcc.a later
 	$<$<BOOL:$CACHE{ENABLE_LTO}>:-flto>
@@ -61,52 +59,24 @@ set(link_options_common
 	$<$<NOT:$<CONFIG:Debug,RelWithDebInfo>>:-Wl,--strip-all>
 )
 
-## cpu arch specific
-set(ENABLE_MMU "OFF" CACHE BOOL "Enable MMU")
-if($CACHE{CPU_ARCH} STREQUAL "A55")
-	set(PRIMARY_CORE "0" CACHE STRING "Primary Core: 0, 1, 2, 3")
-	set_property(CACHE PRIMARY_CORE PROPERTY STRINGS  0 1 2 3)
-	set(compile_options_arch -D$CACHE{CPU_ARCH} -mlittle-endian -mcpu=cortex-a55 -mtune=cortex-a55 -DPRIMARY_CORE=$CACHE{PRIMARY_CORE})
-else()
-	set(compile_options_arch -D$CACHE{CPU_ARCH} -march=rv64gc -mabi=lp64d)
-endif()
-
 ## compiler specific
-
-### set sysroot for clang
-if(${IS_CLANG})
-	set(compile_options_common --sysroot=${SDK_PATH}/libs/arm_gnu/13.2.rel1/sysroot ${compile_options_common})
-	set(link_options_common --sysroot=${SDK_PATH}/libs/arm_gnu/13.2.rel1/sysroot ${link_options_common})
-endif()
-
-### libgcc
-if(${IS_CLANG})
-	set(LIBGCC ${SDK_PATH}/libs/arm_gnu/13.2.rel1/builtins/libgcc.a)
-else()
-	set(LIBGCC "-lgcc")
-endif()
-
-### set target triple for clang
-if(${IS_CLANG})
-	set(compile_options_arch -target aarch64-none-elf ${compile_options_arch})
-	set(link_options_common -target aarch64-none-elf ${link_options_common})
-endif()
 
 if(${IS_GCC})
 	### With ld.bfd version 2.39 and newer new warnings are added. 
 	### Skip those since we are not loaded by a elf loader.
 	if(${CMAKE_C_COMPILER_VERSION} VERSION_GREATER_EQUAL 12.2.0)
-		set(link_options_common ${link_options_common} -Wl,--no-warn-rwx-segments)
+		list(APPEND link_options -Wl,--no-warn-rwx-segments)
 	endif()
 	# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105523
-	set(compile_options_common --param=min-pagesize=0 ${compile_options_common})
+	list(APPEND compile_options_common --param=min-pagesize=0)
 endif()
 
-## this apply to all targets
+## Adds options to the COMPILE_OPTIONS directory property. 
+## These options are used when compiling targets from the current directory and below.
+add_compile_options(${compile_options_common}) # 扩散到所有目标
 
-### Adds options to the COMPILE_OPTIONS directory property. 
-### These options are used when compiling targets from the current directory and below.
-add_compile_options(${compile_options_arch} ${compile_options_common})
+# cpu arch target
+include(hw/cpu/cpu_arch.cmake)
 
 # targets
 set_non_empty_cache(APP_CMAKE "" FILEPATH "Path to the app.cmake") # set APP_CMAKE default value to empty string, so that it must be provided by the user
@@ -132,19 +102,17 @@ target_compile_options($CACHE{PROJECT_NAME}.elf
 
 target_link_options($CACHE{PROJECT_NAME}.elf
 	PRIVATE
-		${link_options_common}
+		${link_options}
 )
 
 target_link_libraries($CACHE{PROJECT_NAME}.elf
 	PRIVATE
-		$<$<STREQUAL:$CACHE{CPU_ARCH},A55>:aarch64_startup>
-		$<$<STREQUAL:$CACHE{CPU_ARCH},A55>:newlib_stubs>
-		$<$<STREQUAL:$CACHE{CPU_ARCH},A55>:gicv3>
-		$<$<STREQUAL:$CACHE{CPU_ARCH},AX65>:ax65_startup>
+		$<$<STREQUAL:$CACHE{CPU_ARCH},A55>:newlib_stubs> # right now only a55 has newlib_stubs
+		${CPU_ARCH_LIB}
 		${app_dep}
 		-lc
 		-lm
-		${LIBGCC}
+		-lgcc
 )
 
 if("$CACHE{MEM_SCHEME}" STREQUAL "CUSTOM")

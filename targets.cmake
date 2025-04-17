@@ -4,8 +4,6 @@
 #-------------------------------------------------------------------------------
 # Hardware Components
 #-------------------------------------------------------------------------------
-add_subdirectory(hw/cpu/aarch64 EXCLUDE_FROM_ALL)
-add_subdirectory(hw/cpu/ax65 EXCLUDE_FROM_ALL)
 add_subdirectory(hw/gic/v3_v4 EXCLUDE_FROM_ALL)
 add_subdirectory(hw/uart/pl011 EXCLUDE_FROM_ALL)
 add_subdirectory(hw/uart/dw_apb_uart EXCLUDE_FROM_ALL)
