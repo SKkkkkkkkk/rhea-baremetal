@@ -55,8 +55,6 @@ set(link_options
 	-Wl,--gc-sections
 	-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/$CACHE{PROJECT_NAME}.map
 	-Wl,--print-memory-usage
-	-Wl,--wrap=memcpy -Wl,--wrap=memmove -Wl,--wrap=memset -Wl,--wrap=memcmp -Wl,--wrap=strlen
-	$<$<NOT:$<CONFIG:Debug,RelWithDebInfo>>:-Wl,--strip-all>
 )
 
 ## compiler specific
@@ -102,14 +100,15 @@ target_compile_options($CACHE{PROJECT_NAME}.elf
 
 target_link_options($CACHE{PROJECT_NAME}.elf
 	PRIVATE
+		${compile_options_arch}
 		${link_options}
 )
 
 target_link_libraries($CACHE{PROJECT_NAME}.elf
 	PRIVATE
-		$<$<STREQUAL:$CACHE{CPU_ARCH},A55>:newlib_stubs> # right now only a55 has newlib_stubs
 		${CPU_ARCH_LIB}
 		${app_dep}
+		newlib_stubs
 		-lc
 		-lm
 		-lgcc

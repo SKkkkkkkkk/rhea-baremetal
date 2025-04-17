@@ -25,6 +25,7 @@ static bool console_init = false;
 
 #if defined QEMU
 
+#ifdef A55
 #include "pl011.h"
 void console_config(int console_id __unused, int console_input_clk __unused, int baudrate __unused)
 {
@@ -61,6 +62,38 @@ int _read(int fd __unused, char* ptr, int len)
 		ptr[i] = uart_getchar();
 	return i;
 }
+#else
+#include "uart.h"
+void console_config(int console_id __unused, int console_input_clk __unused, int baudrate __unused)
+{
+	console_init = true;
+}
+
+int _write (int fd __unused, char *ptr, int len)
+{
+	if(!console_init)
+		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
+	int i;
+	for(i=0;i<len;i++)
+	{
+		uart_putc(ptr[i]);
+		if(ptr[i] == '\n')
+			uart_putc('\r');
+	}
+	return i;
+}
+
+int _read(int fd __unused, char* ptr, int len)
+{
+	if(!console_init)
+		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
+	int i=0;
+	for(;i<len;i++)
+		ptr[i] = uart_getc();
+	return i;
+}
+
+#endif
 
 #else
 

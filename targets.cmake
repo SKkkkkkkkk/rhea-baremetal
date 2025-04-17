@@ -20,6 +20,7 @@ add_subdirectory(hw/dma/dw_axi_dma EXCLUDE_FROM_ALL)
 add_subdirectory(hw/pwm EXCLUDE_FROM_ALL)
 add_subdirectory(hw/vendor EXCLUDE_FROM_ALL)
 add_subdirectory(hw/wdt/dw_apb_wdt EXCLUDE_FROM_ALL)
+add_subdirectory(hw/uart/16550 EXCLUDE_FROM_ALL)
 
 #-------------------------------------------------------------------------------
 # Libraries

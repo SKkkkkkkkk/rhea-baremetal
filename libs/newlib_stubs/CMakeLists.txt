@@ -8,10 +8,17 @@ target_sources(${TARGET_NAME}
 )
 
 if($CACHE{BOARD} STREQUAL "QEMU")
-	target_link_libraries(${TARGET_NAME}
-		PRIVATE
-			pl011
-	)
+	if($CACHE{CPU_ARCH} STREQUAL "A55")
+		target_link_libraries(${TARGET_NAME}
+			PRIVATE
+				pl011
+		)
+	else()	# AX65
+		target_link_libraries(${TARGET_NAME}
+			PRIVATE
+				16550
+		)
+	endif()
 else()
 	target_link_libraries(${TARGET_NAME}
 		PRIVATE

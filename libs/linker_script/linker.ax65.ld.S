@@ -8,10 +8,10 @@ ENTRY(_start)
 	#define __ROM_BASE VIRT_FLASH
 	#define __ROM_SIZE 64M
 
-	#define __SRAM_BASE VIRT_SECURE_MEM
+	#define __SRAM_BASE 0x80000000
 	#define __SRAM_SIZE 16M
 
-	#define __DDR_BASE 0x80000000
+	#define __DDR_BASE VIRT_DRAM
 	#define __DDR_SIZE 0x80000000 //2G
 #else
 	#define __ROM_BASE BOOTROM_BASE
@@ -25,21 +25,21 @@ ENTRY(_start)
 #endif
 
 #if (MEM_SCHEME == MEM_SCHEME_ROM)
-	#define RO_REGION ROM
+	#define TEXT_REGION ROM
 	#define DATA_VMA_REGION SRAM
 	#define DATA_LMA_REGION ROM
 	#define BSS_REGION SRAM
 	#define HEAP_REGION SRAM
 	#define STACK_REGION SRAM
 #elif (MEM_SCHEME == MEM_SCHEME_SRAM)
-	#define RO_REGION SRAM
+	#define TEXT_REGION SRAM
 	#define DATA_VMA_REGION SRAM
 	#define DATA_LMA_REGION SRAM
 	#define BSS_REGION SRAM
 	#define HEAP_REGION SRAM
 	#define STACK_REGION SRAM
 #elif (MEM_SCHEME == MEM_SCHEME_DRAM)
-	#define RO_REGION DRAM
+	#define TEXT_REGION DRAM
 	#define DATA_VMA_REGION DRAM
 	#define DATA_LMA_REGION DRAM
 	#define BSS_REGION DRAM
@@ -64,50 +64,43 @@ MEMORY {
 
 SECTIONS
 {
-	.ro :
-	{
-		_ro_start = .;
-		*startup*(.text*)
-		*(SORT_BY_ALIGNMENT(.text*))
-		*(SORT_BY_ALIGNMENT(.rodata*))
-		*(.vectors)
-		_ro_end = .;
-	} >RO_REGION
+    .text : {
+        *(.text.init)
+        *(.text*)
+    } > TEXT_REGION
 
-	.data :
-	/* Make sure VMA & LMA alignment >= 32B, 
-	   which allows us to use 16-byte load/store instructions.
-	*/
-	ALIGN(32) 
-	{
-		_data_start = .;
-		*(SORT_BY_ALIGNMENT(.data*))
-		. = ALIGN(32); /* Not only the address should be 32B aligned, but also the size */
-		_data_end = .;
-	} >DATA_VMA_REGION AT>DATA_LMA_REGION
-	_data_start_lma = LOADADDR(.data);
-	_data_size = SIZEOF(.data);
+    .rodata : {
+		*(.srodata*)
+        *(.rodata*)
+    } > TEXT_REGION
 
-	.bss (NOLOAD) :
-	/* Make sure VMA & LMA alignment >= 32B, 
-	   which allows us to use 16-byte load/store instructions.
-	*/
-	ALIGN(32) 
-	{
-		_bss_start = .;
-		*(SORT_BY_ALIGNMENT(.bss*))
-		*(COMMON)
-		. = ALIGN(32); /* Not only the address should be 32B aligned, but also the size */
-		_bss_end = .;
-	} >BSS_REGION
+    /* 这里添加DATA段的ROM地址标记，用于初始化 */
+    _data_rom_start = LOADADDR(.data);
 
-	.heap (NOLOAD) :
-	{
-		end = .;
-		_heap_start = .;
-		. += HEAP_SIZE;
-		_heap_end = .;
-	} >HEAP_REGION
+    .data : {
+        _data_start = .;    /* DATA段在RAM中的开始地址 */
+        *(.sdata*)
+        *(.data*)
+        _data_end = .;      /* DATA段在RAM中的结束地址 */
+    } > DATA_VMA_REGION AT>DATA_LMA_REGION
+
+    .bss : {
+        _bss_start = .;     /* BSS段的开始地址 */
+        *(.sbss*)
+        *(.bss*)
+        *(COMMON)
+        _bss_end = .;       /* BSS段的结束地址 */
+    } > BSS_REGION
+
+    . = ALIGN(8);
+    _end = .;       /* 定义堆开始的位置 */
+    
+    /* 堆区 */
+    .heap (NOLOAD) : {
+        _heap_start = .;
+        . = . + 64K;  /* 分配64KB的堆空间 */
+        _heap_end = .; /* 定义堆结束的位置 */
+    } > HEAP_REGION
 
 	.stack (NOLOAD) :
 	{
