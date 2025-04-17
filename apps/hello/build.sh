@@ -1,4 +1,4 @@
-CC=riscv64-unknown-elf-gcc \
+CC=riscv32-unknown-elf-gcc \
 cmake \
 -S ../.. -B build \
 -G Ninja \
