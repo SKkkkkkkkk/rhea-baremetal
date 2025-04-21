@@ -60,9 +60,14 @@ set(link_options
 ## compiler specific
 
 if(${IS_GCC})
-	### With ld.bfd version 2.39 and newer new warnings are added. 
-	### Skip those since we are not loaded by a elf loader.
-	if(${CMAKE_C_COMPILER_VERSION} VERSION_GREATER_EQUAL 12.2.0)
+	# Check if linker supports --no-warn-rwx-segments option
+	execute_process(
+		COMMAND ${CMAKE_LINKER} --no-warn-rwx-segments -v
+		ERROR_QUIET
+		OUTPUT_QUIET
+		RESULT_VARIABLE LINKER_OPTION_RESULT
+	)
+	if(${LINKER_OPTION_RESULT} EQUAL 0)
 		list(APPEND link_options -Wl,--no-warn-rwx-segments)
 	endif()
 	# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105523
