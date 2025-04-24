@@ -13,7 +13,7 @@ extern char _stack_start[];
 
 // Forward declarations
 void main(void);
-static inline uint32_t get_hartid(void);
+static uint32_t get_hartid(void) __attribute__((naked));
 static inline void cenv_init(void);
 static void secondary_core_boot(void) __attribute__((noreturn));
 static void trap_entry(void) __attribute__ ((interrupt ("machine")));
@@ -73,13 +73,9 @@ _start(void) {
 }
 
 // Get hart ID from mhartid CSR
-static inline uint32_t get_hartid(void) {
-    uint32_t hartid;
-    __asm__ volatile (
-        "csrr %0, mhartid"
-        : "=r"(hartid)
-    );
-    return hartid;
+static uint32_t get_hartid(void) {
+    asm volatile("csrr a0, mhartid");
+    asm volatile("ret");
 }
 
 // Secondary core boot function
