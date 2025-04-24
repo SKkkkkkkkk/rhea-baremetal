@@ -1,8 +1,8 @@
 set(compile_options_arch 
     -D${CPU_ARCH} 
-    -march=rv64gc 
+    -mcpu=ax65 -mtune=ax65
     -mabi=lp64d
-    -mcmodel=medany
+    -mcmodel=large
 )
 add_compile_options(${compile_options_arch}) # 扩散到所有目标
 

@@ -1,4 +1,4 @@
-CC=riscv32-unknown-elf-gcc \
+CC=riscv64-elf-gcc \
 cmake \
 -S ../.. -B build \
 -G Ninja \
@@ -6,6 +6,7 @@ cmake \
 -DPROJECT_NAME=hello \
 -DAPP_CMAKE=app.cmake \
 -DCPU_ARCH=AX65 \
--DMEM_SCHEME=ROM \
+-DBOARD=QEMU \
+-DMEM_SCHEME=DRAM \
 -DCMAKE_BUILD_TYPE=Debug
 cmake --build build

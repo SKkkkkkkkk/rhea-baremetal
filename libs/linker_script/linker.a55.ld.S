@@ -80,10 +80,10 @@ SECTIONS
 	*/
 	ALIGN(32) 
 	{
-		_data_start = .;
+		_data_vma_start = .;
 		*(SORT_BY_ALIGNMENT(.data*))
 		. = ALIGN(32); /* Not only the address should be 32B aligned, but also the size */
-		_data_end = .;
+		_data_vma_end = .;
 	} >DATA_VMA_REGION AT>DATA_LMA_REGION
 	_data_start_lma = LOADADDR(.data);
 	_data_size = SIZEOF(.data);

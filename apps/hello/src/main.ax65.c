@@ -1,6 +1,11 @@
 #include <stdio.h>
+#include <stdint.h>
+#include <nds_intrinsic.h>
+
 int main()
 {
-    printf("hello world from ax65\n");
+    printf("howdy\n");
+    asm volatile(".word 0"); // illegal instruction
+    printf("i'm still alive\n");
     return 0;
 }

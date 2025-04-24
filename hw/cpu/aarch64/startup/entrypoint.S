@@ -136,7 +136,7 @@ clear_loop:
 	b.lo	clear_loop
 clear_loop_end:
 
-	ldr x0, =_data_start
+	ldr x0, =_data_vma_start
 	ldr x1, =_data_start_lma
 	ldr x2, =_data_size
 	cmp x0, x1

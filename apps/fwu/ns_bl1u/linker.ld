@@ -20,10 +20,10 @@ SECTIONS
  .data :
  ALIGN(32)
  {
-  _data_start = .;
+  _data_vma_start = .;
   *(SORT_BY_ALIGNMENT(.data*))
   . = ALIGN(32);
-  _data_end = .;
+  _data_vma_end = .;
  } >SRAM AT>ROM
  _data_start_lma = LOADADDR(.data);
  _data_size = SIZEOF(.data);
