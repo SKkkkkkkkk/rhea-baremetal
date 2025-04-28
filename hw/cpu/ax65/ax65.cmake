@@ -2,7 +2,7 @@ set(compile_options_arch
     -D${CPU_ARCH} 
     -mcpu=ax65 -mtune=ax65
     -mabi=lp64d
-    -mcmodel=large
+    # -mcmodel=large
 )
 add_compile_options(${compile_options_arch}) # 扩散到所有目标
 

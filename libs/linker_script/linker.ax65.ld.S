@@ -65,13 +65,13 @@ MEMORY {
 SECTIONS
 {
     .text : {
-        *(.text.init)
-        *(.text*)
+        KEEP(*(.text.init))
+        *(SORT_BY_ALIGNMENT(.text*))
     } > TEXT_REGION
 
     .rodata : {
-		*(.srodata*)
-        *(.rodata*)
+		*(SORT_BY_ALIGNMENT(.srodata*))
+        *(SORT_BY_ALIGNMENT(.rodata*))
     } > TEXT_REGION
 
     /* 这里添加DATA段的ROM地址标记，用于初始化 */
@@ -79,15 +79,15 @@ SECTIONS
 
     .data : ALIGN(16) {
         _data_vma_start = .;    /* DATA段在RAM中的开始地址 */
-        *(.sdata*)
-        *(.data*)
+        *(SORT_BY_ALIGNMENT(.sdata*))
+        *(SORT_BY_ALIGNMENT(.data*))
         _data_vma_end = .;      /* DATA段在RAM中的结束地址 */
     } > DATA_VMA_REGION AT>DATA_LMA_REGION
 
     .bss : ALIGN(16) {
         _bss_start = .;     /* BSS段的开始地址 */
-        *(.sbss*)
-        *(.bss*)
+        *(SORT_BY_ALIGNMENT(.sbss*))
+        *(SORT_BY_ALIGNMENT(.bss*))
         _bss_end = .;       /* BSS段的结束地址 */
     } > BSS_REGION
 

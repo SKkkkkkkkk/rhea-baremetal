@@ -18,8 +18,8 @@ static inline void cenv_init(void);
 static void secondary_core_boot(void) __attribute__((noreturn));
 static void trap_entry(void) __attribute__ ((interrupt ("machine")));
 
-void __attribute__((naked, section(".text.init"))) 
-_start(void) {
+void __attribute__((naked)) 
+__real_start(void) {
     // Set up Machine Trap-Vector Base-Address Register
     __asm__ volatile (
         "csrw mtvec, %0\n"

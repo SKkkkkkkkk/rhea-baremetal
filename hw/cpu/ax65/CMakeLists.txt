@@ -4,6 +4,6 @@ add_library(${TARGET_NAME} OBJECT)
 
 target_sources(${TARGET_NAME} 
 	PRIVATE
-		startup.S
-		trap.c
+		start.s
+		startup.c
 )
