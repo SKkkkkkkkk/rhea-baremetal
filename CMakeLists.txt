@@ -90,8 +90,11 @@ add_compile_options(${compile_options_common}) # 扩散到所有目标
 include(hw/cpu/cpu_arch.cmake)
 
 # targets
-set_non_empty_cache(APP_CMAKE "" FILEPATH "Path to the app.cmake") # set APP_CMAKE default value to empty string, so that it must be provided by the user
-include($CACHE{APP_CMAKE})
+# set_non_empty_cache(APP_CMAKE "" FILEPATH "Path to the app.cmake") # set APP_CMAKE default value to empty string, so that it must be provided by the user
+set(APP_CMAKE "" CACHE FILEPATH "Path to the app.cmake") # set APPLET_CMAKE default value to empty string, so that it must be provided by the user
+if(NOT $CACHE{APP_CMAKE} STREQUAL "")
+	include($CACHE{APP_CMAKE})
+endif()
 add_executable($CACHE{PROJECT_NAME}.elf)
 include(targets.cmake)
 add_subdirectory(verification EXCLUDE_FROM_ALL)
