@@ -119,6 +119,7 @@ static inline uint32_t readl(uint64_t address)
 
 static inline void HAL_PCIE_DbiWritel(struct HAL_PCIE_HANDLE *pcie, uint32_t reg, uint32_t val)
 {
+	// printf("seehi--> %s line: %d (0x%08x , 0x%lx)\n", __func__, __LINE__, val, pcie->dev->dbiBase + reg);
 	writel(pcie->dev->dbiBase + reg, val);
 }
 
@@ -393,6 +394,39 @@ HAL_Status HAL_PCIE_InboundConfig(struct HAL_PCIE_HANDLE *pcie, int32_t index, i
 	return HAL_ERROR;
 }
 
+HAL_Status HAL_PCIE_InboundConfig_addr(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint64_t size)
+{
+	uint32_t val, off;
+	uint32_t i;
+	uint64_t limit_addr;
+
+	if(index > 7){
+		printf("index max 7\n");
+		return HAL_ERROR;
+	}
+	limit_addr = busAddr + size - 1;
+
+	off = PCIE_ATU_OFFSET + 0x200 * index + 0x100;
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_LOWER_BASE, busAddr & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_UPPER_BASE, (busAddr >> 32) & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_LOWER_LIMIT, (limit_addr) & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_UPPER_LIMIT, (limit_addr >> 32) & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_LOWER_TARGET, cpuAddr & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_UPPER_TARGET, (cpuAddr >> 32) & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_REGION_CTRL1, type);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UNR_REGION_CTRL2, PCIE_ATU_ENABLE);
+
+	for (i = 0; i < 5000; i++) {
+		val = HAL_PCIE_DbiReadl(pcie, off + PCIE_ATU_UNR_REGION_CTRL2);
+		if (val & PCIE_ATU_ENABLE) {
+			return HAL_OK;
+		}
+		HAL_DelayUs(LINK_WAIT_IATU);
+	}
+
+	return HAL_ERROR;
+}
+
 /**
  * @brief  Setting PCIe outbound atu.
  * @param  pcie: PCIe host.
@@ -469,6 +503,40 @@ HAL_Status dw_pcie_prog_inbound_atu(struct HAL_PCIE_HANDLE *pcie, int32_t index,
 	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UPPER_TARGET, (cpuAddr >> 32) & 0xFFFFFFFF);
 	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_CR1, PCIE_ATU_TYPE_MEM);
 	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_CR2, PCIE_ATU_ENABLE | PCIE_ATU_BAR_MODE_ENABLE | (bar << 8));
+
+	for (i = 0; i < 5000; i++) {
+		val = HAL_PCIE_DbiReadl(pcie, off + PCIE_ATU_CR2);
+		if (val & PCIE_ATU_ENABLE) {
+			return HAL_OK;
+		}
+		HAL_DelayUs(LINK_WAIT_IATU);
+	}
+
+	return HAL_ERROR;
+}
+
+HAL_Status dw_pcie_prog_inbound_atu_addr(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint64_t size)
+{
+	uint32_t val, off;
+	uint32_t i;
+	uint64_t limit_addr;
+
+	if(index > 7){
+		printf("index max 7\n");
+		return HAL_ERROR;
+	}
+	limit_addr = busAddr + size - 1;
+
+	off = 0x0;
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_VIEWPORT, PCIE_ATU_REGION_INBOUND |index);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_LOWER_BASE, busAddr & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UPPER_BASE, (busAddr >> 32) & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_LIMIT, limit_addr & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UPPER_LIMIT, (limit_addr >> 32) & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_LOWER_TARGET, cpuAddr & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_UPPER_TARGET, (cpuAddr >> 32) & 0xFFFFFFFF);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_CR1, type);
+	HAL_PCIE_DbiWritel(pcie, off + PCIE_ATU_CR2, PCIE_ATU_ENABLE);
 
 	for (i = 0; i < 5000; i++) {
 		val = HAL_PCIE_DbiReadl(pcie, off + PCIE_ATU_CR2);

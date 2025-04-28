@@ -1,0 +1,13 @@
+#ifndef __REG_MAP__H__
+#define __REG_MAP__H__
+
+#define CLCI_MCU_RAM_ADDR 0x10000
+#define CLCI_MCU_RAM_SIZE 0x8000
+
+#define CLCI_MCU_BIU_ADDR	0x30000
+#define CLCI_MCU_BIU_SIZE	0x10000
+
+#define CLCI_MCU_LOCAL_CTRL_ADDR	0x21000
+#define CLCI_MCU_LOCAL_CTRL_SIZE	0x1000
+
+#endif

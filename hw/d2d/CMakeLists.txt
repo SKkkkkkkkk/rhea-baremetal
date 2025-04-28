@@ -7,22 +7,57 @@ target_sources(${TARGET_NAME}
 		src/d2d_api.c
 		src/d2d_sync.c
 		src/d2d_ring_buf.c
+		src/crc32.c
+		lib/src/clci_api.c
+		lib/src/clci_error.c
+		lib/src/commands_common.c
+		lib/src/commands_sys.c
+		lib/src/doorbell.c
+		lib/src/gicv3_basic.c
+		lib/src/gicv3_lpis.c
+		lib/src/interrupt.c
+		lib/src/local_ctrl.c
+		lib/src/mailbox_drv.c
+		lib/src/mailbox_sys.c
+		lib/src/ring_buf.c
 )
 
 target_include_directories(${TARGET_NAME}
 	PUBLIC
 		inc
+		lib/inc
 )
 
 target_link_libraries(${TARGET_NAME}
 	PRIVATE
 		crc
+		gicv3
 )
 
-target_compile_definitions(d2d PRIVATE CONFIG_RHEA_DUAL_DIE)
-target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_WORK_MODE=1)
+if(NOT DEFINED DIE_MAX_NUM)
+    set(DIE_MAX_NUM 2)
+endif()
+
+if(NOT DEFINED SELF_DIE_ID)
+    set(SELF_DIE_ID 0)
+endif()
+
+target_compile_definitions(d2d PUBLIC CONFIG_RHEA_DIE_MAX=${DIE_MAX_NUM})
+target_compile_definitions(d2d PUBLIC CONFIG_RHEA_D2D_SELF_ID=${SELF_DIE_ID})
 target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_HEADER_ADDR=0x48000000)
 target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_CMD_ADDR=0x48000010)
 target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_CMD_SIZE=0x960)
 target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_DATA_ADDR=0x48000970)
 target_compile_definitions(d2d PRIVATE CONFIG_RHEA_D2D_SYNC_DATA_SIZE=0xFF690)
+if(REAL_CLCI)
+	target_compile_definitions(d2d PRIVATE ENABLE_REAL_CLCI)
+	if(BLOCKING_MODE)
+		target_compile_definitions(d2d PRIVATE ENABLE_BLOCKING_MODE)
+	endif()
+	option(ISR_MODE "Enable ISR mode" OFF)
+	if(ISR_MODE)
+		add_compile_definitions(d2d PRIVATE ENABLE_ISR_MODE=1)
+	else()
+		add_compile_definitions(d2d PRIVATE ENABLE_ISR_MODE=0)
+	endif()
+endif()

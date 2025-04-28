@@ -69,7 +69,7 @@ typedef struct
 	__IM  uint32_t CIDR3;                /*!< \brief  Offset: 0xFFFC (R/ ) Component ID3 Register */
 }  GICDistributor_Type;
 
-#ifdef QEMU
+#ifdef VIRT
 #define GICDistributor      ((GICDistributor_Type      *)     VIRT_GIC_DIST ) /*!< \brief GIC Distributor register set access pointer */
 #else
 #define GICDistributor      ((GICDistributor_Type      *)     (GIC600_BASE) ) /*!< \brief GIC Distributor register set access pointer */
@@ -176,7 +176,7 @@ typedef struct
 #endif
 } GICRedistributor_Type;
 
-#ifdef QEMU
+#ifdef VIRT
 #define GICRedistributor      ((GICRedistributor_Type      *)     VIRT_GIC_REDIST ) /*!< \brief GIC ReDistributor register set access pointer */
 #else
 #define ITScount 1

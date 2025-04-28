@@ -13,9 +13,13 @@ add_library(${TARGET_NAME} STATIC)
 target_sources(${TARGET_NAME}
 	PRIVATE
 		src/gicv3.c
+		lpi/gicv3_cpuif.S
+		lpi/gicv3_lpis.c
+		lpi/gicv3_basic.c
 )
 
 target_include_directories(${TARGET_NAME}
 	PUBLIC
 		inc
+		lpi
 )

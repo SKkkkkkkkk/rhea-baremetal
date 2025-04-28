@@ -12,4 +12,5 @@ set(app_inc
 set(app_dep
 	d2d
 	systimer
+	dw_apb_timers
 )

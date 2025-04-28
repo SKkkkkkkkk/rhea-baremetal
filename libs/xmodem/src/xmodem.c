@@ -158,6 +158,7 @@ int xmodemTransmit(unsigned char *src, int srcsz)
 	unsigned char packetno = 1;
 	int i, c, len = 0;
 	int retry;
+	int idx;
 
 	for(;;) {
 		for( retry = 0; retry < 16; ++retry) {
@@ -195,7 +196,9 @@ int xmodemTransmit(unsigned char *src, int srcsz)
 			c = srcsz - len;
 			if (c > bufsz) c = bufsz;
 			if (c >= 0) {
-				memset (&xbuff[3], 0, bufsz);
+				for (idx = 0; idx < bufsz; idx++) {
+					xbuff[3 + idx] = 0;
+				}
 				if (c == 0) {
 					xbuff[3] = CTRLZ;
 				}

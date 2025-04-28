@@ -1,3 +1,4 @@
+#ifdef A55
 #define VIRT_FLASH               0x00000000
 #define VIRT_CPUPERIPHS          0x08000000
 #define VIRT_GIC_DIST            0x08000000
@@ -25,3 +26,8 @@
 #define VIRT_PCIE_PIO            0x3eff0000
 #define VIRT_PCIE_ECAM           0x3f000000
 #define VIRT_MEM                 0x40000000
+#else
+#define VIRT_FLASH               0x1000
+#define VIRT_UART                0x10000000
+#define VIRT_DRAM                0x80000000
+#endif

@@ -20,7 +20,7 @@ Rhea BareMetal是由一系列封装成模块的drivers和libs构成的集合，�
 
 只提及工程配置相关options, 通过CMake Cache传入, 不包含cmake options(如-S, -B, -G...)
 
-- BOARD: QEMU, RTL, FPGA, EVB. QEMU为qemu virt平台，并非rhea平台.
+- BOARD: VIRT, RTL, FPGA, EVB. VIRT为qemu virt平台，并非rhea平台.
 
 - CMAKE_BUILD_TYPE: Debug, Release, RelWithDebInfo, MinSizeRel. 默认为Release.
 
@@ -28,7 +28,7 @@ Rhea BareMetal是由一系列封装成模块的drivers和libs构成的集合，�
 
 - PROJECT_NAME: 设置工程名字(生成的目标文件名字前缀)
 
-- PROJECT_PATH: Path of app.cmake, app.cmake用于添加app sources，headers, dependencies(依赖的targets)
+- APP_CMAKE: 设置app.cmake路径
 
 - ...
 

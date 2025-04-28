@@ -1,0 +1,120 @@
+#ifndef __CLCI_COMMON_H__
+#define __CLCI_COMMON_H__
+
+#include <stdint.h>
+
+#define MAX_PHY_LANE_NUM 17
+
+enum {
+	DMA_PRBS7,
+	DMA_PRBS15,
+	DMA_PRBS23,
+	DMA_PRBS31,
+};
+
+enum {
+	DELAYLINE_MAX_SEQ1,
+	DELAYLINE_FIRST_SEQ1,
+};
+
+enum {
+	HS_CLK_CNT_DIV2,
+	HS_CLK_CNT_DIV4,
+	HS_CLK_CNT_DIV1,
+};
+
+enum { LOOPBACK_DIE2DIE, LOOPBACK_MAC, LOOPBACK_LOGIC, LOOPBACK_MUX2DEMUX, LOOPBACK_IO, LOOPBACK_PACKAGE };
+
+enum clci_error_codes_e {
+	ERROR_NONE,
+	ERROR_PHY_PLL_LOCK_FAIL,
+	ERROR_RX_DCC_FAILED,
+	ERROR_BITLOCK_STATE_CHECK_TIMEOUT,
+	ERROR_BITLOCK_PHASE0_DATA_FAIL,
+	ERROR_BITLOCK_PHASE0_DATA_TIMEOUT,
+	ERROR_BITLOCK_PHASE0_CLOCK_FAIL,
+	ERROR_BITLOCK_PHASE0_CLOCK_TIMEOUT,
+	ERROR_BITLOCK_PHASE1_FAIL,
+	ERROR_BITLOCK_PHASE1_TIMEOUT,
+	ERROR_BITLOCK_BITLOCK_STATE_DONE_TIMEOUT,
+	ERROR_CLCI_LINK,
+	ERROR_PCSLOCK_CHECK_FRAME_HEADER_TIMEOUT,
+	ERROR_PCSLOCK_LANE_SYNC_TIMEOUT,
+	ERROR_PCSLOCK_LANE_LINK_TIMEOUT,
+	ERROR_PCS_CMD_CRC,
+	ERROR_PCS_CRC,
+	ERROR_MAC_CXS_RX_FIFO,
+	ERROR_MAC_B_RX_FIFO,
+	ERROR_MAC_AR_RX_FIFO,
+	ERROR_MAC_AW_RX_FIFO,
+	ERROR_MAC_RD_RX_FIFO,
+	ERROR_MAC_WD_RX_FIFO,
+	ERROR_MAC_RX_PATH_ASYNC_FIFO_PCS1,
+	ERROR_MAC_RX_PATH_ASYNC_FIFO_PCS0,
+	ERROR_OVER_SAMPLING_EARLY_LATE_OVERFLOW,
+	ERROR_FACTORY_CALC_OS_LANE
+};
+
+enum clci_progress_e {
+	PROGRESS_NONE,
+	PROGRESS_APHY_PLL_LOCK,
+	PROGRESS_APHY_INIT,
+	PROGRESS_SPHY_INIT,
+	PROGRESS_PCSLOCK_INIT,
+	PROGRESS_BITLOCK_EN,
+	PROGRESS_BITLOCK_STATE_CHECK,
+	PROGRESS_BITLOCK_PHASE0_DATA_CHECK,
+	PROGRESS_BITLOCK_PHASE0_CLOCK_CHECK,
+	PROGRESS_BITLOCK_PHASE1_CHECK,
+	PROGRESS_PCSLOCK_FRAME_HEADER_CHECK,
+	PROGRESS_PCSLOCK_LANE_SYNC_CHECK,
+	PROGRESS_PCSLOCK_LANE_LINK_CHECK,
+	PROGRESS_MAC_INIT,
+};
+
+struct clci_die_t {
+	uint8_t index;
+	uint8_t slave_addr;
+	uint8_t remap;
+	uint8_t addr_bitwidth;
+
+	uint8_t os_lane;
+	uint8_t tx_repaire_lane;
+	uint8_t rx_repaire_lane;
+	uint8_t progress;
+
+	uint32_t channel;
+};
+
+struct clci_config_t {
+	uint8_t max_bits;
+	uint8_t min_bits;
+	uint8_t start_lane;
+	uint8_t end_lane;
+
+	uint8_t die_id;
+	uint8_t loop_type;
+	uint8_t os_late;
+	uint8_t os_early;
+
+	uint8_t div1;
+	uint8_t div2;
+	uint8_t diff_mode;
+	uint8_t lane_mode;
+
+	uint8_t aphy_pll_mode;
+	uint8_t min_dl_width;
+	uint8_t rx_lane_rev;
+	uint8_t pcs_async_bypass;
+
+	uint32_t pass_pat_num;
+	uint32_t temp;
+	uint32_t clci_delay_ms;
+	uint32_t error_code;
+
+	struct clci_die_t die[2];
+};
+
+extern struct clci_config_t *clci_config;
+
+#endif

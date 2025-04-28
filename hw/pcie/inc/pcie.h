@@ -100,6 +100,12 @@ struct HAL_PCIE_DEV {
 	uint8_t firstBusNo;
 	uint32_t ltrIrqNum;
 	uint32_t vdmIrqNum;
+	uint32_t dstateIrqNum;
+	uint32_t linkstIrqNum;
+	uint32_t ltssmIrqNum;
+	uint32_t hp_msiIrqNum;
+	uint8_t bif_en;
+	uint8_t pipe8;
 	void *phy;
 };
 
@@ -120,8 +126,10 @@ uint32_t HAL_PCIE_GetLTSSM(struct HAL_PCIE_HANDLE *pcie);
 HAL_Status HAL_PCIE_Init(struct HAL_PCIE_HANDLE *pcie, struct HAL_PCIE_DEV *dev);
 HAL_Status HAL_PCIE_DeInit(struct HAL_PCIE_HANDLE *pcie);
 HAL_Status HAL_PCIE_InboundConfig(struct HAL_PCIE_HANDLE *pcie, int32_t index, int32_t bar, uint64_t cpuAddr);
+HAL_Status HAL_PCIE_InboundConfig_addr(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint64_t size);
 HAL_Status HAL_PCIE_OutboundConfig(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint64_t size);
 HAL_Status dw_pcie_prog_inbound_atu(struct HAL_PCIE_HANDLE *pcie, int32_t index, int32_t bar, uint64_t cpuAddr);
+HAL_Status dw_pcie_prog_inbound_atu_addr(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint64_t size);
 HAL_Status dw_pcie_prog_outbound_atu(struct HAL_PCIE_HANDLE *pcie, int32_t index, int type, uint64_t cpuAddr, uint64_t busAddr, uint64_t size);
 int32_t HAL_PCIE_OutboundConfigCFG0(struct HAL_PCIE_HANDLE *pcie, HAL_PCI_DevT bdf, uint32_t size);
 
