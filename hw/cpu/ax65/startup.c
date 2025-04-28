@@ -62,8 +62,8 @@ __real_start(void) {
     // Jump to main function
     main();
 
-#ifdef QEMU
-    // Exit QEMU
+#ifdef VIRT
+    // Exit VIRT
     *((volatile uint32_t*)0x100000) = 0x5555;
 #endif
 

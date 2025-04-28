@@ -12,7 +12,7 @@ add_library(${TARGET_NAME} STATIC)
 
 target_sources(${TARGET_NAME}
 	PRIVATE
-		uart.c
+		16550.c
 )
 
 target_include_directories(${TARGET_NAME}

@@ -1,4 +1,4 @@
-#ifndef QEMU
+#ifndef VIRT
 #include "gicv3.h"
 #include "arch_features.h"
 #include "system_counter.h"

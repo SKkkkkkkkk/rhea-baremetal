@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "wakeup_core.h"
 #include "arch_helpers.h"
-#ifndef QEMU
+#ifndef VIRT
 #	include "chip.h"
 #endif
 
@@ -27,7 +27,7 @@ void core3_entry()
 	while(1) __asm__ volatile("");
 }
 
-#ifndef QEMU
+#ifndef VIRT
 void chip_info()
 {
 	printf("*** CHIP INFO ***\n\r");
@@ -46,7 +46,7 @@ void chip_info()
 
 int main()
 {
-#ifndef QEMU
+#ifndef VIRT
 	chip_info();
 #endif
 	printf("hello world from core0, mpidr_el1: 0x%lx\n\r", read_mpidr_el1());

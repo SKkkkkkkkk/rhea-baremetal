@@ -1,6 +1,6 @@
-#include "uart.h"
+#include "16550.h"
 
-// QEMU UART寄存器定义
+// VIRT UART寄存器定义
 #define UART0_BASE 0x10000000
 #define UART_RHR (UART0_BASE + 0x00) // 接收保持寄存器
 #define UART_THR (UART0_BASE + 0x00) // 发送保持寄存器
@@ -12,7 +12,7 @@ void uart_init(void) {
   // QEMU的UART不需要进行额外的初始化
 }
 
-void uart_putc(char ch) {
+void uart_putchar(char ch) {
   volatile uint8_t *uart_lsr = (volatile uint8_t *)UART_LSR;
   volatile uint8_t *uart_thr = (volatile uint8_t *)UART_THR;
 
@@ -21,7 +21,7 @@ void uart_putc(char ch) {
   *uart_thr = ch;
 }
 
-char uart_getc(void) {
+char uart_getchar(void) {
   volatile uint8_t *uart_lsr = (volatile uint8_t *)UART_LSR;
   volatile uint8_t *uart_rhr = (volatile uint8_t *)UART_RHR;
 
@@ -32,6 +32,6 @@ char uart_getc(void) {
 
 void uart_puts(const char *str) {
   while (*str) {
-    uart_putc(*str++);
+    uart_putchar(*str++);
   }
 }

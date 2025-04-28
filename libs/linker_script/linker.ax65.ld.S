@@ -4,7 +4,7 @@ OUTPUT_ARCH(riscv)
 ENTRY(_start)
 #include "memmap.h"
 
-#ifdef QEMU
+#ifdef VIRT
 	#define __ROM_BASE VIRT_FLASH
 	#define __ROM_SIZE 64M
 

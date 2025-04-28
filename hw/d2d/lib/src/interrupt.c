@@ -67,7 +67,7 @@ volatile unsigned int flag;
 #define D2D_REG_AHB_TEST2       0x008
 #define D2D_REG_AHB_TEST3       0x00c
 
-#ifdef QEMU
+#ifdef VIRT
   #define DIST_BASE_ADDR    (VIRT_GIC_DIST)
   #define RD_BASE_ADDR      (VIRT_GIC_REDIST)
   #define ITS_BASE_ADDR     (VIRT_GIC_ITS)

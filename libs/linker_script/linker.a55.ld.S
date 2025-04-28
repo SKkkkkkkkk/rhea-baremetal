@@ -4,7 +4,7 @@ ENTRY(entrypoint)
 
 #include "memmap.h"
 
-#ifdef QEMU
+#ifdef VIRT
 	#define __ROM_BASE VIRT_FLASH
 	#define __ROM_SIZE 64M
 

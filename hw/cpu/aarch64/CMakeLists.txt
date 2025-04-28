@@ -13,7 +13,7 @@ target_sources(${TARGET_NAME}
 		misc/cache_helpers.S
 )
 
-if(NOT $CACHE{BOARD} STREQUAL "QEMU")
+if(NOT $CACHE{BOARD} STREQUAL "VIRT")
 target_link_libraries(${TARGET_NAME}
 	PRIVATE
 		system_counter

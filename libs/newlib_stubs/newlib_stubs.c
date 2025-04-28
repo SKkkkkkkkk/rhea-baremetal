@@ -1,3 +1,6 @@
+// =====================
+// newlib stubs for baremetal
+// =====================
 #include <errno.h>
 #include <sys/stat.h>
 #include <stdbool.h>
@@ -5,183 +8,73 @@
 #include <stdint.h>
 
 #define DEFAULT_CONSOLE_BAUDRATE 115200U
-#ifdef QEMU
-#	define default_uart_clk 25000000U
+
+// 平台相关串口初始化和收发
+#if defined(VIRT)
+#	if defined(A55)
+#		include "pl011.h"
+#	else
+#		include "16550.h"
+#	endif
+#	define UART_PUTCHAR uart_putchar
+#	define UART_GETCHAR uart_getchar
+#	define UART_CONFIG() (console_init = true)
+#	define UART_ID 0
+#elif defined(RTL)
+#	define UART_PUTCHAR(c) (*(volatile uint32_t *)0x06400000 = (c))
+#	define UART_GETCHAR() (0)
+#	define UART_CONFIG() (console_init = true)
+#	define UART_ID 0
 #else
 #	include "cru.h"
-#	define default_uart_clk get_clk(CLK_UART)
+#	include "dw_apb_uart.h" 
+#	define UART_PUTCHAR(c) uart_sendchar(UART_ID, (c)); REG32(SYSCTRL_BASE + 0xfe0) = (c)
+#	define UART_GETCHAR() uart_getchar(UART_ID)
+#	define UART_CONFIG() do { \
+    seehi_uart_config_baudrate(DEFAULT_CONSOLE_BAUDRATE, get_clk(CLK_UART), UART_ID); \
+    console_init = true; \
+} while(0)
+#	define UART_ID SEEHI_UART0
 #endif
 
 static bool console_init = false;
 
-#pragma weak _write
-#pragma weak _read
-
-#ifdef QEMU 
-	#define UART_ID 0
-#else
-	#define UART_ID SEEHI_UART0
-#endif
-
-#if defined QEMU
-
-#ifdef A55
-#include "pl011.h"
-void console_config(int console_id __unused, int console_input_clk __unused, int baudrate __unused)
-{
-	uart_config _uart_config = {
-		.data_bits = 8,
-		.stop_bits = 1,
-		.parity = false,
-		.baudrate = 9600
-	};
-	(void)uart_configure(&_uart_config);
-	console_init = true;
+// =====================
+// 通用_write/_read实现
+// =====================
+int _write(int fd __attribute__((unused)), char *ptr, int len) {
+    if (!console_init) UART_CONFIG();
+    for (int i = 0; i < len; i++) {
+        UART_PUTCHAR(ptr[i]);
+        if (ptr[i] == '\n') UART_PUTCHAR('\r');
+    }
+    return len;
 }
 
-int _write (int fd __unused, char *ptr, int len)
-{
-	if(!console_init)
-		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
-	int i;
-	for(i=0;i<len;i++)
-	{
-		uart_putchar(ptr[i]);
-		if(ptr[i] == '\n')
-			uart_putchar('\r');
-	}
-	return i;
+int _read(int fd __attribute__((unused)), char *ptr, int len) {
+    if (!console_init) UART_CONFIG();
+    for (int i = 0; i < len; i++) {
+        ptr[i] = UART_GETCHAR();
+    }
+    return len;
 }
 
-int _read(int fd __unused, char* ptr, int len)
-{
-	if(!console_init)
-		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
-	int i=0;
-	for(;i<len;i++)
-		ptr[i] = uart_getchar();
-	return i;
-}
-#else
-#include "uart.h"
-void console_config(int console_id __unused, int console_input_clk __unused, int baudrate __unused)
-{
-	console_init = true;
-}
-
-int _write (int fd __unused, char *ptr, int len)
-{
-	if(!console_init)
-		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
-	int i;
-	for(i=0;i<len;i++)
-	{
-		uart_putc(ptr[i]);
-		if(ptr[i] == '\n')
-			uart_putc('\r');
-	}
-	return i;
-}
-
-int _read(int fd __unused, char* ptr, int len)
-{
-	if(!console_init)
-		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
-	int i=0;
-	for(;i<len;i++)
-		ptr[i] = uart_getc();
-	return i;
-}
-
-#endif
-
-#else
-
-// #ifdef EVB
-// // With EVB(ASIC), we have a real pll to get current uart clock.
-// #include "cru.h"
-// #endif
-#include "dw_apb_uart.h"
-void console_config(int console_id, int console_input_clk, int baudrate)
-{
-	(void)seehi_uart_config_baudrate(baudrate, console_input_clk, console_id);
-	console_init = true;
-}
-
-int _write (int fd __unused, char *ptr, int len)
-{
-	if(!console_init)
-		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
-	
-	int i=0;
-	for(;i<len;i++)
-	{
-		uart_sendchar(UART_ID, ptr[i]);
-		REG32(SYSCTRL_BASE + 0xfe0) = ptr[i];
-		if(ptr[i] == '\n')
-		{
-			uart_sendchar(UART_ID,'\r');
-			REG32(SYSCTRL_BASE + 0xfe0) = '\r';
-		}
-	}
-	return i;
-}
-
-int _read(int fd __unused, char* ptr, int len)
-{
-	if(!console_init)
-		console_config(UART_ID, default_uart_clk, DEFAULT_CONSOLE_BAUDRATE);
-
-	int i=0;
-	for(;i<len;i++)
-		ptr[i] = uart_getchar(UART_ID);
-	return i;
-}
-
-#endif
-
-
-/* _exit */
-__attribute__((__used__)) void _exit(int status __unused) {
-	while(1);
-}
-
-/* close */
-__attribute__((__used__)) int _close(int file __unused) {
-	return -1;
-}
-
-/* fstat */
-__attribute__((__used__)) int _fstat(int file __unused, struct stat *st) {
-	st->st_mode = S_IFCHR;
-	return 0;
-}
-
-__attribute__((__used__)) int _getpid(void) {
-	return 1;
-}
-
-__attribute__((__used__)) int _isatty(int file __unused) {
-	return 1;
-}
-
-__attribute__((__used__)) int _kill(int pid __unused, int sig __unused) {
-	errno = EINVAL;
-	return -1;
-}
-
-__attribute__((__used__)) int _lseek(int file __unused, int ptr __unused, int dir __unused) {
-	return 0;
-}
-
+// =====================
+// Syscall stubs
+// =====================
+__attribute__((__used__)) void _exit(int status __attribute__((unused))) { while(1); }
+__attribute__((__used__)) int _close(int file __attribute__((unused))) { return -1; }
+__attribute__((__used__)) int _fstat(int file __attribute__((unused)), struct stat *st) { st->st_mode = S_IFCHR; return 0; }
+__attribute__((__used__)) int _getpid(void) { return 1; }
+__attribute__((__used__)) int _isatty(int file __attribute__((unused))) { return 1; }
+__attribute__((__used__)) int _kill(int pid __attribute__((unused)), int sig __attribute__((unused))) { errno = EINVAL; return -1; }
+__attribute__((__used__)) int _lseek(int file __attribute__((unused)), int ptr __attribute__((unused)), int dir __attribute__((unused))) { return 0; }
 __attribute__((__used__)) void *_sbrk(int incr) {
 	extern char _heap_start;
 	extern char _heap_end;
 	static unsigned char *heap = (unsigned char *)(uintptr_t)(&_heap_start);
-	unsigned char *prev_heap;
-	prev_heap = heap;
-	if((uintptr_t)(heap + incr) > (uintptr_t)&_heap_end)
-	{
+	unsigned char *prev_heap = heap;
+	if((uintptr_t)(heap + incr) > (uintptr_t)&_heap_end) {
 		_write(1, "Heap Overflow!\n\r", 16);
 		while(1) asm volatile("");
 	}
@@ -189,353 +82,77 @@ __attribute__((__used__)) void *_sbrk(int incr) {
 	return prev_heap;
 }
 
+// =====================
+// FreeRTOS malloc lock support
+// =====================
 #if defined(FREERTOS)
-
 #include "FreeRTOS.h"
 #include "task.h"
-__attribute__((__used__)) void __malloc_lock(struct _reent *r __unused)   
-{
-	configASSERT(!xPortIsInsideInterrupt()); // 禁止在中断中使用malloc
-	if(xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED)
-		return;
+__attribute__((__used__)) void __malloc_lock(struct _reent *r __attribute__((unused))) {
+	configASSERT(!xPortIsInsideInterrupt());
+	if(xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) return;
 	vTaskSuspendAll();
 }
-
-__attribute__((__used__)) void __malloc_unlock(struct _reent *r __unused) 
-{
-	configASSERT(!xPortIsInsideInterrupt()); // 禁止在中断中使用malloc
-	if(xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED)
-		return;
+__attribute__((__used__)) void __malloc_unlock(struct _reent *r __attribute__((unused))) {
+	configASSERT(!xPortIsInsideInterrupt());
+	if(xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) return;
 	(void)xTaskResumeAll();
 }
 #endif
 
-/* environment */
+// =====================
+// 环境变量
+// =====================
 char *__env[1] = { 0 };
 char **environ = __env;
 
-__attribute__((__used__)) __attribute__((__used__)) int link(char *old __unused, char *new __unused) {
-	errno = EMLINK;
-	return -1;
+// =====================
+// 其它stubs
+// =====================
+__attribute__((__used__)) int link(const char *old, const char *new_) { errno = EMLINK; return -1; }
+__attribute__((__used__)) int unlink(const char *name) { errno = ENOENT; return -1; }
+__attribute__((__used__)) int stat(const char *path, struct stat *st) { st->st_mode = S_IFCHR; return 0; }
+__attribute__((__used__)) int _open(const char *name __attribute__((unused)), int flags __attribute__((unused)), int mode __attribute__((unused))) { return -1; }
+__attribute__((__used__)) int fork(void) { errno = EAGAIN; return -1; }
+__attribute__((__used__)) int wait(int *status __attribute__((unused))) { errno = ECHILD; return -1; }
+__attribute__((__used__)) void _fini() { return; }
+
+// =====================
+// 通用__wrap_*实现，保证链接通过
+// =====================
+void *__wrap_memset(void *dst, int val, size_t count) {
+    unsigned char *ptr = (unsigned char *)dst;
+    while (count--) *ptr++ = (unsigned char)val;
+    return dst;
 }
-
-__attribute__((__used__)) __attribute__((__used__)) int _open(const char *name __unused, int flags __unused, int mode __unused) {
-	return -1;
+void *__wrap_memcpy(void *dst, const void *src, size_t len) {
+    unsigned char *d = (unsigned char *)dst;
+    const unsigned char *s = (const unsigned char *)src;
+    while (len--) *d++ = *s++;
+    return dst;
 }
-
-/* execve */
-// int execve(char *name __unused, char **argv __unused, char **env __unused) {
-// 	errno = ENOMEM;
-// 	return -1;
-// }
-
-/* fork */
-__attribute__((__used__)) __attribute__((__used__)) int fork(void) {
-	errno = EAGAIN;
-	return -1;
+void *__wrap_memmove(void *dst, const void *src, size_t len) {
+    unsigned char *d = (unsigned char *)dst;
+    const unsigned char *s = (const unsigned char *)src;
+    if (d < s) {
+        while (len--) *d++ = *s++;
+    } else {
+        d += len;
+        s += len;
+        while (len--) *--d = *--s;
+    }
+    return dst;
 }
-
-
-__attribute__((__used__)) __attribute__((__used__)) int stat (const char *__restrict __path __unused, struct stat *__restrict __sbuf ) {
-	__sbuf->st_mode = S_IFCHR;
-	return 0;
+int __wrap_memcmp(const void *s1, const void *s2, size_t len) {
+    const unsigned char *a = (const unsigned char *)s1, *b = (const unsigned char *)s2;
+    while (len--) {
+        if (*a != *b) return *a - *b;
+        a++; b++;
+    }
+    return 0;
 }
-
-// int times(struct tms *buf) {
-//   return -1;
-// }
-
-__attribute__((__used__)) __attribute__((__used__)) int unlink(char *name __unused) {
-	errno = ENOENT;
-	return -1;
+size_t __wrap_strlen(const char *s) {
+    const char *p = s;
+    while (*p) ++p;
+    return p - s;
 }
-
-__attribute__((__used__)) __attribute__((__used__)) int wait(int *status __unused) {
-	errno = ECHILD;
-	return -1;
-}
-
-// typedef void (*ptr_func_t)();
-// extern char __preinit_array_start;
-// extern char __preinit_array_end;
-
-// extern char __init_array_start;
-// extern char __init_array_end;
-
-// extern char __fini_array_start;
-// extern char __fini_array_end;
-
-// /** Call constructors for static objects
-//  */
-// void call_init_array() {
-//     uintptr_t* func = (uintptr_t*)&__preinit_array_start;
-//     while (func < (uintptr_t*)&__preinit_array_end) {
-// 		(*(ptr_func_t)(*func))();
-//         func++;
-//     }
-
-//     func = (uintptr_t*)&__init_array_start;
-//     while (func < (uintptr_t*)&__init_array_end) {
-//         (*(ptr_func_t)(*func))();
-//         func++;
-//     }
-// }
-
-// /** Call destructors for static objects
-//  */
-// void call_fini_array() {
-//     ptr_func_t array = (ptr_func_t)&__fini_array_start;
-//     while (array < (ptr_func_t)&__fini_array_end) {
-//         (*array)();
-//         array++;
-//     }
-// }
-
-
-
-__attribute__((__used__)) void _fini()
-{
-	return;
-}
-
-
-#if defined(A55)
-
-#include "arch_features.h"
-
-void *__wrap_memcpy(void *dst, const void *src, size_t len)
-{
-	bool need_aligned = true;
-
-	switch (GET_EL(read_CurrentEl()))
-	{
-	case MODE_EL3:
-		if( ((read_sctlr_el3() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el3() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	case MODE_EL2:
-		if( ((read_sctlr_el2() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el2() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	case MODE_EL1:
-		if( ((read_sctlr_el1() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el1() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	default:
-		break;
-	}	
-
-	if(!need_aligned)
-	{
-		extern void *__real_memcpy(void *dst, const void *src, size_t len);
-		return __real_memcpy(dst, src, len);
-	}
-
-	const char *s = src;
-	char *d = dst;
-
-	while (len--)
-		*d++ = *s++;
-
-	return dst;
-}
-
-void *__wrap_memmove(void *dst, const void *src, size_t len)
-{
-	bool need_aligned = true;
-
-	switch (GET_EL(read_CurrentEl()))
-	{
-	case MODE_EL3:
-		if( ((read_sctlr_el3() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el3() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	case MODE_EL2:
-		if( ((read_sctlr_el2() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el2() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	case MODE_EL1:
-		if( ((read_sctlr_el1() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el1() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	default:
-		break;
-	}	
-
-	if(!need_aligned)
-	{
-		extern void *__real_memmove(void *dst, const void *src, size_t len);
-		return __real_memmove(dst, src, len);
-	}
-
-	/*
-	 * The following test makes use of unsigned arithmetic overflow to
-	 * more efficiently test the condition !(src <= dst && dst < str+len).
-	 * It also avoids the situation where the more explicit test would give
-	 * incorrect results were the calculation str+len to overflow (though
-	 * that issue is probably moot as such usage is probably undefined
-	 * behaviour and a bug anyway.
-	 */
-	if ((size_t)dst - (size_t)src >= len) {
-		/* destination not in source data, so can safely use memcpy */
-		return memcpy(dst, src, len);
-	} else {
-		/* copy backwards... */
-		const char *end = dst;
-		const char *s = (const char *)src + len;
-		char *d = (char *)dst + len;
-		while (d != end)
-			*--d = *--s;
-	}
-	return dst;
-}
-
-void *__wrap_memset(void *dst, int val, size_t count)
-{
-	bool need_aligned = true;
-
-	switch (GET_EL(read_CurrentEl()))
-	{
-	case MODE_EL3:
-		if( ((read_sctlr_el3() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el3() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	case MODE_EL2:
-		if( ((read_sctlr_el2() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el2() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	case MODE_EL1:
-		if( ((read_sctlr_el1() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el1() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	default:
-		break;
-	}	
-
-	if(!need_aligned)
-	{
-		extern void *__real_memset(void *dst, int val, size_t count);
-		return __real_memset(dst, val, count);
-	}
-
-	uint8_t *ptr = dst;
-	uint64_t *ptr64;
-	uint64_t fill = (unsigned char)val;
-
-	/* Simplify code below by making sure we write at least one byte. */
-	if (count == 0U) {
-		return dst;
-	}
-
-	/* Handle the first part, until the pointer becomes 64-bit aligned. */
-	while (((uintptr_t)ptr & 7U) != 0U) {
-		*ptr = (uint8_t)val;
-		ptr++;
-		if (--count == 0U) {
-			return dst;
-		}
-	}
-
-	/* Duplicate the fill byte to the rest of the 64-bit word. */
-	fill |= fill << 8;
-	fill |= fill << 16;
-	fill |= fill << 32;
-
-	/* Use 64-bit writes for as long as possible. */
-	ptr64 = (uint64_t *)ptr;
-	for (; count >= 8U; count -= 8) {
-		*ptr64 = fill;
-		ptr64++;
-	}
-
-	/* Handle the remaining part byte-per-byte. */
-	ptr = (uint8_t *)ptr64;
-	while (count-- > 0U)  {
-		*ptr = (uint8_t)val;
-		ptr++;
-	}
-
-	return dst;
-}
-
-int __wrap_memcmp( const void * s1, const void * s2, size_t len )
-{
-	bool need_aligned = true;
-
-	switch (GET_EL(read_CurrentEl()))
-	{
-	case MODE_EL3:
-		if( ((read_sctlr_el3() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el3() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	case MODE_EL2:
-		if( ((read_sctlr_el2() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el2() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	case MODE_EL1:
-		if( ((read_sctlr_el1() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el1() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	default:
-		break;
-	}	
-
-	if(!need_aligned)
-	{
-		extern int __real_memcmp(const void *s1, const void *s2, size_t len);
-		return __real_memcmp(s1, s2, len);
-	}
-
-	const unsigned char *s = s1;
-	const unsigned char *d = s2;
-	unsigned char sc;
-	unsigned char dc;
-
-	while (len--) {
-		sc = *s++;
-		dc = *d++;
-		if (sc - dc)
-			return (sc - dc);
-	}
-
-	return 0;
-}
-
-size_t __wrap_strlen(const char *s)
-{
-	bool need_aligned = true;
-
-	switch (GET_EL(read_CurrentEl()))
-	{
-	case MODE_EL3:
-		if( ((read_sctlr_el3() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el3() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	case MODE_EL2:
-		if( ((read_sctlr_el2() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el2() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	case MODE_EL1:
-		if( ((read_sctlr_el1() & SCTLR_M_BIT) == SCTLR_M_BIT) && ((read_sctlr_el1() & SCTLR_A_BIT) == 0ULL) )
-			need_aligned = false;
-		break;
-	default:
-		break;
-	}
-
-	if(!need_aligned)
-	{
-		extern size_t __real_strlen (const char *);
-		return __real_strlen(s);
-	}
-
-	const char *cursor = s;
-
-	while (*cursor)
-		cursor++;
-
-	return cursor - s;
-}
-
-
-#endif

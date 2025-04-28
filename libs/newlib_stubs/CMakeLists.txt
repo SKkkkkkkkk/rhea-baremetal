@@ -7,7 +7,7 @@ target_sources(${TARGET_NAME}
 		newlib_stubs.c
 )
 
-if($CACHE{BOARD} STREQUAL "QEMU")
+if($CACHE{BOARD} STREQUAL "VIRT")
 	if($CACHE{CPU_ARCH} STREQUAL "A55")
 		target_link_libraries(${TARGET_NAME}
 			PRIVATE

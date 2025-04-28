@@ -6,7 +6,7 @@ cmake \
 -DPROJECT_NAME=hello \
 -DAPP_CMAKE=app.cmake \
 -DCPU_ARCH=AX65 \
--DBOARD=QEMU \
+-DBOARD=VIRT \
 -DMEM_SCHEME=DRAM \
 -DCMAKE_BUILD_TYPE=Debug
 cmake --build build

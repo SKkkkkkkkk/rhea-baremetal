@@ -46,7 +46,7 @@ volatile unsigned int flag;
 
 #define ITT               (0x40070000)
 
-#ifdef QEMU
+#ifdef VIRT
   #define DIST_BASE_ADDR    (VIRT_GIC_DIST)
   #define RD_BASE_ADDR      (VIRT_GIC_REDIST)
   #define ITS_BASE_ADDR     (VIRT_GIC_ITS)

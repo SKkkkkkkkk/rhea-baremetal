@@ -18,7 +18,7 @@ target_link_libraries(${TARGET_NAME}
 		crc
 )
 
-if($CACHE{BOARD} STREQUAL "QEMU")
+if($CACHE{BOARD} STREQUAL "VIRT")
 	target_link_libraries(${TARGET_NAME} PRIVATE pl011)
 else()
 	target_link_libraries(${TARGET_NAME} PRIVATE dw_apb_uart)
