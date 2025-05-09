@@ -6,4 +6,5 @@ target_sources(${TARGET_NAME}
 	PRIVATE
 		start.s
 		startup.c
+		trap.c
 )

@@ -16,25 +16,25 @@
 #	else
 #		include "16550.h"
 #	endif
+#	define UART_ID 0
 #	define UART_PUTCHAR uart_putchar
 #	define UART_GETCHAR uart_getchar
 #	define UART_CONFIG() (console_init = true)
-#	define UART_ID 0
 #elif defined(RTL)
+#	define UART_ID 0
 #	define UART_PUTCHAR(c) (*(volatile uint32_t *)0x06400000 = (c))
 #	define UART_GETCHAR() (0)
 #	define UART_CONFIG() (console_init = true)
-#	define UART_ID 0
 #else
 #	include "cru.h"
 #	include "dw_apb_uart.h" 
+#	define UART_ID SEEHI_UART0
 #	define UART_PUTCHAR(c) uart_sendchar(UART_ID, (c)); REG32(SYSCTRL_BASE + 0xfe0) = (c)
 #	define UART_GETCHAR() uart_getchar(UART_ID)
 #	define UART_CONFIG() do { \
     seehi_uart_config_baudrate(DEFAULT_CONSOLE_BAUDRATE, get_clk(CLK_UART), UART_ID); \
     console_init = true; \
 } while(0)
-#	define UART_ID SEEHI_UART0
 #endif
 
 static bool console_init = false;

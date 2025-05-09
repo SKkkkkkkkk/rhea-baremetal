@@ -1,10 +1,58 @@
-# Rhea BareMetal
+# RHEA Baremetal
 
-Rhea BareMetal提供一个干净的完全可控的裸机开发和测试平台
+RHEA Baremetal 是一个嵌入式系统裸机开发项目，提供了完整的硬件抽象层和丰富的示例应用。该项目支持多种硬件外设，采用模块化设计，并使用Modern CMake构建系统。
 
-Rhea BareMetal是由一系列封装成模块的drivers和libs构成的集合，向下对硬件进行抽象，向上为App提供APIs
+## 目录结构
 
-![](docs/images/rhea_baremetal_stack.png)
+```
+rhea-baremetal/
+├── apps/                    # 应用程序目录
+│   ├── hello/
+│   ├── freertos/
+│   ├── axi_dma/
+│   ├── cipher/
+│   ├── pcie_ep/
+│   ├── pcie_rc/
+│   └── ...
+│
+├── hw/                     # 硬件抽象层
+│   ├── cpu/               # - CPU架构支持
+│   │   ├── aarch64/      #   · ARM 64位架构
+│   │   └── ax65/         #   · RISCV 64位架构
+│   ├── uart/             # - UART控制器驱动
+│   ├── gpio/             # - GPIO控制器驱动
+│   ├── spi/              # - SPI控制器驱动
+│   ├── dma/              # - DMA控制器驱动
+│   ├── pcie/             # - PCIe接口驱动
+│   ├── mmc/              # - MMC/SD卡控制器
+│   ├── timer/            # - 定时器驱动
+│   ├── wdt/              # - 看门狗驱动
+│   ├── gic/              # - ARM GIC中断控制器
+│   └── mailbox/          # - 邮箱通信驱动
+│
+├── libs/                  # 公共库
+│   ├── freertos/         # - FreeRTOS内核
+│   ├── arm_gnu/          # - ARM GNU工具链支持
+│   ├── crc/              # - CRC校验库
+│   ├── flash/            # - Flash存储支持
+│   │   ├── nand/        #   · NAND Flash
+│   │   └── nor/         #   · NOR Flash
+│   ├── xmodem/           # - Xmodem协议支持
+│   └── newlib_stubs/     # - newlib C库支持
+│
+├── common/                # 通用代码
+├── cmake_helper/          # CMake构建辅助文件
+├── docs/                  # 文档
+└── tools/                # 工具脚本
+```
+
+## 构建系统
+
+项目使用CMake作为构建系统，每个应用都有独立的构建目录。主要构建文件：
+
+- `CMakeLists.txt`: 主构建配置文件
+- `targets.cmake`: 目标配置文件
+- `build_all.sh`: 构建所有目标的脚本
 
 ## Requirements
 
@@ -20,8 +68,7 @@ Rhea BareMetal是由一系列封装成模块的drivers和libs构成的集合，�
 
 只提及工程配置相关options, 通过CMake Cache传入, 不包含cmake options(如-S, -B, -G...)
 
-- BOARD: VIRT, RTL, FPGA, EVB. VIRT为qemu virt平台，并非rhea平台.
-
+- BOARD: VIRT, RTL, FPGA, EVB. VIRT为qemu virt平台.
 - CMAKE_BUILD_TYPE: Debug, Release, RelWithDebInfo, MinSizeRel. 默认为Release.
 
 - MEM_SCHEME: ROM, SRAM, DRAM, CUSTOM

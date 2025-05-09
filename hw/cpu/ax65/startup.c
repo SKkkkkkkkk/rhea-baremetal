@@ -16,7 +16,7 @@ void main(void);
 static uint32_t get_hartid(void) __attribute__((naked));
 static inline void cenv_init(void);
 static void secondary_core_boot(void) __attribute__((noreturn));
-static void trap_entry(void) __attribute__ ((interrupt ("machine")));
+extern void trap_entry(void) __attribute__ ((interrupt ("machine")));
 
 void __attribute__((naked)) 
 __real_start(void) {
@@ -99,23 +99,5 @@ static void cenv_init(void) {
         while (data_vma_start < data_vma_end) {
             *data_vma_start++ = *data_lma_start++;
         }
-    }
-}
-
-#include <stdio.h>
-void __attribute__ ((interrupt ("machine"))) trap_entry()
-{
-    uintptr_t epc;
-    uintptr_t cause;
-    uintptr_t tval;
-    asm volatile("csrr %0, mepc" : "=r"(epc));
-    asm volatile("csrr %0, mcause" : "=r"(cause));
-    asm volatile("csrr %0, mtval" : "=r"(tval));
-    printf("trap epc: %lx\n", epc);
-    printf("trap cause: %lx\n", cause);
-    printf("trap tval: %lx\n", tval);
-    if (cause == 2) {
-        printf("illegal instruction\n");
-        asm volatile("csrw mepc, %0" : : "r"(epc + 4));
     }
 }

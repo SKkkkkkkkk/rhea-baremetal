@@ -3,6 +3,7 @@ set(compile_options_arch
     -mcpu=ax65 -mtune=ax65
     -mabi=lp64d
     # -mcmodel=large
+    -I${CMAKE_CURRENT_LIST_DIR}
 )
 add_compile_options(${compile_options_arch}) # 扩散到所有目标
 
